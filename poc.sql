@@ -70,7 +70,7 @@ create or replace function parse_mac_table_def(definition json)
     begin
         _columns := definition->'columns';
         _table_name := definition->>'table_name';
-        execute 'create table if not exists ' || _table_name || '()';
+        execute 'create table if not exists ' || _table_name || '(row_owner text default current_user)';
         for _i in select * from json_array_elements(_columns) loop
             select sql_type_from_generic_type(_i->>'type') into _dtype;
             select _i->>'name' into _colname;
@@ -99,6 +99,7 @@ create or replace function parse_mac_table_def(definition json)
         end loop;
         execute 'alter table ' || _table_name || ' owner to authenticator';
         execute 'alter table ' || _table_name || ' enable row level security';
+        -- eventually move the select grant up and grant it on all user defined rows only
         execute 'grant insert, select, update, delete on ' || _table_name || ' to public';
         execute 'grant execute on function roles_have_common_group(text, text) to public';
         execute 'create policy row_ownership_insert_policy on ' || _table_name || ' for insert with check (true)';
@@ -156,11 +157,69 @@ create or replace function parse_generic_table_def(definition json)
     end;
 $$ language plpgsql;
 
--- func: create role
--- func: create group
--- func: add member
--- func: remove member
--- func: delete all my data, put in audit table
+-- do hashing here or in the app?
+drop function if exists user_create(text);
+create or replace function user_create(_id text)
+    returns text as $$
+    begin
+        execute 'create role ' || _id;
+        execute 'grant ' || _id || ' to authenticator';
+        return 'created user ' || _id;
+    end;
+$$ language plpgsql;
+
+drop function if exists group_create(text);
+create or replace function group_create(group_name text)
+    returns text as $$
+    begin
+        execute 'create role ' || group_name;
+        return 'created group ' || group_name;
+    end;
+$$ language plpgsql;
+
+-- '{"memberships": [{"user":"role1", "group":"group4"}, {"user":"role2", "group":"group4"}]}'::json
+drop function if exists group_add_members(json);
+create or replace function group_add_members(members json)
+    returns text as $$
+    declare _i json;
+    declare _user text;
+    declare _group text;
+    begin
+        for _i in select * from json_array_elements(members->'memberships') loop
+            select _i->>'user' into _user;
+            select _i->>'group' into _group;
+            execute 'grant ' || _user || ' to ' || _group;
+        end loop;
+    return 'added members to groups';
+    end;
+$$ language plpgsql;
+
+-- '{"memberships": [{"user":"role1", "group":"group4"}]}'::json
+drop function if exists group_remove_members(json);
+create or replace function group_remove_members(members json)
+    returns text as $$
+    declare _i json;
+    declare _user text;
+    declare _group text;
+    begin
+        for _i in select * from json_array_elements(members->'memberships') loop
+            select _i->>'user' into _user;
+            select _i->>'group' into _group;
+            execute 'revoke ' || _user || ' from ' || _group;
+        end loop;
+    return 'removed members from groups';
+    end;
+$$ language plpgsql;
+
+drop function if exists user_delete_data();
+create or replace function user_delete_data()
+    returns text as $$
+    begin
+        -- for all tables
+            -- delete from table
+            -- update autdit table
+    end;
+$$ language plpgsql;
 
 ----------------
 -- Use the model
