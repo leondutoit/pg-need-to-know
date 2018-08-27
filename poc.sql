@@ -164,6 +164,8 @@ create or replace function user_create(_id text)
     begin
         execute 'create role ' || _id;
         execute 'grant ' || _id || ' to authenticator';
+        execute 'grant select on group_memberships to ' || _id;
+        execute 'grant execute on function roles_have_common_group(text, text) to ' || _id;
         return 'created user ' || _id;
     end;
 $$ language plpgsql;
@@ -220,6 +222,10 @@ create or replace function user_delete_data()
             -- update autdit table
     end;
 $$ language plpgsql;
+
+-- TODO
+-- user delete (revoke select on group_memberships, revoke all privileges on <table> from role)
+-- group delete (should have no members, then revoke all privileges on <table> from role))
 
 ----------------
 -- Use the model
