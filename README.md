@@ -6,19 +6,15 @@ A useful Mandatory Access Control setup for PostgreSQL.
 - Data owners are the only ones who can operate on their data by default (select, update, delete)
 - Read-only access can be granted to others based on common group membership
 
-## Features
+## Creating a REST API using postgrest
 
-- create tables `table_create` with MAC policies
-- register data owners `user_create` before data collection
-- create groups `group_create`
-- add mmembers to groups `group_add_members`
-- remove members from groups `group_remove_members`, using `revoke`
-- delete groups `group_delete`
-- user deletes their own data `user_delete_data`
-
-## Creating a REST API
-
-Use postgrest.
+- `/rpc/table_create`
+- `/rpc/user_create`
+- `/rpc/group_create`
+- `/rpc/group_add_members`
+- `/rpc/group_remove_members`
+- `/rpc/group_delete`
+- `/rpc/user_delete_data`
 
 ## LICENSE
 
