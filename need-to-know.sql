@@ -3,9 +3,9 @@
 
 -- login as the superuser
 -- construct a membership view, grant access to it
-create role authenticator;
-grant authenticator to tsd_backend_utv_user;
-\du
+--create role authenticator;
+--grant authenticator to tsd_backend_utv_user;
+--\du
 
 ------------
 -- functions
@@ -21,7 +21,6 @@ select _group, _role from
 alter view group_memberships owner to authenticator;
 grant select on pg_authid to authenticator, tsd_backend_utv_user;
 grant select on group_memberships to authenticator, tsd_backend_utv_user;
-\d
 
 set role tsd_backend_utv_user;
 
@@ -37,6 +36,39 @@ create or replace function roles_have_common_group(_current_role text, _current_
         where _group != 'authenticator')
     != 0 into _res;
     return _res;
+    end;
+$$ language plpgsql;
+
+drop function if exists sql_type_from_generic_type(text);
+create or replace function sql_type_from_generic_type(_type text)
+    returns text as $$
+    begin
+        case
+            -- even though redundant this prevent SQL injection
+            when _type = 'int' then return 'int';
+            when _type = 'text' then return 'text';
+            when _type = 'json' then return 'json';
+            when _type = 'real' then return 'real';
+            when _type = 'text[]' then return 'text[]';
+            when _type = 'date' then return 'date';
+            when _type = 'timestamp' then return 'timestamp';
+            when _type = 'timestamptz' then return 'timestamptz';
+            when _type = 'int[]' then return 'int[]';
+            when _type = 'boolean' then return 'boolean';
+            when _type = 'cidr' then return 'cidr';
+            when _type = 'inet' then return 'inet';
+            when _type = 'jsonb' then return 'jsonb';
+            when _type = 'interval' then return 'interval';
+            when _type = 'macaddr' then return 'macaddr';
+            when _type = 'decimal' then return 'decimal';
+            when _type = 'serial' then return 'serial';
+            when _type = 'time' then return 'time';
+            when _type = 'timetz' then return 'timetz';
+            when _type = 'xml' then return 'xml';
+            when _type = 'uuid' then return 'uuid';
+            when _type = 'bytea' then return 'bytea';
+            else raise exception using message = 'Unrecognised data type';
+        end case;
     end;
 $$ language plpgsql;
 
@@ -159,14 +191,14 @@ $$ language plpgsql;
 
 -- do hashing here or in the app?
 drop function if exists user_create(text);
-create or replace function user_create(_id text)
+create or replace function user_create(user_name text)
     returns text as $$
     begin
-        execute 'create role ' || _id;
-        execute 'grant ' || _id || ' to authenticator';
-        execute 'grant select on group_memberships to ' || _id;
-        execute 'grant execute on function roles_have_common_group(text, text) to ' || _id;
-        return 'created user ' || _id;
+        execute 'create role ' || user_name;
+        execute 'grant ' || user_name || ' to authenticator';
+        execute 'grant select on group_memberships to ' || user_name;
+        execute 'grant execute on function roles_have_common_group(text, text) to ' || user_name;
+        return 'created user ' || user_name;
     end;
 $$ language plpgsql;
 
@@ -196,6 +228,9 @@ create or replace function group_add_members(members json)
     end;
 $$ language plpgsql;
 
+-- group_list_members
+
+
 -- '{"memberships": [{"user":"role1", "group":"group4"}]}'::json
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
@@ -224,5 +259,5 @@ create or replace function user_delete_data()
 $$ language plpgsql;
 
 -- TODO
--- user delete (revoke select on group_memberships, revoke all privileges on <table> from role)
+-- user delete (revoke select on group_memberships, revoke execute on function roles_have_common_group(text,text), revoke all privileges on <table> from role)
 -- group delete (should have no members, then revoke all privileges on <table> from role))
