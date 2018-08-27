@@ -30,16 +30,20 @@ insert into people (name, age) values ('Faye Thompson', 58);
 set role authenticator;
 
 -- `/rpc/group_add_members`
--- limit to admin_user
-select group_add_members('{"memberships": [{"user":"gustav", "group":"project_members"}, {"user":"hannah", "group":"project_members"}, {"user":"faye", "group":"project_members"}]}'::json);
+-- limit to admin_user, should fail for others
+select group_add_members('{"memberships": [{"user":"gustav", "group":"project_members"}, {"user":"hannah", "group":"project_members"}]}'::json);
 \du
 
 set role gustav;
-select name, age from people;
+select name, age from people; -- can see hannah's data
 set role authenticator;
 
 set role hannah;
-select name, age from people;
+select name, age from people; -- can see gustav's data
+set role authenticator;
+
+set role faye;
+select name, age from people; -- can only see own data
 set role authenticator;
 
 -- `/rpc/group_list_members`
@@ -49,11 +53,11 @@ set role authenticator;
 select group_remove_members('{"memberships": [{"user":"gustav", "group":"project_members"}]}'::json);
 
 set role gustav;
-select name, age from people;
+select name, age from people; -- can now only see own data
 set role authenticator;
 
 set role hannah;
-select name, age from people;
+select name, age from people; -- can only see own data, only hannah left in group
 set role authenticator;
 
 

@@ -3,7 +3,9 @@
 
 -- login as the superuser
 -- construct a membership view, grant access to it
---create role authenticator;
+create role authenticator createrole;
+-- the createrole privilege should be removed
+-- and onlt granted to admin_user role
 --grant authenticator to tsd_backend_utv_user;
 --\du
 
