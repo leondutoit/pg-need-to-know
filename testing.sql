@@ -49,9 +49,12 @@ set role authenticator;
 -- `/rpc/group_list`
 set role admin_user;
 select group_list();
+set role authenticator;
 
 -- `/rpc/group_list_members`
-
+set role admin_user;
+select group_list_members('project_members');
+set role authenticator;
 
 -- `/rpc/group_remove_members`
 select group_remove_members('{"memberships": [{"user":"gustav", "group":"project_members"}]}'::json);
@@ -64,8 +67,12 @@ set role hannah;
 select name, age from people; -- can only see own data, only hannah left in group
 set role authenticator;
 
-
 -- `/rpc/user_delete_data`
+set role gustav;
+select user_delete_data(); -- TODO: create another table so can see delete from many tables
+select name, age from people;
+set role authenticator;
+table user_data_deletion_requests;
 
 -- `/rpc/user_delete`
 
