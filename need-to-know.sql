@@ -1,17 +1,14 @@
 
--- Proof of Concept
+-- can consider adding functionality using:
+-- http://postgrest.org/en/v5.0/api.html#accessing-request-headers-cookies
+-- http://postgrest.org/en/v5.0/api.html#setting-response-headers
 
--- login as the superuser
--- construct a membership view, grant access to it
-create role authenticator createrole;
--- the createrole privilege should be removed
--- and onlt granted to admin_user role
---grant authenticator to tsd_backend_utv_user;
---\du
+-- as the superuser
 
-------------
--- functions
-------------
+create role authenticator createrole; -- add noinheret?
+grant authenticator to tsd_backend_utv_user;
+create role admin_user; -- project admins
+grant admin_user to authenticator;
 
 create or replace view group_memberships as
 select _group, _role from
@@ -21,10 +18,10 @@ select _group, _role from
     join (select rolname as _role, oid from pg_authid)d on c.roleid = d.oid;
 -- give the db owner ownership of this view
 alter view group_memberships owner to authenticator;
-grant select on pg_authid to authenticator, tsd_backend_utv_user;
-grant select on group_memberships to authenticator, tsd_backend_utv_user;
+grant select on pg_authid to authenticator, tsd_backend_utv_user, admin_user;
+grant select on group_memberships to authenticator, tsd_backend_utv_user, admin_user;
 
-set role tsd_backend_utv_user;
+set role tsd_backend_utv_user; --dbowner
 
 create or replace function roles_have_common_group(_current_role text, _current_row_owner text)
     returns boolean as $$
@@ -40,6 +37,7 @@ create or replace function roles_have_common_group(_current_role text, _current_
     return _res;
     end;
 $$ language plpgsql;
+grant execute on function roles_have_common_group(text, text) to public;
 
 drop function if exists sql_type_from_generic_type(text);
 create or replace function sql_type_from_generic_type(_type text)
@@ -73,6 +71,7 @@ create or replace function sql_type_from_generic_type(_type text)
         end case;
     end;
 $$ language plpgsql;
+grant execute on function sql_type_from_generic_type(text) to admin_user;
 
 drop function if exists table_create(json, text, int);
 create or replace function table_create(definition json, type text, form_id int default 0)
@@ -132,10 +131,9 @@ create or replace function parse_mac_table_def(definition json)
             end;
         end loop;
         execute 'alter table ' || _table_name || ' owner to authenticator';
-        execute 'alter table ' || _table_name || ' enable row level security';
+        execute 'alter table ' || _table_name || ' enable row level security'; -- force, so authenticator cannot bypass RLS
         -- eventually move the select grant up and grant it on all user defined rows only
         execute 'grant insert, select, update, delete on ' || _table_name || ' to public';
-        execute 'grant execute on function roles_have_common_group(text, text) to public';
         execute 'create policy row_ownership_insert_policy on ' || _table_name || ' for insert with check (true)';
         execute 'create policy row_ownership_select_policy on ' || _table_name || ' for select using (row_owner = current_user)';
         execute 'create policy row_ownership_delete_policy on ' || _table_name || ' for delete using (row_owner = current_user)';
@@ -213,7 +211,13 @@ create or replace function group_create(group_name text)
     end;
 $$ language plpgsql;
 
--- '{"memberships": [{"user":"role1", "group":"group4"}, {"user":"role2", "group":"group4"}]}'::json
+drop table user_defined_groups;
+create table if not exists user_defined_groups(
+    group_name text not null,
+    user_name text not null);
+grant select, insert, delete on user_defined_groups to admin_user;
+grant select on user_defined_groups to public;
+
 drop function if exists group_add_members(json);
 create or replace function group_add_members(members json)
     returns text as $$
@@ -225,15 +229,26 @@ create or replace function group_add_members(members json)
             select _i->>'user' into _user;
             select _i->>'group' into _group;
             execute 'grant ' || _user || ' to ' || _group;
+            insert into user_defined_groups (group_name, user_name) values (_group, _user);
         end loop;
     return 'added members to groups';
     end;
 $$ language plpgsql;
 
+-- group_list
+drop function if exists group_list();
+create or replace function group_list()
+    returns setof user_defined_groups as $$
+    begin
+        return query select group_name, user_name from user_defined_groups;
+    end;
+$$ language plpgsql;
+
+
 -- group_list_members
 
 
--- '{"memberships": [{"user":"role1", "group":"group4"}]}'::json
+
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
     returns text as $$
@@ -249,6 +264,8 @@ create or replace function group_remove_members(members json)
     return 'removed members from groups';
     end;
 $$ language plpgsql;
+
+-- audit table
 
 drop function if exists user_delete_data();
 create or replace function user_delete_data()
