@@ -13,11 +13,12 @@ A useful Mandatory Access Control setup for PostgreSQL.
 - `/rpc/user_create`
 - `/rpc/group_create`
 - `/rpc/group_add_members`
+- `/rpc/group_list`
 - `/rpc/group_list_members`
 - `/rpc/group_remove_members`
-- `/rpc/user_delete`
 - `/rpc/group_delete`
 - `/rpc/user_delete_data`
+- `/rpc/user_delete`
 
 ## LICENSE
 
