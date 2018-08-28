@@ -46,6 +46,10 @@ set role faye;
 select name, age from people; -- can only see own data
 set role authenticator;
 
+-- `/rpc/group_list`
+set role admin_user;
+select group_list();
+
 -- `/rpc/group_list_members`
 
 
