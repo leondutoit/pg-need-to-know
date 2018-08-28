@@ -249,7 +249,6 @@ $$ language plpgsql;
 drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
     returns table (user_name text) as $$
-    declare
     begin
         return query select u.user_name from user_defined_groups u where u.group_name = $1;
     end;
@@ -296,6 +295,38 @@ create or replace function user_delete_data()
 $$ language plpgsql;
 grant execute on function user_delete_data() to public;
 
--- TODO
--- user delete (revoke select on group_memberships, revoke execute on function roles_have_common_group(text,text), revoke all privileges on <table> from role)
--- group delete (should have no members, then revoke all privileges on <table> from role))
+-- admin_user only
+-- user delete
+drop function if exists user_delete(text);
+create or replace function user_delete(user_name text)
+    returns text as $$
+    declare _table text;
+    declare _numrows int;
+    decalre _g text;
+    begin
+        -- check if the user has data in the db, exit if true
+        for _table in select table_name from information_schema.tables where table_schema = 'public' and table_type != 'VIEW' loop
+            begin
+                execute 'select count(1) from ' || _table || ' where row_owner = ' || quote_literal(user_name) into _numrows;
+                if _numrows > 0 then
+                    raise exception 'Cannot delete user, DB has data belonging to %', user_name;
+                end if;
+            exception
+                when undefined_column then raise notice '% has no user data', _table;
+            end;
+        end loop;
+        -- remove user from groups (TODO: admin_user should be able to do this)
+        for _g in select _group from group_memberships where _role = user_name loop
+            execute 'revoke ' || user_name || ' from ' || _g;
+        end loop;
+        -- revoke table privileges using information_schema.role_table_grants
+        -- revoke function privileges using information_schema.role_routine_grants
+        return 'user deleted';
+    end;
+$$ language plpgsql;
+
+
+
+-- group delete
+    -- if no members, then delete, otherwise raise exception
+

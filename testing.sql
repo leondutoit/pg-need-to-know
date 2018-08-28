@@ -75,5 +75,13 @@ set role authenticator;
 table user_data_deletion_requests;
 
 -- `/rpc/user_delete`
+set role admin_user;
+select user_delete('hannah'); -- should fail, because data still present
+set role authenticator;
+set role hannah;
+select user_delete_data();
+set role authenticator;
+set role admin_user;
+select user_delete('hannah');
 
 -- `/rpc/group_delete`
