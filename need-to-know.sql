@@ -2,7 +2,8 @@
 -- can consider adding functionality using:
 -- http://postgrest.org/en/v5.0/api.html#accessing-request-headers-cookies
 -- http://postgrest.org/en/v5.0/api.html#setting-response-headers
-
+-- helpful reference
+-- https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 -- as the superuser
 
 create role authenticator createrole; -- add noinheret?
@@ -244,10 +245,15 @@ create or replace function group_list()
     end;
 $$ language plpgsql;
 
-
 -- group_list_members
-
-
+drop function if exists group_list_members(text);
+create or replace function group_list_members(group_name text)
+    returns table (user_name text) as $$
+    declare
+    begin
+        return query select u.user_name from user_defined_groups u where u.group_name = $1;
+    end;
+$$ language plpgsql;
 
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
@@ -265,17 +271,30 @@ create or replace function group_remove_members(members json)
     end;
 $$ language plpgsql;
 
--- audit table
+drop table user_data_deletion_requests;
+create table if not exists user_data_deletion_requests(
+    user_name text not null,
+    request_date timestamptz not null
+);
+grant insert on user_data_deletion_requests to public;
 
 drop function if exists user_delete_data();
 create or replace function user_delete_data()
     returns text as $$
+    declare _table text;
     begin
-        -- for all tables
-            -- delete from table
-            -- update autdit table
+        for _table in select table_name from information_schema.tables where table_schema = 'public' and table_type != 'VIEW' loop
+            begin
+                execute 'delete from '||  _table;
+            exception
+                when insufficient_privilege then raise notice 'permission denied on %', _table;
+            end;
+        end loop;
+        insert into user_data_deletion_requests (user_name, request_date) values (current_user, current_timestamp);
+        return 'all data deleted';
     end;
 $$ language plpgsql;
+grant execute on function user_delete_data() to public;
 
 -- TODO
 -- user delete (revoke select on group_memberships, revoke execute on function roles_have_common_group(text,text), revoke all privileges on <table> from role)
