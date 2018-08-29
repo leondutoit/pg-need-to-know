@@ -53,13 +53,13 @@ create or replace function roles_have_common_group_and_is_data_user(_current_rol
         if _type != 'data_user'
             then return false;
         end if;
-        select (
+        execute format('select (
             select count(_group) from (
-                select _group from group_memberships where _role = _current_role
+                select _group from group_memberships where _role = $1
                 intersect
-                select _group from group_memberships where _role = _current_row_owner)a
-            where _group != 'authenticator')
-        != 0 into _res;
+                select _group from group_memberships where _role = $2)a
+            where _group != $3)
+        != 0') into _res using trusted_current_role, trusted_current_row_owner, 'authenticator';
         return _res;
     end;
 $$ language plpgsql;
