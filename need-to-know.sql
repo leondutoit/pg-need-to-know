@@ -38,8 +38,8 @@ create or replace function roles_have_common_group_and_is_data_user(_current_rol
     declare _type text;
     begin
     execute 'select _user_type from user_types where _user_name = ' || quote_literal(_current_role) into _type;
-    if _type != 'data_user' then
-        raise exception 'access denied';
+    if _type != 'data_user'
+        then return false;
     end if;
     select (
         select count(_group) from (
@@ -349,5 +349,3 @@ create or replace function group_delete(group_name text)
         return 'group deleted';
     end;
 $$ language plpgsql;
-
-
