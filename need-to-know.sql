@@ -11,6 +11,7 @@ grant authenticator to tsd_backend_utv_user;
 create role admin_user; -- project admins
 grant admin_user to authenticator;
 
+
 create or replace view group_memberships as
 select _group, _role from
     (select * from
@@ -22,7 +23,9 @@ alter view group_memberships owner to authenticator;
 grant select on pg_authid to authenticator, tsd_backend_utv_user, admin_user;
 grant select on group_memberships to authenticator, tsd_backend_utv_user, admin_user;
 
+
 set role tsd_backend_utv_user; --dbowner
+
 
 create or replace function roles_have_common_group(_current_role text, _current_row_owner text)
     returns boolean as $$
@@ -39,6 +42,7 @@ create or replace function roles_have_common_group(_current_role text, _current_
     end;
 $$ language plpgsql;
 grant execute on function roles_have_common_group(text, text) to public;
+
 
 drop function if exists sql_type_from_generic_type(text);
 create or replace function sql_type_from_generic_type(_type text)
@@ -74,6 +78,7 @@ create or replace function sql_type_from_generic_type(_type text)
 $$ language plpgsql;
 grant execute on function sql_type_from_generic_type(text) to admin_user;
 
+
 drop function if exists table_create(json, text, int);
 create or replace function table_create(definition json, type text, form_id int default 0)
     returns text as $$
@@ -90,6 +95,7 @@ create or replace function table_create(definition json, type text, form_id int 
         end if;
     end;
 $$ language plpgsql;
+
 
 drop function if exists parse_mac_table_def(json);
 create or replace function parse_mac_table_def(definition json)
@@ -148,49 +154,19 @@ $$ language plpgsql;
 drop function if exists parse_generic_table_def(json);
 create or replace function parse_generic_table_def(definition json)
     returns text as $$
-    declare _table_name text;
-    declare _columns json;
-    declare _colname text;
-    declare _dtype text;
-    declare _i json;
-    declare _pk boolean;
-    declare _nn boolean;
     begin
-        _columns := definition->'columns';
-        _table_name := definition->>'table_name';
-        execute 'create table if not exists ' || _table_name || '()';
-        for _i in select * from json_array_elements(_columns) loop
-            select sql_type_from_generic_type(_i->>'type') into _dtype;
-            select _i->>'name' into _colname;
-            begin
-                -- can use if not exists when postgres 9.6 is running in tsd
-                execute 'alter table ' || _table_name || ' add column ' || _colname || ' ' || _dtype;
-            exception
-                when duplicate_column then raise notice 'column % already exists', _colname;
-            end;
-            begin
-                select _i->'constraints'->'primary_key' into _pk;
-                if _pk is not null then
-                    begin
-                        execute 'alter table ' || _table_name || ' add primary key ' || '(' || _colname || ')';
-                    exception
-                        when invalid_table_definition then raise notice 'primary key already exists';
-                    end;
-                end if;
-            end;
-            begin
-                select _i->'constraints'->'not_null' into _nn;
-                if _nn is not null then
-                    execute 'alter table ' || _table_name || ' alter column ' || _colname || ' set not null';
-                end if;
-            end;
-        end loop;
-        execute 'alter table ' || _table_name || ' owner to import_user';
-        return 'Success';
+        return 'Not implemented - did nothing.';
     end;
 $$ language plpgsql;
 
--- do hashing here or in the app?
+
+drop table if exist user_types(
+    user_name text not null,
+    user_type text not null);
+alter table user_types owner to authenticator;
+grant insert, select, delete on user_types to public; -- eventually only app_user, admin_user
+
+
 drop function if exists user_create(text);
 create or replace function user_create(user_name text)
     returns text as $$
@@ -202,6 +178,7 @@ create or replace function user_create(user_name text)
         return 'created user ' || user_name;
     end;
 $$ language plpgsql;
+
 
 drop function if exists group_create(text);
 create or replace function group_create(group_name text)
@@ -218,6 +195,7 @@ create table if not exists user_defined_groups(
     user_name text not null);
 grant select, insert, delete on user_defined_groups to admin_user;
 grant select on user_defined_groups to public;
+
 
 drop function if exists group_add_members(json);
 create or replace function group_add_members(members json)
@@ -236,7 +214,7 @@ create or replace function group_add_members(members json)
     end;
 $$ language plpgsql;
 
--- group_list
+
 drop function if exists group_list();
 create or replace function group_list()
     returns setof user_defined_groups as $$
@@ -245,7 +223,7 @@ create or replace function group_list()
     end;
 $$ language plpgsql;
 
--- group_list_members
+
 drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
     returns table (user_name text) as $$
@@ -253,6 +231,7 @@ create or replace function group_list_members(group_name text)
         return query select u.user_name from user_defined_groups u where u.group_name = $1;
     end;
 $$ language plpgsql;
+
 
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
@@ -270,12 +249,14 @@ create or replace function group_remove_members(members json)
     end;
 $$ language plpgsql;
 
+
 drop table user_data_deletion_requests;
 create table if not exists user_data_deletion_requests(
     user_name text not null,
     request_date timestamptz not null
 );
 grant insert on user_data_deletion_requests to public;
+
 
 drop function if exists user_delete_data();
 create or replace function user_delete_data()
@@ -295,38 +276,47 @@ create or replace function user_delete_data()
 $$ language plpgsql;
 grant execute on function user_delete_data() to public;
 
--- admin_user only
--- user delete
+
 drop function if exists user_delete(text);
 create or replace function user_delete(user_name text)
     returns text as $$
     declare _table text;
     declare _numrows int;
-    decalre _g text;
+    declare _g text;
     begin
-        -- check if the user has data in the db, exit if true
         for _table in select table_name from information_schema.tables where table_schema = 'public' and table_type != 'VIEW' loop
             begin
                 execute 'select count(1) from ' || _table || ' where row_owner = ' || quote_literal(user_name) into _numrows;
                 if _numrows > 0 then
-                    raise exception 'Cannot delete user, DB has data belonging to %', user_name;
+                    raise exception 'Cannot delete user, DB has data belonging to % in table %', user_name, _table;
                 end if;
             exception
                 when undefined_column then raise notice '% has no user data', _table;
             end;
         end loop;
-        -- remove user from groups (TODO: admin_user should be able to do this)
         for _g in select _group from group_memberships where _role = user_name loop
             execute 'revoke ' || user_name || ' from ' || _g;
         end loop;
-        -- revoke table privileges using information_schema.role_table_grants
-        -- revoke function privileges using information_schema.role_routine_grants
+        for _table in select table_name from information_schema.role_table_grants where grantee = quote_literal(user_name) loop
+            begin
+                execute 'revoke all privileges on ' || _table ' from ' || user_name;
+            end;
+        end loop;
+        execute 'revoke execute on function roles_have_common_group(text, text) from ' || user_name;
+        execute 'drop role ' || user_name;
         return 'user deleted';
     end;
 $$ language plpgsql;
+grant execute on function user_delete(text) to public; -- eventually only admin_user
 
 
+drop function if exists group_delete(text);
+create or replace function group_delete(group_name text)
+    returns text as $$
+        -- if no members, then delete, otherwise raise exception
+    begin
+        return 'deleted %', group_name;
+    end;
+$$ language plpgsql;
 
--- group delete
-    -- if no members, then delete, otherwise raise exception
 
