@@ -1,4 +1,8 @@
 
+\echo
+\echo 'TESTING'
+\echo
+
 -- `/rpc/table_create`
 set role authenticator;
 set role app_user;
@@ -70,6 +74,7 @@ set role authenticator;
 -- `/rpc/group_remove_members`
 set role admin_user;
 select group_remove_members('{"memberships": [{"user":"gustav", "group":"project_group"}]}'::json);
+set role authenticator;
 
 set role project_user;
 select name, age from people; -- can only see hannah's data
@@ -95,7 +100,11 @@ set role authenticator;
 table user_data_deletion_requests;
 
 -- `/rpc/user_delete`
+set role hannah;
+select name, age from people;
+set role authenticator;
 set role admin_user;
+\echo 'deleting hannah as admin user - should not work'
 select user_delete('hannah'); -- should fail, because data still present
 set role authenticator;
 set role hannah;
@@ -107,15 +116,31 @@ select user_delete('hannah');
 -- `/rpc/group_delete`
 
 -- cleanup state
-set role gustav;
-select user_delete_data();
+set role authenticator;
+set role admin_user;
+select user_delete('gustav');
 set role authenticator;
 
 set role faye;
 select user_delete_data();
 set role authenticator;
 
--- delete groups
+set role admin_user;
+select user_delete('faye');
+select user_delete('project_user');
+set role authenticator;
 
+set role admin_user;
+select group_delete('project_group');
+set role authenticator;
 
+set role app_user;
+drop table people;
+drop table people2;
+
+\echo
+\echo 'DB state after cleanup'
+\echo '======================'
+\d
+\du
 

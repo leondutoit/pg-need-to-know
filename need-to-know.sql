@@ -298,6 +298,7 @@ create table if not exists user_data_deletion_requests(
     user_name text not null,
     request_date timestamptz not null
 );
+alter table user_data_deletion_requests owner to admin_user;
 grant insert on user_data_deletion_requests to public;
 
 
@@ -320,6 +321,9 @@ $$ language plpgsql;
 grant execute on function user_delete_data() to public;
 
 -- review the logic here, not sure it works
+-- problem is the admin_user does not have access to the data in the table
+-- and so cannot figure out that there is data at all
+-- since user created tables are owned by the app_user
 drop function if exists user_delete(text);
 create or replace function user_delete(user_name text)
     returns text as $$
@@ -327,8 +331,11 @@ create or replace function user_delete(user_name text)
     declare _numrows int;
     declare _g text;
     begin
+        -- check that user_name is user defined and not an internal role
         for _table in select table_name from information_schema.tables where table_schema = 'public' and table_type != 'VIEW' loop
             begin
+                -- this has to be checked by the role we are going to delete
+                -- since they have access to their own data
                 execute 'select count(1) from ' || _table || ' where row_owner = ' || quote_literal(user_name) into _numrows;
                 if _numrows > 0 then
                     raise exception 'Cannot delete user, DB has data belonging to % in table %', user_name, _table;
