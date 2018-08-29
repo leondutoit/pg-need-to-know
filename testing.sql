@@ -105,3 +105,17 @@ set role admin_user;
 select user_delete('hannah');
 
 -- `/rpc/group_delete`
+
+-- cleanup state
+set role gustav;
+select user_delete_data();
+set role authenticator;
+
+set role faye;
+select user_delete_data();
+set role authenticator;
+
+-- delete groups
+
+
+
