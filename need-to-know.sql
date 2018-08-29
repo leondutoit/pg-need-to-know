@@ -144,6 +144,7 @@ create or replace function parse_mac_table_def(definition json)
         execute 'create policy row_ownership_insert_policy on ' || _table_name || ' for insert with check (true)';
         execute 'create policy row_ownership_select_policy on ' || _table_name || ' for select using (row_owner = current_user)';
         execute 'create policy row_ownership_delete_policy on ' || _table_name || ' for delete using (row_owner = current_user)';
+        -- todo: update the group policy with addition requirement that the current_role's user type = data_user not data_owner
         execute 'create policy row_ownership_select_group_policy on ' || _table_name || ' for select using (roles_have_common_group(current_user::text, row_owner))';
         execute 'create policy row_owbership_update_policy on ' || _table_name || ' for update using (row_owner = current_user) with check (row_owner = current_user)';
         return 'Success';
@@ -182,11 +183,11 @@ create or replace function user_create(user_name text, user_type text)
 $$ language plpgsql;
 
 
--- TODO: create a view which joins this to group_memberships
--- so it reflects the true DB state, not just our accounting system
+
 drop table if exists user_defined_groups;
-create table if not exists user_defined_groups(group_name text);
+create table if not exists user_defined_groups(group_name text unique);
 grant insert, select, delete on user_defined_groups to public; --eventually admin
+
 
 drop function if exists group_create(text);
 create or replace function group_create(group_name text)
@@ -199,11 +200,12 @@ create or replace function group_create(group_name text)
 $$ language plpgsql;
 
 
-drop table if exists user_defined_groups_memberships;
-create table if not exists user_defined_groups_memberships(
-    group_name text not null,
-    user_name text not null);
-grant select, insert, delete on user_defined_groups_memberships to admin_user;
+create or replace view user_defined_groups_memberships as
+    select group_name, _role member from
+        (select group_name from user_defined_groups)a
+        join
+        (select _group, _role from group_memberships )b
+        on a.group_name = b._group;
 grant select on user_defined_groups_memberships to public;
 
 
@@ -218,7 +220,6 @@ create or replace function group_add_members(members json)
             select _i->>'user' into _user;
             select _i->>'group' into _group;
             execute 'grant ' || _user || ' to ' || _group;
-            insert into user_defined_groups_memberships (group_name, user_name) values (_group, _user);
         end loop;
     return 'added members to groups';
     end;
@@ -238,7 +239,8 @@ drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
     returns table (user_name text) as $$
     begin
-        return query select u.user_name from user_defined_groups_memberships u where u.group_name = $1;
+        return query select u.user_name from user_defined_groups_memberships u
+                     where u.group_name = quote_literal(group_name);
     end;
 $$ language plpgsql;
 
@@ -254,7 +256,6 @@ create or replace function group_remove_members(members json)
             select _i->>'user' into _user;
             select _i->>'group' into _group;
             execute 'revoke ' || _user || ' from ' || _group;
-            execute 'delete from user_defined_groups_memberships where user_name = ' || quote_literal(_user);
         end loop;
     return 'removed members from groups';
     end;
