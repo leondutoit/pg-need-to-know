@@ -182,21 +182,29 @@ create or replace function user_create(user_name text, user_type text)
 $$ language plpgsql;
 
 
+-- TODO: create a view which joins this to group_memberships
+-- so it reflects the true DB state, not just our accounting system
+drop table if exists user_defined_groups;
+create table if not exists user_defined_groups(group_name text);
+grant insert, select, delete on user_defined_groups to public; --eventually admin
+
 drop function if exists group_create(text);
 create or replace function group_create(group_name text)
     returns text as $$
     begin
         execute 'create role ' || group_name;
+        insert into user_defined_groups values (group_name);
         return 'created group ' || group_name;
     end;
 $$ language plpgsql;
 
-drop table if exists user_defined_groups;
-create table if not exists user_defined_groups(
+
+drop table if exists user_defined_groups_memberships;
+create table if not exists user_defined_groups_memberships(
     group_name text not null,
     user_name text not null);
-grant select, insert, delete on user_defined_groups to admin_user;
-grant select on user_defined_groups to public;
+grant select, insert, delete on user_defined_groups_memberships to admin_user;
+grant select on user_defined_groups_memberships to public;
 
 
 drop function if exists group_add_members(json);
@@ -210,7 +218,7 @@ create or replace function group_add_members(members json)
             select _i->>'user' into _user;
             select _i->>'group' into _group;
             execute 'grant ' || _user || ' to ' || _group;
-            insert into user_defined_groups (group_name, user_name) values (_group, _user);
+            insert into user_defined_groups_memberships (group_name, user_name) values (_group, _user);
         end loop;
     return 'added members to groups';
     end;
@@ -221,7 +229,7 @@ drop function if exists group_list();
 create or replace function group_list()
     returns setof user_defined_groups as $$
     begin
-        return query select group_name, user_name from user_defined_groups;
+        return query select group_name from user_defined_groups;
     end;
 $$ language plpgsql;
 
@@ -230,7 +238,7 @@ drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
     returns table (user_name text) as $$
     begin
-        return query select u.user_name from user_defined_groups u where u.group_name = $1;
+        return query select u.user_name from user_defined_groups_memberships u where u.group_name = $1;
     end;
 $$ language plpgsql;
 
@@ -246,6 +254,7 @@ create or replace function group_remove_members(members json)
             select _i->>'user' into _user;
             select _i->>'group' into _group;
             execute 'revoke ' || _user || ' from ' || _group;
+            execute 'delete from user_defined_groups_memberships where user_name = ' || quote_literal(_user);
         end loop;
     return 'removed members from groups';
     end;
@@ -317,9 +326,15 @@ grant execute on function user_delete(text) to public; -- eventually only admin_
 drop function if exists group_delete(text);
 create or replace function group_delete(group_name text)
     returns text as $$
-        -- if no members, then delete, otherwise raise exception
+    declare _num_members int;
     begin
-        return 'deleted %', group_name;
+        -- ensure group has no members
+        execute 'select count(1) from user_defined_groups_memberships u where u.group_name = ' || quote_literal(group_name) into _num_members;
+        if _num_members > 0 then
+            raise exception 'Cannot delete group %, it has % members', group_name, _num_members;
+        end if;
+        execute 'drop role ' || group_name;
+        return 'group deleted';
     end;
 $$ language plpgsql;
 
