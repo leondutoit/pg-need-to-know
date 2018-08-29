@@ -8,6 +8,7 @@
 
 -- TODO:
 -- review table and view ownership
+-- alter function ownerships to admin_user
 
 
 create role authenticator createrole; -- add noinheret?
@@ -23,7 +24,6 @@ select _group, _role from
         (select rolname as _group, oid from pg_authid)a join
         (select roleid, member from pg_auth_members)b on a.oid = b.member)c
     join (select rolname as _role, oid from pg_authid)d on c.roleid = d.oid;
--- give the db owner ownership of this view
 alter view group_memberships owner to admin_user;
 grant select on pg_authid to authenticator, tsd_backend_utv_user, admin_user;
 grant select on group_memberships to authenticator, tsd_backend_utv_user, admin_user;
@@ -235,6 +235,7 @@ create or replace function group_add_members(members json)
     return 'added members to groups';
     end;
 $$ language plpgsql;
+grant execute on function group_add_members(json) to admin_user;
 
 
 drop function if exists group_list();
@@ -244,16 +245,21 @@ create or replace function group_list()
         return query select group_name from user_defined_groups;
     end;
 $$ language plpgsql;
+grant execute on function group_list() to admin_user;
 
 
 drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
-    returns table (user_name text) as $$
+    returns table (member text) as $$
+    declare _group text;
     begin
-        return query select u.user_name from user_defined_groups_memberships u
-                     where u.group_name = quote_literal(group_name);
+        _group := $1;
+        raise notice '%', _group;
+        return query execute 'select u.member::text from user_defined_groups_memberships u
+                     where u.group_name = ' || quote_literal(_group);
     end;
 $$ language plpgsql;
+grant execute on function group_list_members(text) to admin_user;
 
 
 drop function if exists group_remove_members(json);
@@ -271,6 +277,7 @@ create or replace function group_remove_members(members json)
     return 'removed members from groups';
     end;
 $$ language plpgsql;
+grant execute on function group_remove_members(json) to admin_user;
 
 
 drop table if exists user_data_deletion_requests;
