@@ -1,17 +1,20 @@
 
--- can consider adding functionality using:
--- http://postgrest.org/en/v5.0/api.html#accessing-request-headers-cookies
--- http://postgrest.org/en/v5.0/api.html#setting-response-headers
--- helpful reference
--- https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
+/*
+
+Conventions
+-----------
+For plpgsql functions the following conventions for code are adopted
+- all parameters are re-assigned to internal variables
+- all these variable state explicitly whether the source of the input
+  is trusted or untrusted - this _should_ make it easier to reason
+  about the security of the function; an example of trusted input
+  is the built-in current_user variable, while end-user input is untrusted
+- declarations for variables that are used to store parameters are
+  distinguished from variables used to store internal state by comments
+
+*/
+
 -- as the superuser
-
--- TODO:
--- review table and view ownership
--- alter function ownerships to admin_user
--- review query build statements and input sanitsation
--- see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
-
 
 create role authenticator createrole; -- add noinheret?
 grant authenticator to tsd_backend_utv_user;

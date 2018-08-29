@@ -1,0 +1,11 @@
+-- can consider adding functionality using:
+-- http://postgrest.org/en/v5.0/api.html#accessing-request-headers-cookies
+-- http://postgrest.org/en/v5.0/api.html#setting-response-headers
+-- helpful reference
+-- https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
+
+-- TODO:
+-- review table and view ownership
+-- alter function ownerships to admin_user
+-- review query build statements and input sanitsation
+-- see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
