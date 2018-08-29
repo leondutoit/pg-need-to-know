@@ -36,21 +36,28 @@ set role tsd_backend_utv_user; --dbowner
 drop function if exists roles_have_common_group_and_is_data_user(text, text);
 create or replace function roles_have_common_group_and_is_data_user(_current_role text, _current_row_owner text)
     returns boolean as $$
-    declare _res boolean;
+    -- param vars
+    declare trusted_current_role text;
+    declare trusted_current_row_owner text;
+    -- func vars
     declare _type text;
+    declare _res boolean;
     begin
-    execute 'select _user_type from user_types where _user_name = ' || quote_literal(_current_role) into _type;
-    if _type != 'data_user'
-        then return false;
-    end if;
-    select (
-        select count(_group) from (
-            select _group from group_memberships where _role = _current_role
-            intersect
-            select _group from group_memberships where _role = _current_row_owner)a
-        where _group != 'authenticator')
-    != 0 into _res;
-    return _res;
+        trusted_current_role := $1;
+        trusted_current_row_owner := $2;
+        execute format('select _user_type from user_types where _user_name = $1')
+            into _type using trusted_current_role;
+        if _type != 'data_user'
+            then return false;
+        end if;
+        select (
+            select count(_group) from (
+                select _group from group_memberships where _role = _current_role
+                intersect
+                select _group from group_memberships where _role = _current_row_owner)a
+            where _group != 'authenticator')
+        != 0 into _res;
+        return _res;
     end;
 $$ language plpgsql;
 alter function roles_have_common_group_and_is_data_user owner to admin_user;
@@ -210,10 +217,10 @@ create or replace function group_create(group_name text)
         return 'created group ' || group_name;
     end;
 $$ language plpgsql;
-grant execute on group_create(text) to admin_user;
+grant execute on function group_create(text) to admin_user;
 
 
-drop view user_defined_groups_memberships cascade;
+drop view if exists user_defined_groups_memberships cascade;
 create or replace view user_defined_groups_memberships as
     select group_name, _role member from
         (select group_name from user_defined_groups)a
