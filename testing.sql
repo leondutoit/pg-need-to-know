@@ -75,11 +75,22 @@ set role project_user;
 select name, age from people; -- can only see hannah's data
 set role authenticator;
 
--- check from here
 -- `/rpc/user_delete_data`
+-- create another table first to check multiple table deletes
+set role authenticator;
+set role app_user;
+select table_create('{"table_name": "people2", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac');
+set role authenticator;
+
+-- insert some data
 set role gustav;
-select user_delete_data(); -- TODO: create another table so can see delete from many tables
+insert into people2 (name, age) values ('Gustav de la Croix', 10);
+select name, age from people2;
+
+-- delete
+select user_delete_data();
 select name, age from people;
+select name, age from people2;
 set role authenticator;
 table user_data_deletion_requests;
 

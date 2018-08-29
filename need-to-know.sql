@@ -9,6 +9,8 @@
 -- TODO:
 -- review table and view ownership
 -- alter function ownerships to admin_user
+-- review query build statements and input sanitsation
+-- see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
 
 
 create role authenticator createrole; -- add noinheret?
@@ -186,6 +188,7 @@ create or replace function user_create(user_name text, user_type text)
         execute 'grant ' || user_name || ' to authenticator';
         execute 'grant select on group_memberships to ' || user_name;
         execute 'grant execute on function roles_have_common_group_and_is_data_user(text, text) to ' || user_name;
+        execute 'grant insert on user_data_deletion_requests to ' || user_name;
         insert into user_types (_user_name, _user_type) values (user_name, user_type);
         return 'created user ' || user_name;
     end;
@@ -306,7 +309,7 @@ create or replace function user_delete_data()
 $$ language plpgsql;
 grant execute on function user_delete_data() to public;
 
-
+-- review the logic here, not sure it works
 drop function if exists user_delete(text);
 create or replace function user_delete(user_name text)
     returns text as $$
