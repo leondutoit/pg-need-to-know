@@ -160,21 +160,23 @@ create or replace function parse_generic_table_def(definition json)
 $$ language plpgsql;
 
 
-drop table if exist user_types(
-    user_name text not null,
-    user_type text not null);
+drop table user_types;
+create table if not exists user_types(
+    _user_name text not null,
+    _user_type text not null check (_user_type in ('data_owner', 'data_user')));
 alter table user_types owner to authenticator;
 grant insert, select, delete on user_types to public; -- eventually only app_user, admin_user
 
 
-drop function if exists user_create(text);
-create or replace function user_create(user_name text)
+drop function if exists user_create(text, text);
+create or replace function user_create(user_name text, user_type text)
     returns text as $$
     begin
         execute 'create role ' || user_name;
         execute 'grant ' || user_name || ' to authenticator';
         execute 'grant select on group_memberships to ' || user_name;
         execute 'grant execute on function roles_have_common_group(text, text) to ' || user_name;
+        insert into user_types (_user_name, _user_type) values (user_name, user_type);
         return 'created user ' || user_name;
     end;
 $$ language plpgsql;
@@ -302,7 +304,9 @@ create or replace function user_delete(user_name text)
                 execute 'revoke all privileges on ' || _table ' from ' || user_name;
             end;
         end loop;
+        execute 'revoke all privileges on group_memberships from ' || user_name;
         execute 'revoke execute on function roles_have_common_group(text, text) from ' || user_name;
+        execute 'delete from user_types where _user_name = ' || quote_literal(user_name);
         execute 'drop role ' || user_name;
         return 'user deleted';
     end;
