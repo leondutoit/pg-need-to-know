@@ -1,16 +1,24 @@
 
 -- `/rpc/table_create`
+set role authenticator;
+set role app_user;
 select table_create('{"table_name": "people", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac');
 \d+ people
+set role authenticator;
 
 -- `/rpc/user_create`
-select user_create('gustav');
-select user_create('hannah');
-select user_create('faye');
+set role admin_user;
+select user_create('gustav', 'data_owner');
+select user_create('hannah', 'data_owner');
+select user_create('faye', 'data_owner');
+select user_create('project_user', 'data_user');
 \du
+table user_types;
+set role authenticator;
 
 -- `/rpc/group_create`
-select group_create('project_members');
+set role admin_user;
+select group_create('project_group');
 \du
 
 set role gustav;

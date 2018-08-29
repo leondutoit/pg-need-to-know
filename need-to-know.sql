@@ -6,11 +6,16 @@
 -- https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 -- as the superuser
 
+-- TODO:
+-- review table and view ownership
+
+
 create role authenticator createrole; -- add noinheret?
 grant authenticator to tsd_backend_utv_user;
-create role admin_user; -- project admins
+create role admin_user createrole; -- project admins
 grant admin_user to authenticator;
-
+create role app_user;
+grant app_user to authenticator;
 
 create or replace view group_memberships as
 select _group, _role from
@@ -19,18 +24,23 @@ select _group, _role from
         (select roleid, member from pg_auth_members)b on a.oid = b.member)c
     join (select rolname as _role, oid from pg_authid)d on c.roleid = d.oid;
 -- give the db owner ownership of this view
-alter view group_memberships owner to authenticator;
+alter view group_memberships owner to admin_user;
 grant select on pg_authid to authenticator, tsd_backend_utv_user, admin_user;
 grant select on group_memberships to authenticator, tsd_backend_utv_user, admin_user;
 
 
 set role tsd_backend_utv_user; --dbowner
 
-drop function if exists roles_have_common_group(text, text);
-create or replace function roles_have_common_group(_current_role text, _current_row_owner text)
+drop function if exists roles_have_common_group_and_is_data_user(text, text);
+create or replace function roles_have_common_group_and_is_data_user(_current_role text, _current_row_owner text)
     returns boolean as $$
     declare _res boolean;
+    declare _type text;
     begin
+    execute 'select _user_type from user_types where _user_name = ' || quote_literal(_current_role) into _type;
+    if _type != 'data_user' then
+        raise exception 'access denied';
+    end if;
     select (
         select count(_group) from (
             select _group from group_memberships where _role = _current_role
@@ -41,7 +51,8 @@ create or replace function roles_have_common_group(_current_role text, _current_
     return _res;
     end;
 $$ language plpgsql;
-grant execute on function roles_have_common_group(text, text) to public;
+alter function roles_have_common_group_and_is_data_user owner to admin_user;
+grant execute on function roles_have_common_group_and_is_data_user(text, text) to public;
 
 
 drop function if exists sql_type_from_generic_type(text);
@@ -95,6 +106,7 @@ create or replace function table_create(definition json, type text, form_id int 
         end if;
     end;
 $$ language plpgsql;
+grant execute on function table_create(json, text, int) to app_user;
 
 
 drop function if exists parse_mac_table_def(json);
@@ -115,7 +127,6 @@ create or replace function parse_mac_table_def(definition json)
             select sql_type_from_generic_type(_i->>'type') into _dtype;
             select _i->>'name' into _colname;
             begin
-                -- can use if not exists when postgres 9.6 is running in tsd
                 execute 'alter table ' || _table_name || ' add column ' || _colname || ' ' || _dtype;
             exception
                 when duplicate_column then raise notice 'column % already exists', _colname;
@@ -137,15 +148,13 @@ create or replace function parse_mac_table_def(definition json)
                 end if;
             end;
         end loop;
-        execute 'alter table ' || _table_name || ' owner to authenticator';
         execute 'alter table ' || _table_name || ' enable row level security'; -- force, so authenticator cannot bypass RLS
-        -- eventually move the select grant up and grant it on all user defined rows only
+        -- TODO: eventually move the select grant up and grant it on all user defined rows only
         execute 'grant insert, select, update, delete on ' || _table_name || ' to public';
         execute 'create policy row_ownership_insert_policy on ' || _table_name || ' for insert with check (true)';
         execute 'create policy row_ownership_select_policy on ' || _table_name || ' for select using (row_owner = current_user)';
         execute 'create policy row_ownership_delete_policy on ' || _table_name || ' for delete using (row_owner = current_user)';
-        -- todo: update the group policy with addition requirement that the current_role's user type = data_user not data_owner
-        execute 'create policy row_ownership_select_group_policy on ' || _table_name || ' for select using (roles_have_common_group(current_user::text, row_owner))';
+        execute 'create policy row_ownership_select_group_policy on ' || _table_name || ' for select using (roles_have_common_group_and_is_data_user(current_user::text, row_owner))';
         execute 'create policy row_owbership_update_policy on ' || _table_name || ' for update using (row_owner = current_user) with check (row_owner = current_user)';
         return 'Success';
     end;
@@ -176,15 +185,15 @@ create or replace function user_create(user_name text, user_type text)
         execute 'create role ' || user_name;
         execute 'grant ' || user_name || ' to authenticator';
         execute 'grant select on group_memberships to ' || user_name;
-        execute 'grant execute on function roles_have_common_group(text, text) to ' || user_name;
+        execute 'grant execute on function roles_have_common_group_and_is_data_user(text, text) to ' || user_name;
         insert into user_types (_user_name, _user_type) values (user_name, user_type);
         return 'created user ' || user_name;
     end;
 $$ language plpgsql;
+grant execute on function user_create(text, text) to admin_user;
 
 
-
-drop table if exists user_defined_groups;
+drop table if exists user_defined_groups cascade;
 create table if not exists user_defined_groups(group_name text unique);
 grant insert, select, delete on user_defined_groups to public; --eventually admin
 
@@ -198,8 +207,10 @@ create or replace function group_create(group_name text)
         return 'created group ' || group_name;
     end;
 $$ language plpgsql;
+grant execute on group_create(text) to admin_user;
 
 
+drop view user_defined_groups_memberships cascade;
 create or replace view user_defined_groups_memberships as
     select group_name, _role member from
         (select group_name from user_defined_groups)a
@@ -315,7 +326,7 @@ create or replace function user_delete(user_name text)
             end;
         end loop;
         execute 'revoke all privileges on group_memberships from ' || user_name;
-        execute 'revoke execute on function roles_have_common_group(text, text) from ' || user_name;
+        execute 'revoke execute on function roles_have_common_group_and_is_data_user(text, text) from ' || user_name;
         execute 'delete from user_types where _user_name = ' || quote_literal(user_name);
         execute 'drop role ' || user_name;
         return 'user deleted';
