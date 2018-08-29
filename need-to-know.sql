@@ -26,7 +26,7 @@ grant select on group_memberships to authenticator, tsd_backend_utv_user, admin_
 
 set role tsd_backend_utv_user; --dbowner
 
-
+drop function if exists roles_have_common_group(text, text);
 create or replace function roles_have_common_group(_current_role text, _current_row_owner text)
     returns boolean as $$
     declare _res boolean;
@@ -160,7 +160,7 @@ create or replace function parse_generic_table_def(definition json)
 $$ language plpgsql;
 
 
-drop table user_types;
+drop table if exists user_types;
 create table if not exists user_types(
     _user_name text not null,
     _user_type text not null check (_user_type in ('data_owner', 'data_user')));
@@ -191,7 +191,7 @@ create or replace function group_create(group_name text)
     end;
 $$ language plpgsql;
 
-drop table user_defined_groups;
+drop table if exists user_defined_groups;
 create table if not exists user_defined_groups(
     group_name text not null,
     user_name text not null);
@@ -252,7 +252,7 @@ create or replace function group_remove_members(members json)
 $$ language plpgsql;
 
 
-drop table user_data_deletion_requests;
+drop table if exists user_data_deletion_requests;
 create table if not exists user_data_deletion_requests(
     user_name text not null,
     request_date timestamptz not null
