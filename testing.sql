@@ -5,7 +5,7 @@
 
 -- `/rpc/table_create`
 set role authenticator;
-set role app_user;
+set role admin_user;
 select table_create('{"table_name": "people", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac');
 \d+ people
 set role authenticator;
@@ -61,6 +61,11 @@ set role project_user;
 select name, age from people; -- can only see gustav and hannah's data
 set role authenticator;
 
+\echo 'check table owner access rights'
+set role admin_user;
+select * from people;
+set role authenticator;
+
 -- `/rpc/group_list`
 set role admin_user;
 select group_list();
@@ -83,7 +88,7 @@ set role authenticator;
 -- `/rpc/user_delete_data`
 -- create another table first to check multiple table deletes
 set role authenticator;
-set role app_user;
+set role admin_user;
 select table_create('{"table_name": "people2", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac');
 set role authenticator;
 
@@ -134,7 +139,7 @@ set role admin_user;
 select group_delete('project_group');
 set role authenticator;
 
-set role app_user;
+set role admin_user;
 drop table people;
 drop table people2;
 

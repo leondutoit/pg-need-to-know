@@ -118,7 +118,7 @@ create or replace function table_create(definition json, type text, form_id int 
         end if;
     end;
 $$ language plpgsql;
-grant execute on function table_create(json, text, int) to app_user;
+grant execute on function table_create(json, text, int) to admin_user;
 
 
 drop function if exists parse_mac_table_def(json);
@@ -160,7 +160,8 @@ create or replace function parse_mac_table_def(definition json)
                 end if;
             end;
         end loop;
-        execute 'alter table ' || _table_name || ' enable row level security'; -- force, so authenticator cannot bypass RLS
+        execute 'alter table ' || _table_name || ' enable row level security';
+        execute 'alter table ' || _table_name || ' force row level security';
         -- TODO: eventually move the select grant up and grant it on all user defined rows only
         execute 'grant insert, select, update, delete on ' || _table_name || ' to public';
         execute 'create policy row_ownership_insert_policy on ' || _table_name || ' for insert with check (true)';
@@ -320,10 +321,7 @@ create or replace function user_delete_data()
 $$ language plpgsql;
 grant execute on function user_delete_data() to public;
 
--- review the logic here, not sure it works
--- problem is the admin_user does not have access to the data in the table
--- and so cannot figure out that there is data at all
--- since user created tables are owned by the app_user
+
 drop function if exists user_delete(text);
 create or replace function user_delete(user_name text)
     returns text as $$
@@ -331,12 +329,17 @@ create or replace function user_delete(user_name text)
     declare _numrows int;
     declare _g text;
     begin
-        -- check that user_name is user defined and not an internal role
+        -- TODO check that user_name is user defined and not an internal role
         for _table in select table_name from information_schema.tables where table_schema = 'public' and table_type != 'VIEW' loop
             begin
-                -- this has to be checked by the role we are going to delete
-                -- since they have access to their own data
+                -- checked by the role we are going to delete, table owner has no access to data
+                set role authenticator;
+                execute 'set role ' || user_name;
+                raise notice '1. --> current role: %', current_user::text;
                 execute 'select count(1) from ' || _table || ' where row_owner = ' || quote_literal(user_name) into _numrows;
+                set role authenticator;
+                set role admin_user;
+                raise notice '2. --> current role: %', current_user::text;
                 if _numrows > 0 then
                     raise exception 'Cannot delete user, DB has data belonging to % in table %', user_name, _table;
                 end if;
