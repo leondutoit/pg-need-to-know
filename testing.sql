@@ -57,12 +57,30 @@ create or replace function test_user_create()
 $$ language plpgsql;
 select test_user_create();
 
-\echo 'overview of users after creation'
+\echo 'overview of roles after user creation'
 \du
 
--- `/rpc/group_create`
-set role admin_user;
-select group_create('project_group');
+\echo 'testing: group_create'
+
+create or replace function test_group_create()
+    returns boolean as $$
+    declare _ans text;
+    begin
+        set role admin_user;
+        select group_create('project_group') into _ans;
+        assert (select count(*) from user_defined_groups) = 1,
+            'problem recording user defined group creation in accounting table';
+        -- check role exists
+        set role authenticator;
+        set role tsd_backend_utv_user; -- db owner
+        set role project_group;
+        set role authenticator;
+        return true;
+    end;
+$$ language plpgsql;
+select test_group_create();
+
+\echo 'overview of roles after group creation'
 \du
 
 set role gustav;
