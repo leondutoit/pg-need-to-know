@@ -312,7 +312,7 @@ create or replace function user_delete_data()
             begin
                 execute 'delete from '||  _table;
             exception
-                when insufficient_privilege then raise notice 'permission denied on %', _table;
+                when insufficient_privilege then raise notice 'cannot delete data from %, permission denied', _table;
             end;
         end loop;
         insert into user_data_deletion_requests (user_name, request_date) values (current_user, current_timestamp);
@@ -355,7 +355,11 @@ create or replace function user_delete(user_name text)
                 execute 'revoke all privileges on ' || _table ' from ' || user_name;
             end;
         end loop;
+        -- ensure correct role
+        set role authenticator;
+        set role admin_user;
         execute 'revoke all privileges on group_memberships from ' || user_name;
+        execute 'revoke all privileges on user_data_deletion_requests from ' || user_name;
         execute 'revoke execute on function roles_have_common_group_and_is_data_user(text, text) from ' || user_name;
         execute 'delete from user_types where _user_name = ' || quote_literal(user_name);
         execute 'drop role ' || user_name;
