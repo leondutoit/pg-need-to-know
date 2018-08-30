@@ -3,12 +3,26 @@
 \echo 'TESTING'
 \echo
 
--- `/rpc/table_create`
-set role authenticator;
-set role admin_user;
-select table_create('{"table_name": "people", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac');
+\echo 'testing: table_create'
+\echo '---------------------'
+
+create or replace function test_table_create()
+    returns boolean as $$
+    declare _ans text;
+    begin
+        set role authenticator;
+        set role admin_user;
+        select table_create('{"table_name": "people", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac') into _ans;
+        assert (select count(1) from people) = 0, 'problem with table creation';
+        set role authenticator;
+        return true;
+    end;
+$$ language plpgsql;
+select test_table_create();
+
+\echo 'overview of new people table and its RLS policies'
+\echo '-------------------------------------------------'
 \d+ people
-set role authenticator;
 
 -- `/rpc/user_create`
 set role admin_user;
