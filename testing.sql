@@ -4,7 +4,6 @@
 \echo
 
 \echo 'testing: table_create'
-\echo '---------------------'
 
 create or replace function test_table_create()
     returns boolean as $$
@@ -21,18 +20,45 @@ $$ language plpgsql;
 select test_table_create();
 
 \echo 'overview of new people table and its RLS policies'
-\echo '-------------------------------------------------'
 \d+ people
 
--- `/rpc/user_create`
-set role admin_user;
-select user_create('gustav', 'data_owner');
-select user_create('hannah', 'data_owner');
-select user_create('faye', 'data_owner');
-select user_create('project_user', 'data_user');
+\echo 'testing: user_create'
+
+create or replace function test_user_create()
+    returns boolean as $$
+    declare _ans text;
+    begin
+        set role admin_user;
+        select user_create('gustav', 'data_owner') into _ans;
+        assert (select _user_type from user_types where _user_name = 'gustav') = 'data_owner',
+            'problem with user creation';
+        select user_create('hannah', 'data_owner') into _ans;
+        assert (select _user_type from user_types where _user_name = 'hannah') = 'data_owner',
+            'problem with user creation';
+        select user_create('faye', 'data_owner') into _ans;
+        assert (select _user_type from user_types where _user_name = 'faye') = 'data_owner',
+            'problem with user creation';
+        select user_create('project_user', 'data_user') into _ans;
+        assert (select _user_type from user_types where _user_name = 'project_user') = 'data_user',
+            'problem with user creation';
+        assert (select count(1) from user_types) = 4,
+            'not all newly created users are recorded in the user_types table';
+        -- test that the rolse actually exist
+        set role gustav;
+        set role authenticator;
+        set role hannah;
+        set role authenticator;
+        set role faye;
+        set role authenticator;
+        set role project_user;
+        set role authenticator;
+        return true;
+    end;
+$$ language plpgsql;
+select test_user_create();
+
+\echo 'overview of users after creation'
 \du
-table user_types;
-set role authenticator;
 
 -- `/rpc/group_create`
 set role admin_user;
