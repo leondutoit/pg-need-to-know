@@ -187,21 +187,26 @@ $$ language plpgsql;
 select test_group_list_members();
 
 
--- `/rpc/group_remove_members`
+\echo 'testing: group_remove_members'
+
 create or replace function test_group_remove_members()
     returns boolean as $$
+    declare _ans text;
     begin
+        set role admin_user;
+        select group_remove_members('{"memberships": [{"user":"gustav", "group":"project_group"}]}'::json) into _ans;
+        set role authenticator;
+        set role project_user;
+        -- now only data owner in the group is hannah
+        assert (select count(1) from people) = 1,
+            'project_user has unauthorized data access to people, something went wrong then removing gustav from project_group';
+        assert (select count(1) from user_defined_groups_memberships where member = 'gustav' and group_name = 'project_group') = 0,
+            'gustav is still recorded as being a member of project_group in the accounting view';
+        set role authenticator;
         return true;
     end;
 $$ language plpgsql;
-
-set role admin_user;
-select group_remove_members('{"memberships": [{"user":"gustav", "group":"project_group"}]}'::json);
-set role authenticator;
-
-set role project_user;
-select name, age from people; -- can only see hannah's data
-set role authenticator;
+select test_group_remove_members();
 
 -- `/rpc/user_delete_data`
 -- create another table first to check multiple table deletes
