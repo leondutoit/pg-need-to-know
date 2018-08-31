@@ -165,7 +165,7 @@ create or replace function test_group_list()
     returns boolean as $$
     begin
         set role admin_user;
-        assert (select '(group_name)' in (select group_list()::text)), 'group list does not work';
+        assert (select '(project_group)' in (select group_list()::text)), 'group list does not work';
         set role authenticator;
         return true;
     end;
@@ -176,14 +176,16 @@ select test_group_list();
 create or replace function test_group_list_members()
     returns boolean as $$
     begin
+        set role admin_user;
+        assert 'gustav' in (select group_list_members('project_group')), 'listing group members does not work';
+        assert 'hannah' in (select group_list_members('project_group')), 'listing group members does not work';
+        assert 'project_user' in (select group_list_members('project_group')), 'listing group members does not work';
+        set role authenticator;
         return true;
     end;
 $$ language plpgsql;
+select test_group_list_members();
 
-
-set role admin_user;
-select group_list_members('project_group');
-set role authenticator;
 
 -- `/rpc/group_remove_members`
 create or replace function test_group_remove_members()
