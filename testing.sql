@@ -103,7 +103,10 @@ create or replace function test_defult_data_owner_policies()
         set role hannah;
         assert (select count(1) from people) = 1, 'hannah has unauthorized data access';
         set role authenticator;
-        set role admin_user;
+        set role project_user;
+        assert (select count(1) from people) = 0, 'project_user has unauthorized data access';
+        set role authenticator;
+        set role admin_user; -- make sure RLS is forced on table owner too
         assert (select count(1) from people) = 0, 'admin_user has unauthorized data access';
         set role authenticator;
         return true;
