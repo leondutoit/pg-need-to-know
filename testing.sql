@@ -208,7 +208,6 @@ create or replace function test_group_remove_members()
 $$ language plpgsql;
 select test_group_remove_members();
 
--- `/rpc/user_delete_data`
 
 create or replace function test_user_delete_data()
     returns boolean as $$
@@ -236,51 +235,85 @@ select test_user_delete_data();
 
 
 -- `/rpc/user_delete`
-set role hannah;
-select name, age from people;
-set role authenticator;
-set role admin_user;
-\echo 'deleting hannah as admin user - should not work'
-select user_delete('hannah'); -- should fail, because data still present
-set role authenticator;
-set role hannah;
-select user_delete_data();
-set role authenticator;
-set role admin_user;
-select user_delete('hannah');
+
+create or replace function test_user_delete()
+    returns boolean as $$
+    begin
+        set role hannah;
+        select name, age from people;
+        set role authenticator;
+        set role admin_user;
+        \echo 'deleting hannah as admin user - should not work'
+        select user_delete('hannah'); -- should fail, because data still present
+        set role authenticator;
+        set role hannah;
+        select user_delete_data();
+        set role authenticator;
+        set role admin_user;
+        select user_delete('hannah');
+        return true;
+    end;
+$$ language plpgsql;
+select test_user_delete();
 
 -- `/rpc/group_delete`
 
--- cleanup state
-set role authenticator;
-set role admin_user;
-select user_delete('gustav');
-set role authenticator;
+create or replace function test_group_delete()
+    returns boolean as $$
+    begin
+        set role admin_user;
+        select group_delete('project_group'); -- test that fails if has members
+        set role authenticator;
+        -- now remove members
+        set role admin_user;
+        select group_delete('project_group'); -- test that this works
+        set role authenticator;
+        return true;
+    end;
+$$ language plpgsql;
+select test_group_delete();
 
-set role faye;
-select user_delete_data();
-set role authenticator;
 
-set role admin_user;
-select user_delete('faye');
-select user_delete('project_user');
-set role authenticator;
+create or replace function teardown()
+    returns boolean as $$
+    begin
+        set role authenticator;
+        set role admin_user;
+        select user_delete('gustav');
+        set role authenticator;
 
-set role admin_user;
-select group_delete('project_group');
-set role authenticator;
+        set role faye;
+        select user_delete_data();
+        set role authenticator;
 
-set role admin_user;
-drop table people;
-drop table people2;
-set role authenticator;
+        set role admin_user;
+        select user_delete('faye');
+        select user_delete('project_user');
+        set role authenticator;
 
-set role admin_user;
-delete from user_data_deletion_requests;
+        set role admin_user;
+        drop table people;
+        drop table people2;
+        set role authenticator;
 
-\echo
-\echo 'DB state after cleanup'
-\echo '======================'
-\d
-\du
+        set role admin_user;
+        delete from user_data_deletion_requests;
 
+        \echo
+        \echo 'DB state after cleanup'
+        \echo '======================'
+        \d
+        \du
+        return true;
+    end;
+$$ language plpgsql;
+select teardown();
+
+create or replace function run_tests()
+    returns boolean as $$
+    begin
+        -- assert and print all the things here
+        return true;
+    end;
+$$ language plpgsql;
+select run_tests();
