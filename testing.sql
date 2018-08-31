@@ -209,23 +209,31 @@ $$ language plpgsql;
 select test_group_remove_members();
 
 -- `/rpc/user_delete_data`
--- create another table first to check multiple table deletes
-set role authenticator;
-set role admin_user;
-select table_create('{"table_name": "people2", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac');
-set role authenticator;
 
--- insert some data
-set role gustav;
-insert into people2 (name, age) values ('Gustav de la Croix', 10);
-select name, age from people2;
+create or replace function test_user_delete_data()
+    returns boolean as $$
+    declare _ans text;
+    begin
+        -- create another table to check for deletes across multiple tables
+        set role authenticator;
+        set role admin_user;
+        select table_create('{"table_name": "people2", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac') into _ans;
+        set role authenticator;
+        -- insert some data
+        set role gustav;
+        insert into people2 (name, age) values ('Gustav de la Croix', 10);
+        -- delete the data
+        select user_delete_data() into _ans;
+        assert (select count(1) from people) = 0, 'data for gustav not deleted from table people';
+        assert (select count(1) from people2) = 0, 'data for gustav not deleted from table people2';
+        set role authenticator;
+        assert (select count(1) from user_data_deletion_requests where user_name = 'gustav') >= 1,
+            'problem recording the data deletion request from gustav';
+        return true;
+    end;
+$$ language plpgsql;
+select test_user_delete_data();
 
--- delete
-select user_delete_data();
-select name, age from people;
-select name, age from people2;
-set role authenticator;
-table user_data_deletion_requests;
 
 -- `/rpc/user_delete`
 set role hannah;
@@ -265,6 +273,10 @@ set role authenticator;
 set role admin_user;
 drop table people;
 drop table people2;
+set role authenticator;
+
+set role admin_user;
+delete from user_data_deletion_requests;
 
 \echo
 \echo 'DB state after cleanup'
