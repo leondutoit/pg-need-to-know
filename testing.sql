@@ -160,16 +160,39 @@ select test_group_membership_data_access_policies();
 
 
 -- `/rpc/group_list`
-set role admin_user;
-select group_list();
-set role authenticator;
+
+create or replace function test_group_list()
+    returns boolean as $$
+    begin
+        set role admin_user;
+        assert (select '(group_name)' in (select group_list()::text)), 'group list does not work';
+        set role authenticator;
+        return true;
+    end;
+$$ language plpgsql;
+select test_group_list();
 
 -- `/rpc/group_list_members`
+create or replace function test_group_list_members()
+    returns boolean as $$
+    begin
+        return true;
+    end;
+$$ language plpgsql;
+
+
 set role admin_user;
 select group_list_members('project_group');
 set role authenticator;
 
 -- `/rpc/group_remove_members`
+create or replace function test_group_remove_members()
+    returns boolean as $$
+    begin
+        return true;
+    end;
+$$ language plpgsql;
+
 set role admin_user;
 select group_remove_members('{"memberships": [{"user":"gustav", "group":"project_group"}]}'::json);
 set role authenticator;
