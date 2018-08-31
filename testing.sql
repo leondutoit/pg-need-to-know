@@ -139,22 +139,25 @@ select test_group_add_members();
 \echo 'overview of roles after group membership changes'
 \du
 
-set role gustav;
-select name, age from people; -- can only see own data
-set role authenticator;
+\echo 'testing group membership RLS policies'
 
-set role hannah;
-select name, age from people; -- can only see own data
-set role authenticator;
+create or replace function test_group_membership_data_access_policies()
+    returns boolean as $$
+    begin
+        set role gustav;
+        assert (select count(1) from people) = 1, 'data owner, gustav, has unauthorized data access';
+        set role authenticator;
+        set role hannah;
+        assert (select count(1) from people) = 1, 'data owner, hannah, has unauthorized data access';
+        set role authenticator;
+        set role project_user;
+        assert (select count(1) from people) = 2, 'RLS policy for data user, project_user, is broken';
+        set role authenticator;
+        return true;
+    end;
+$$ language plpgsql;
+select test_group_membership_data_access_policies();
 
-set role project_user;
-select name, age from people; -- can only see gustav and hannah's data
-set role authenticator;
-
-\echo 'check table owner access rights'
-set role admin_user;
-select * from people;
-set role authenticator;
 
 -- `/rpc/group_list`
 set role admin_user;
