@@ -68,7 +68,7 @@ create or replace function test_group_create()
     begin
         set role admin_user;
         select group_create('project_group') into _ans;
-        assert (select count(*) from user_defined_groups) = 1,
+        assert (select count(1) from user_defined_groups) = 1,
             'problem recording user defined group creation in accounting table';
         -- check role exists
         set role authenticator;
@@ -83,21 +83,33 @@ select test_group_create();
 \echo 'overview of roles after group creation'
 \du
 
-set role gustav;
-insert into people (name, age) values ('Gustav de la Croix', 1);
--- add test to ensure that row_owner cannot be selected
-select name, age from people;
-set role authenticator;
+\echo 'testing: default data owner RLS policies'
 
-set role hannah;
-insert into people (name, age) values ('Hannah le Roux', 29);
--- add test to ensure that row_owner cannot be selected
-select name, age from people;
-set role authenticator;
-
-set role faye;
-insert into people (name, age) values ('Faye Thompson', 58);
-set role authenticator;
+create or replace function test_defult_data_owner_policies()
+    returns boolean as $$
+    begin
+        set role gustav;
+        insert into people (name, age) values ('Gustav de la Croix', 1);
+        set role authenticator;
+        set role hannah;
+        insert into people (name, age) values ('Hannah le Roux', 29);
+        set role authenticator;
+        set role faye;
+        insert into people (name, age) values ('Faye Thompson', 58);
+        set role authenticator;
+        set role gustav;
+        assert (select count(1) from people) = 1, 'gustav has unauthorized data access';
+        set role authenticator;
+        set role hannah;
+        assert (select count(1) from people) = 1, 'hannah has unauthorized data access';
+        set role authenticator;
+        set role admin_user;
+        assert (select count(1) from people) = 0, 'admin_user has unauthorized data access';
+        set role authenticator;
+        return true;
+    end;
+$$ language plpgsql;
+select test_defult_data_owner_policies();
 
 -- `/rpc/group_add_members`
 set role admin_user;
