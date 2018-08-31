@@ -1,7 +1,7 @@
 
 -- TODO:
--- write these tests so they have no effect on existing data or objects
--- so they can be run in an active DB
+-- review tests to make sure they have no effect on existing data or objects
+-- so they can be run in an active DB, make sure cleanup does not alter existing state
 
 \echo
 \echo 'TESTING'
@@ -45,8 +45,7 @@ create or replace function test_user_create()
         select user_create('project_user', 'data_user') into _ans;
         assert (select _user_type from user_types where _user_name = 'project_user') = 'data_user',
             'problem with user creation';
-        -- this will not work if there is existing data
-        assert (select count(1) from user_types) = 4,
+        assert (select count(1) from user_types where _user_name in ('gustav', 'hannah', 'faye', 'project_user')) = 4,
             'not all newly created users are recorded in the user_types table';
         -- test that the rolse actually exist
         set role gustav;
@@ -73,8 +72,7 @@ create or replace function test_group_create()
     begin
         set role admin_user;
         select group_create('project_group') into _ans;
-        -- be specific here to avoid breakage when there is existing data
-        assert (select count(1) from user_defined_groups) = 1,
+        assert (select count(1) from user_defined_groups where group_name = 'project_group') = 1,
             'problem recording user defined group creation in accounting table';
         -- check role exists
         set role authenticator;
