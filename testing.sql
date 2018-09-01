@@ -1,14 +1,4 @@
 
--- TODO:
--- review tests to make sure they have no effect on existing data or objects
--- so they can be run in an active DB, make sure cleanup does not alter existing state
-
-\echo
-\echo 'TESTING'
-\echo
-
-\echo 'testing: table_create'
-
 create or replace function test_table_create()
     returns boolean as $$
     declare _ans text;
@@ -21,12 +11,7 @@ create or replace function test_table_create()
         return true;
     end;
 $$ language plpgsql;
-select test_table_create();
 
-\echo 'overview of new people table and its RLS policies'
-\d+ people
-
-\echo 'testing: user_create'
 
 create or replace function test_user_create()
     returns boolean as $$
@@ -59,12 +44,7 @@ create or replace function test_user_create()
         return true;
     end;
 $$ language plpgsql;
-select test_user_create();
 
-\echo 'overview of roles after user creation'
-\du
-
-\echo 'testing: group_create'
 
 create or replace function test_group_create()
     returns boolean as $$
@@ -82,12 +62,7 @@ create or replace function test_group_create()
         return true;
     end;
 $$ language plpgsql;
-select test_group_create();
 
-\echo 'overview of roles after group creation'
-\du
-
-\echo 'testing: default data owner RLS policies'
 
 create or replace function test_defult_data_owner_policies()
     returns boolean as $$
@@ -116,9 +91,7 @@ create or replace function test_defult_data_owner_policies()
         return true;
     end;
 $$ language plpgsql;
-select test_defult_data_owner_policies();
 
-\echo 'testing: group_add_members'
 
 create or replace function test_group_add_members()
     returns boolean as $$
@@ -134,12 +107,7 @@ create or replace function test_group_add_members()
         return true;
     end;
 $$ language plpgsql;
-select test_group_add_members();
 
-\echo 'overview of roles after group membership changes'
-\du
-
-\echo 'testing group membership RLS policies'
 
 create or replace function test_group_membership_data_access_policies()
     returns boolean as $$
@@ -156,10 +124,7 @@ create or replace function test_group_membership_data_access_policies()
         return true;
     end;
 $$ language plpgsql;
-select test_group_membership_data_access_policies();
 
-
--- `/rpc/group_list`
 
 create or replace function test_group_list()
     returns boolean as $$
@@ -170,9 +135,8 @@ create or replace function test_group_list()
         return true;
     end;
 $$ language plpgsql;
-select test_group_list();
 
--- `/rpc/group_list_members`
+
 create or replace function test_group_list_members()
     returns boolean as $$
     begin
@@ -184,10 +148,7 @@ create or replace function test_group_list_members()
         return true;
     end;
 $$ language plpgsql;
-select test_group_list_members();
 
-
-\echo 'testing: group_remove_members'
 
 create or replace function test_group_remove_members()
     returns boolean as $$
@@ -206,7 +167,7 @@ create or replace function test_group_remove_members()
         return true;
     end;
 $$ language plpgsql;
-select test_group_remove_members();
+
 
 create or replace function test_user_delete_data()
     returns boolean as $$
@@ -230,9 +191,7 @@ create or replace function test_user_delete_data()
         return true;
     end;
 $$ language plpgsql;
-select test_user_delete_data();
 
--- `/rpc/user_delete`
 
 create or replace function test_user_delete()
     returns boolean as $$
@@ -258,10 +217,8 @@ create or replace function test_user_delete()
         return true;
     end;
 $$ language plpgsql;
-select test_user_delete();
 
--- `/rpc/group_delete`
-\du
+
 create or replace function test_group_delete()
     returns boolean as $$
     declare _ans text;
@@ -277,81 +234,70 @@ create or replace function test_group_delete()
         -- now remove members
         select user_delete('project_user') into _ans;
         set role admin_user;
-        select group_delete('project_group') into _ans; -- test that this works
+        select group_delete('project_group') into _ans;
         set role authenticator;
         return true;
     end;
 $$ language plpgsql;
-select test_group_delete();
-\du
+
 
 create or replace function teardown()
     returns boolean as $$
+    declare _ans text;
     begin
+        -- delete gustav
         set role authenticator;
         set role admin_user;
-        select user_delete('gustav');
+        select user_delete('gustav') into _ans;
         set role authenticator;
-
+        -- delete faye
         set role faye;
-        select user_delete_data();
+        select user_delete_data() into _ans;
         set role authenticator;
-
         set role admin_user;
-        select user_delete('faye');
-        select user_delete('project_user');
+        select user_delete('faye') into _ans;
         set role authenticator;
-
+        -- drop tables
         set role admin_user;
-        drop table people;
-        drop table people2;
+        execute 'drop table people';
+        execute 'drop table people2';
         set role authenticator;
-
+        -- clear out accounting table
         set role admin_user;
-        delete from user_data_deletion_requests;
-
+        execute 'delete from user_data_deletion_requests';
+        -- drop functions? so they cannot be invoked by the API
         return true;
     end;
 $$ language plpgsql;
-select teardown();
+
 
 create or replace function run_tests()
     returns boolean as $$
     begin
-        -- assert and print all the things here
+        assert (select test_table_create()), 'ERROR: test_table_create';
+        assert (select test_user_create()), 'ERROR: test_user_create';
+        assert (select test_group_create()), 'ERROR: test_group_create';
+        assert (select test_defult_data_owner_policies()), 'ERROR: test_defult_data_owner_policies';
+        assert (select test_group_add_members()), 'ERROR: test_group_add_members';
+        assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
+        assert (select test_group_list()), 'ERROR: test_group_list';
+        assert (select test_group_list_members()), 'ERROR: test_group_list_members';
+        assert (select test_group_remove_members()), 'ERROR: test_group_remove_members';
+        assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
+        assert (select test_user_delete()), 'ERROR: test_user_delete';
+        assert (select test_group_delete()), 'ERROR: test_group_delete';
+        assert (select teardown()), 'ERROR: teardown';
+        raise notice 'GOOD NEWS: All tests pass :)';
         return true;
     end;
 $$ language plpgsql;
-select run_tests();
 
 \echo
-\echo 'DB state after cleanup'
-\echo '======================'
+\echo 'DB state before testing'
 \d
 \du
-
-set role authenticator;
-set role gustav;
-select user_delete_data('gustav');
-set role authenticator;
-set role hannah;
-select user_delete_data('hannah');
-set role authenticator;
-set role faye;
-select user_delete_data('faye');
-set role authenticator;
-set role admin_user;
-select user_delete('gustav');
-select user_delete('hannah');
-select user_delete('faye');
-select user_delete('project_user');
-select group_delete('project_group');
-drop table people;
-drop table people2;
-
-
-
-
-
-
-
+select run_tests();
+\echo
+\echo 'DB state after testing'
+\d
+\du

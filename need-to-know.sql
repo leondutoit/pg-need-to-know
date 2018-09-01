@@ -339,11 +339,9 @@ create or replace function user_delete(user_name text)
                 -- checked by the role we are going to delete, table owner has no access to data
                 set role authenticator;
                 execute 'set role ' || user_name;
-                raise notice '1. --> current role: %', current_user::text;
                 execute 'select count(1) from ' || _table || ' where row_owner = ' || quote_literal(user_name) into _numrows;
                 set role authenticator;
                 set role admin_user;
-                raise notice '2. --> current role: %', current_user::text;
                 if _numrows > 0 then
                     raise exception 'Cannot delete user, DB has data belonging to % in table %', user_name, _table;
                 end if;
@@ -384,7 +382,7 @@ create or replace function group_delete(group_name text)
             raise exception 'Cannot delete group %, it has % members', group_name, _num_members;
         end if;
         execute 'drop role ' || group_name;
-        execute 'delete from user_defined_groups where group_name = ' || group_name;
+        execute 'delete from user_defined_groups where group_name = ' || quote_literal(group_name);
         return 'group deleted';
     end;
 $$ language plpgsql;
