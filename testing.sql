@@ -1,4 +1,6 @@
 
+set role tsd_backend_utv_user; -- dbowner
+
 create or replace function test_table_create()
     returns boolean as $$
     declare _ans text;
@@ -265,7 +267,7 @@ create or replace function teardown()
         -- clear out accounting table
         set role admin_user;
         execute 'delete from user_data_deletion_requests';
-        -- drop functions? so they cannot be invoked by the API
+        set role authenticator;
         return true;
     end;
 $$ language plpgsql;
@@ -297,6 +299,21 @@ $$ language plpgsql;
 \d
 \du
 select run_tests();
+-- remove all test functions
+set role tsd_backend_utv_user; -- db owner
+drop function test_table_create();
+drop function test_user_create();
+drop function test_group_create();
+drop function test_defult_data_owner_policies();
+drop function test_group_add_members();
+drop function test_group_membership_data_access_policies();
+drop function test_group_list();
+drop function test_group_list_members();
+drop function test_group_remove_members();
+drop function test_user_delete_data();
+drop function test_user_delete();
+drop function test_group_delete();
+drop function teardown();
 \echo
 \echo 'DB state after testing'
 \d
