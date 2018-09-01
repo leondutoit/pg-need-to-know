@@ -238,19 +238,25 @@ select test_user_delete_data();
 
 create or replace function test_user_delete()
     returns boolean as $$
+    declare _ans text;
     begin
+        set role admin_user;
+        begin
+            select user_delete('hannah') into _ans; -- should fail, because data still present
+        exception
+            when others then raise notice 'existing data check in order, when deleting a user';
+        end;
+        set role authenticator;
+        -- if the above worked, wrongly so, then the next part will fail
+        -- because it will be impossible to set the role to hannah
         set role hannah;
-        select name, age from people;
+        select user_delete_data() into _ans;
         set role authenticator;
         set role admin_user;
-        \echo 'deleting hannah as admin user - should not work'
-        select user_delete('hannah'); -- should fail, because data still present
+        select user_delete('hannah') into _ans;
+        assert (select count(1) from user_types where _user_name = 'hannah') = 0,
+            'user deletion did not update user_types accounting table correctly';
         set role authenticator;
-        set role hannah;
-        select user_delete_data();
-        set role authenticator;
-        set role admin_user;
-        select user_delete('hannah');
         return true;
     end;
 $$ language plpgsql;
@@ -299,11 +305,6 @@ create or replace function teardown()
         set role admin_user;
         delete from user_data_deletion_requests;
 
-        \echo
-        \echo 'DB state after cleanup'
-        \echo '======================'
-        \d
-        \du
         return true;
     end;
 $$ language plpgsql;
@@ -317,3 +318,9 @@ create or replace function run_tests()
     end;
 $$ language plpgsql;
 select run_tests();
+
+\echo
+\echo 'DB state after cleanup'
+\echo '======================'
+\d
+\du
