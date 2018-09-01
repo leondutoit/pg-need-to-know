@@ -229,7 +229,7 @@ create or replace view user_defined_groups_memberships as
     select group_name, _role member from
         (select group_name from user_defined_groups)a
         join
-        (select _group, _role from group_memberships )b
+        (select _group, _role from group_memberships)b
         on a.group_name = b._group;
 grant select on user_defined_groups_memberships to public;
 
@@ -310,6 +310,10 @@ create or replace function user_delete_data()
     begin
         for _table in select table_name from information_schema.tables where table_schema = 'public' and table_type != 'VIEW' loop
             begin
+                if _table in ('user_defined_groups', 'user_types', 'user_data_deletion_requests') then
+                    raise notice 'deleting data from % is not allowed', _table;
+                    continue;
+                end if;
                 execute 'delete from '||  _table;
             exception
                 when insufficient_privilege then raise notice 'cannot delete data from %, permission denied', _table;
@@ -380,6 +384,7 @@ create or replace function group_delete(group_name text)
             raise exception 'Cannot delete group %, it has % members', group_name, _num_members;
         end if;
         execute 'drop role ' || group_name;
+        execute 'delete from user_defined_groups where group_name = ' || group_name;
         return 'group deleted';
     end;
 $$ language plpgsql;

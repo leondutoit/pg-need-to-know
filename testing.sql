@@ -208,7 +208,6 @@ create or replace function test_group_remove_members()
 $$ language plpgsql;
 select test_group_remove_members();
 
-
 create or replace function test_user_delete_data()
     returns boolean as $$
     declare _ans text;
@@ -232,7 +231,6 @@ create or replace function test_user_delete_data()
     end;
 $$ language plpgsql;
 select test_user_delete_data();
-
 
 -- `/rpc/user_delete`
 
@@ -263,22 +261,29 @@ $$ language plpgsql;
 select test_user_delete();
 
 -- `/rpc/group_delete`
-
+\du
 create or replace function test_group_delete()
     returns boolean as $$
+    declare _ans text;
     begin
         set role admin_user;
-        select group_delete('project_group'); -- test that fails if has members
+            -- test that fails if has members
+            begin
+                select group_delete('project_group') into _ans;
+            exception
+                when others then raise notice 'non-empty group deletion prevention works as expected';
+            end;
         set role authenticator;
         -- now remove members
+        select user_delete('project_user') into _ans;
         set role admin_user;
-        select group_delete('project_group'); -- test that this works
+        select group_delete('project_group') into _ans; -- test that this works
         set role authenticator;
         return true;
     end;
 $$ language plpgsql;
 select test_group_delete();
-
+\du
 
 create or replace function teardown()
     returns boolean as $$
@@ -324,3 +329,29 @@ select run_tests();
 \echo '======================'
 \d
 \du
+
+set role authenticator;
+set role gustav;
+select user_delete_data('gustav');
+set role authenticator;
+set role hannah;
+select user_delete_data('hannah');
+set role authenticator;
+set role faye;
+select user_delete_data('faye');
+set role authenticator;
+set role admin_user;
+select user_delete('gustav');
+select user_delete('hannah');
+select user_delete('faye');
+select user_delete('project_user');
+select group_delete('project_group');
+drop table people;
+drop table people2;
+
+
+
+
+
+
+
