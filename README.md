@@ -2,12 +2,25 @@
 
 A useful Mandatory Access Control setup for PostgreSQL.
 
-- Anyone can insert data (so your app can collect data)
-- Data owners are the only ones who can operate on their data by default (select, update, delete)
-- Read-only access can be granted to others based on common group membership
-- All data access must specify columns explicitly, since those containing access control and identity information are protected
+## Features
 
-## Creating a REST API using postgrest
+- Any registered data owner can insert data (registation is needed to enforce ownership)
+- Data owners are the only ones who can operate on their data by default (select, update, delete)
+- Read-only access can be granted to data users based on common group membership (data owner can never see the data of other data owners)
+- All data access must specify columns explicitly, since those containing access control and identity information are protected
+- Data owners can delete all their data at any time
+
+## Creating the DB schema
+
+```bash
+# run this as the DB superuser
+psql -d yourdb -1 -f need-to-know.sql
+
+# run sql tests
+psql -d yourdb -1 -f testing.sql
+```
+
+## Create a REST API using postgrest
 
 - `/rpc/table_create`
 - `/rpc/user_create`
