@@ -27,7 +27,23 @@ psql -d yourdb -1 -f testing.sql
 - Run `postgrest your-config-file`
 - Using this API pre-supposes that you have an Identity Provider and an Authentication Server which can issue JSON Web Tokens (read more about the requirements for this in the description of the MAC model)
 
-Now you have the following REST API available:
+
+## Method overview
+
+```txt
+POST /rpc/table_create
+POST /rpc/user_create
+POST /rpc/group_create
+POST /rpc/group_add_members
+POST /rpc/group_list
+POST /rpc/group_list_members
+POST /rpc/group_remove_members
+POST /rpc/group_delete
+POST /rpc/user_delete_data
+POST /rpc/user_delete
+```
+
+## REST API
 
 - Create a new table
 ```bash
