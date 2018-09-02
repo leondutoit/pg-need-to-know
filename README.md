@@ -28,15 +28,31 @@ psql -d yourdb -1 -f testing.sql
 
 Now you have the following REST API available:
 
-- `/rpc/table_create`
+- Create a new table
+```bash
+POST /rpc/table_create
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"definition": {"table_name": "people", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}, "type": "mac" }
+```
+
 - `/rpc/user_create`
+
 - `/rpc/group_create`
+
 - `/rpc/group_add_members`
+
 - `/rpc/group_list`
+
 - `/rpc/group_list_members`
+
 - `/rpc/group_remove_members`
+
 - `/rpc/group_delete`
+
 - `/rpc/user_delete_data`
+
 - `/rpc/user_delete`
 
 ## LICENSE
