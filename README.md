@@ -1,6 +1,6 @@
 # pg-need-to-know
 
-A useful Mandatory Access Control setup for PostgreSQL.
+A Mandatory Access Control setup for PostgreSQL which takes data ownership seriously.
 
 ## Features
 
@@ -21,6 +21,12 @@ psql -d yourdb -1 -f testing.sql
 ```
 
 ## Create a REST API using postgrest
+
+- Download and install [postgrest](http://postgrest.org/)
+- Create a [config file](http://postgrest.org/en/v5.0/install.html#configuration)
+- Run `postgrest your-config-file`
+
+Now you have the following REST API available:
 
 - `/rpc/table_create`
 - `/rpc/user_create`
