@@ -49,7 +49,16 @@ Authorization: Bearer your-jwt
 {"user_name": "some_analyst", "type": "data_user"}
 ```
 
-- Create a new group (to give data users access to data owners' data)
+- Collect data from `myuser`
+```bash
+POST /people
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"name": "Frank", "age": 90}
+```
+
+- Create a new group
 ```bash
 POST /rpc/group_create
 Content-Type: application/json
@@ -58,7 +67,25 @@ Authorization: Bearer your-jwt
 {"group_name": "analysis1_group"}
 ```
 
-- `/rpc/group_add_members`
+- Add members to the group to enable data access
+```bash
+POST /rpc/group_add_members
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"memberships": [{"user":"myuser", "group":"analysis1_group"}, {"user":"some_analyst", "group":"analysis1_group"}]}
+```
+
+- AS the data user `some_analyst`, get data to analyse
+```bash
+GET /people
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"name": "Frank", "age": 90}
+# returns all data defined by group membership
+# for more query capabilities see postgrest docs
+```
 
 - `/rpc/group_list`
 
