@@ -83,7 +83,8 @@ Content-Type: application/json
 Authorization: Bearer your-jwt
 
 {"name": "Frank", "age": 90}
-# returns all data defined by group membership
+# returns all data some_analyst has access to
+# as defined by group membership
 # for more query capabilities see postgrest docs
 ```
 
