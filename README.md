@@ -25,6 +25,7 @@ psql -d yourdb -1 -f testing.sql
 - Download and install [postgrest](http://postgrest.org/)
 - Create a [config file](http://postgrest.org/en/v5.0/install.html#configuration)
 - Run `postgrest your-config-file`
+- Using this API pre-supposes that you have an Identity Provider and an Authentication Server which can issue JSON Web Tokens (read more about the requirements for this in the description of the MAC model)
 
 Now you have the following REST API available:
 
@@ -37,9 +38,25 @@ Authorization: Bearer your-jwt
 {"definition": {"table_name": "people", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}, "type": "mac" }
 ```
 
-- `/rpc/user_create`
+- Create a new user, either a data owner, or a data user
+```bash
+POST /rpc/user_create
+Content-Type: application/json
+Authorization: Bearer your-jwt
 
-- `/rpc/group_create`
+{"user_name": "myuser", "type": "data_owner"}
+# or
+{"user_name": "some_analyst", "type": "data_user"}
+```
+
+- Create a new group (to give data users access to data owners' data)
+```bash
+POST /rpc/group_create
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"group_name": "analysis1_group"}
+```
 
 - `/rpc/group_add_members`
 
