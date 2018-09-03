@@ -106,6 +106,7 @@ Authorization: Bearer your-jwt
 # for more query capabilities see postgrest docs
 ```
 
+- List all groups in the db
 ```bash
 POST /rpc/group_list
 Content-Type: application/json
@@ -115,6 +116,7 @@ Authorization: Bearer your-jwt
 [{"group_name": "analysis1_group"}]
 ```
 
+- List all members in a specific group
 ```bash
 /rpc/group_list_members
 Content-Type: application/json
@@ -126,9 +128,24 @@ Authorization: Bearer your-jwt
 [{"member": "myuser"}, {"member": "some_analyst"}]
 ```
 
-- `/rpc/group_remove_members`
+- Remove members from a group
+```bash
+POST /rpc/group_remove_members
+Content-Type: application/json
+Authorization: Bearer your-jwt
 
-- `/rpc/group_delete`
+{"memberships": [{"user":"myuser", "group":"analysis1_group"}]}
+```
+
+- Delete a group
+```bash
+POST /rpc/group_delete
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"group_name": "analysis1_group"}
+# will fail if the group still has members
+```
 
 - `/rpc/user_groups`
 
