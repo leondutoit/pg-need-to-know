@@ -39,6 +39,7 @@ POST /rpc/group_list
 POST /rpc/group_list_members
 POST /rpc/group_remove_members
 POST /rpc/group_delete
+POST /rpc/user_groups
 POST /rpc/user_delete_data
 POST /rpc/user_delete
 ```
@@ -92,25 +93,44 @@ Authorization: Bearer your-jwt
 {"memberships": [{"user":"myuser", "group":"analysis1_group"}, {"user":"some_analyst", "group":"analysis1_group"}]}
 ```
 
-- AS the data user `some_analyst`, get data to analyse
+- As the data user `some_analyst`, get data to analyse
 ```bash
 GET /people
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"name": "Frank", "age": 90}
-# returns all data some_analyst has access to
+# returns
+[{"name": "Frank", "age": 90}]
+# all data some_analyst has access to
 # as defined by group membership
 # for more query capabilities see postgrest docs
 ```
 
-- `/rpc/group_list`
+```bash
+POST /rpc/group_list
+Content-Type: application/json
+Authorization: Bearer your-jwt
 
-- `/rpc/group_list_members`
+# returns
+[{"group_name": "analysis1_group"}]
+```
+
+```bash
+/rpc/group_list_members
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"group_name": "analysis1_group"}
+
+# returns
+[{"member": "myuser"}, {"member": "some_analyst"}]
+```
 
 - `/rpc/group_remove_members`
 
 - `/rpc/group_delete`
+
+- `/rpc/user_groups`
 
 - `/rpc/user_delete_data`
 
