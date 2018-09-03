@@ -147,11 +147,32 @@ Authorization: Bearer your-jwt
 # will fail if the group still has members
 ```
 
-- `/rpc/user_groups`
+- List all groups belonging to a user
+```bash
+POST /rpc/user_groups
+Content-Type: application/json
+Authorization: Bearer your-jwt
 
-- `/rpc/user_delete_data`
+{"user": "some_analyst"}
+# returns
+[{"group_name": "analysis1_group"}]
+```
 
-- `/rpc/user_delete`
+- A data owner deletes all their data
+```bash
+POST/rpc/user_delete_data
+Content-Type: application/json
+Authorization: Bearer your-jwt
+```
+
+- Delete a user identity
+```bash
+POST /rpc/user_delete
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"user_name": "myuser"}
+```
 
 ## LICENSE
 

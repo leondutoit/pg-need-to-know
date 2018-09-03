@@ -9,3 +9,4 @@
 -- alter function ownerships to admin_user
 -- review query build statements and input sanitsation
 -- see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
+-- review consitency of parameter names: group, group_name, user, user_name
