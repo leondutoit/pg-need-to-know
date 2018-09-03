@@ -1,6 +1,7 @@
 # pg-need-to-know
 
-A Mandatory Access Control setup for PostgreSQL which takes data ownership seriously.
+A Mandatory Access Control setup for PostgreSQL which takes data ownership seriously, and allows data owners to make their data available to data users on a need to know basis.
+
 
 ## Features
 
@@ -9,6 +10,7 @@ A Mandatory Access Control setup for PostgreSQL which takes data ownership serio
 - Read-only access can be granted to data users based on common group membership (data owner can never see the data of other data owners)
 - All data access must specify columns explicitly, since those containing access control and identity information are protected
 - Data owners can delete all their data at any time
+
 
 ## Creating the DB schema
 
@@ -31,17 +33,19 @@ psql -d yourdb -1 -f testing.sql
 ## Method overview
 
 ```txt
-POST /rpc/table_create
-POST /rpc/user_create
-POST /rpc/group_create
-POST /rpc/group_add_members
-POST /rpc/group_list
-POST /rpc/group_list_members
-POST /rpc/group_remove_members
-POST /rpc/group_delete
-POST /rpc/user_groups
-POST /rpc/user_delete_data
-POST /rpc/user_delete
+HTTP Method     | URL                       | required role
+----------------|---------------------------|--------------
+POST            | /rpc/table_create         | admin_user
+POST            | /rpc/user_create          | admin_user
+POST            | /rpc/group_create         | admin_user
+POST            | /rpc/group_add_members    | admin_user
+POST            | /rpc/group_list           | admin_user
+POST            | /rpc/group_list_members   | admin_user
+POST            | /rpc/group_remove_members | admin_user
+POST            | /rpc/group_delete         | admin_user
+POST            | /rpc/user_groups          | admin_user
+POST            | /rpc/user_delete_data     | the user who owns the data
+POST            | /rpc/user_delete          | admin_user
 ```
 
 ## REST API
