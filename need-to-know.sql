@@ -70,31 +70,33 @@ grant execute on function roles_have_common_group_and_is_data_user(text, text) t
 drop function if exists sql_type_from_generic_type(text);
 create or replace function sql_type_from_generic_type(_type text)
     returns text as $$
+    declare untrusted_type text;
     begin
+        untrusted_type := _type;
         case
             -- even though redundant this prevent SQL injection
-            when _type = 'int' then return 'int';
-            when _type = 'text' then return 'text';
-            when _type = 'json' then return 'json';
-            when _type = 'real' then return 'real';
-            when _type = 'text[]' then return 'text[]';
-            when _type = 'date' then return 'date';
-            when _type = 'timestamp' then return 'timestamp';
-            when _type = 'timestamptz' then return 'timestamptz';
-            when _type = 'int[]' then return 'int[]';
-            when _type = 'boolean' then return 'boolean';
-            when _type = 'cidr' then return 'cidr';
-            when _type = 'inet' then return 'inet';
-            when _type = 'jsonb' then return 'jsonb';
-            when _type = 'interval' then return 'interval';
-            when _type = 'macaddr' then return 'macaddr';
-            when _type = 'decimal' then return 'decimal';
-            when _type = 'serial' then return 'serial';
-            when _type = 'time' then return 'time';
-            when _type = 'timetz' then return 'timetz';
-            when _type = 'xml' then return 'xml';
-            when _type = 'uuid' then return 'uuid';
-            when _type = 'bytea' then return 'bytea';
+            when untrusted_type = 'int' then return 'int';
+            when untrusted_type = 'text' then return 'text';
+            when untrusted_type = 'json' then return 'json';
+            when untrusted_type = 'real' then return 'real';
+            when untrusted_type = 'text[]' then return 'text[]';
+            when untrusted_type = 'date' then return 'date';
+            when untrusted_type = 'timestamp' then return 'timestamp';
+            when untrusted_type = 'timestamptz' then return 'timestamptz';
+            when untrusted_type = 'int[]' then return 'int[]';
+            when untrusted_type = 'boolean' then return 'boolean';
+            when untrusted_type = 'cidr' then return 'cidr';
+            when untrusted_type = 'inet' then return 'inet';
+            when untrusted_type = 'jsonb' then return 'jsonb';
+            when untrusted_type = 'interval' then return 'interval';
+            when untrusted_type = 'macaddr' then return 'macaddr';
+            when untrusted_type = 'decimal' then return 'decimal';
+            when untrusted_type = 'serial' then return 'serial';
+            when untrusted_type = 'time' then return 'time';
+            when untrusted_type = 'timetz' then return 'timetz';
+            when untrusted_type = 'xml' then return 'xml';
+            when untrusted_type = 'uuid' then return 'uuid';
+            when untrusted_type = 'bytea' then return 'bytea';
             else raise exception using message = 'Unrecognised data type';
         end case;
     end;
