@@ -127,8 +127,6 @@ GET /rpc/group_list_members?group_name=analysis1_group
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"group_name": "analysis1_group"}
-
 # returns
 [{"member": "myuser"}, {"member": "some_analyst"}]
 ```
@@ -158,7 +156,6 @@ GET /rpc/user_groups?user_name=myuser
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"user": "some_analyst"}
 # returns
 [{"group_name": "analysis1_group"}]
 ```
