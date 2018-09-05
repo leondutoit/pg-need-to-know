@@ -33,20 +33,21 @@ psql -d yourdb -1 -f testing.sql
 ## Method overview
 
 ```txt
-HTTP Method     | URL                       | required role
-----------------|---------------------------|--------------
-POST            | /rpc/table_create         | admin_user
-POST            | /rpc/user_create          | admin_user
-POST            | /rpc/group_create         | admin_user
-POST            | /rpc/group_add_members    | admin_user
-POST            | /rpc/group_list           | admin_user
-POST            | /rpc/group_list_members   | admin_user
-POST            | /rpc/group_remove_members | admin_user
-POST            | /rpc/group_delete         | admin_user
-POST            | /rpc/user_groups          | admin_user
-POST            | /rpc/user_delete_data     | the user who owns the data
-POST            | /rpc/user_delete          | admin_user
+HTTP Method     | URL                                       | required role
+----------------|-------------------------------------------|--------------
+POST            | /rpc/table_create                         | admin_user
+POST            | /rpc/user_create                          | admin_user
+POST            | /rpc/group_create                         | admin_user
+POST            | /rpc/group_add_members                    | admin_user
+GET             | /rpc/group_list                           | admin_user
+GET             | /rpc/group_list_members?group_name=<name> | admin_user
+POST            | /rpc/group_remove_members                 | admin_user
+POST            | /rpc/group_delete                         | admin_user
+GET             | /rpc/user_groups?user_name=<name>         | admin_user
+POST            | /rpc/user_delete_data                     | the data owner
+POST            | /rpc/user_delete                          | admin_user
 ```
+
 
 ## REST API
 
@@ -112,7 +113,7 @@ Authorization: Bearer your-jwt
 
 - List all groups in the db
 ```bash
-POST /rpc/group_list
+GET /rpc/group_list
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
@@ -122,7 +123,7 @@ Authorization: Bearer your-jwt
 
 - List all members in a specific group
 ```bash
-/rpc/group_list_members
+GET /rpc/group_list_members?group_name=analysis1_group
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
@@ -153,7 +154,7 @@ Authorization: Bearer your-jwt
 
 - List all groups belonging to a user
 ```bash
-POST /rpc/user_groups
+GET /rpc/user_groups?user_name=myuser
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
