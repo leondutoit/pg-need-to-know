@@ -208,14 +208,20 @@ grant insert, select, delete on user_types to public; -- eventually only app_use
 drop function if exists user_create(text, text);
 create or replace function user_create(user_name text, user_type text)
     returns text as $$
+    declare trusted_user_name text;
+    declare trusted_user_type text;
     begin
-        execute 'create role ' || user_name;
-        execute 'grant ' || user_name || ' to authenticator';
-        execute 'grant select on group_memberships to ' || user_name;
-        execute 'grant execute on function roles_have_common_group_and_is_data_user(text, text) to ' || user_name;
-        execute 'grant insert on user_data_deletion_requests to ' || user_name;
-        insert into user_types (_user_name, _user_type) values (user_name, user_type);
-        return 'created user ' || user_name;
+        trusted_user_name := quote_ident(user_name);
+        trusted_user_type := quote_literal(user_type);
+        execute format('create role %I', trusted_user_name);
+        execute format('grant %I to authenticator', trusted_user_name);
+        execute format('grant select on group_memberships to %I', trusted_user_name);
+        execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
+        execute format('grant insert on user_data_deletion_requests to %I', trusted_user_name);
+        -- the table also has a check constraint on it for values of _user_type
+        execute format('insert into user_types (_user_name, _user_type) values ($1, $2)')
+            using user_name, user_type; -- this is alright, since they are _values_ not SQL identifiers
+        return 'user created';
     end;
 $$ language plpgsql;
 grant execute on function user_create(text, text) to admin_user;
