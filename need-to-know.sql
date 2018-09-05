@@ -6,9 +6,11 @@ Conventions
 For plpgsql functions the following conventions for code are adopted
 - all parameters are re-assigned to internal variables
 - all these variable state explicitly whether the source of the input
-  is trusted or untrusted - this _should_ make it easier to reason
-  about the security of the function; an example of trusted input
-  is the built-in current_user variable, while end-user input is untrusted
+  is trusted or untrusted
+- this _should_ make it easier to reason about the security of the function
+- trusted input is either derived from the db system itself or end-user
+  input that has been validated by internal functions
+- untrusted variable are never used for dynamic sql statement generation
 - declarations for variables that are used to store parameters are
   distinguished from variables used to store internal state by comments
 
@@ -132,51 +134,55 @@ grant execute on function table_create(json, text, int) to admin_user;
 drop function if exists parse_mac_table_def(json);
 create or replace function parse_mac_table_def(definition json)
     returns text as $$
-    declare _table_name text;
-    declare _columns json;
-    declare _colname text;
-    declare _dtype text;
-    declare _i json;
-    declare _pk boolean;
-    declare _nn boolean;
+    -- param vars
+    declare untrusted_definition json;
+    -- func vars
+    declare trusted_table_name text;
+    declare untrusted_columns json;
+    declare trusted_colname text;
+    declare trusted_dtype text;
+    declare untrusted_i json;
+    declare untrusted_pk boolean;
+    declare untrusted_nn boolean;
     begin
-        _columns := definition->'columns';
-        _table_name := definition->>'table_name';
-        execute 'create table if not exists ' || _table_name || '(row_owner text default current_user)';
-        for _i in select * from json_array_elements(_columns) loop
-            select sql_type_from_generic_type(_i->>'type') into _dtype;
-            select _i->>'name' into _colname;
+        untrusted_definition := definition;
+        untrusted_columns := untrusted_definition->'columns';
+        trusted_table_name := quote_ident(untrusted_definition->>'table_name');
+        execute format('create table if not exists %I (row_owner text default current_user)', trusted_table_name);
+        for untrusted_i in select * from json_array_elements(untrusted_columns) loop
+            select sql_type_from_generic_type(untrusted_i->>'type') into trusted_dtype;
+            select quote_ident(untrusted_i->>'name') into trusted_colname;
             begin
-                execute 'alter table ' || _table_name || ' add column ' || _colname || ' ' || _dtype;
+                execute format('alter table %I add column %I %s', trusted_table_name, trusted_colname, trusted_dtype);
             exception
-                when duplicate_column then raise notice 'column % already exists', _colname;
+                when duplicate_column then raise notice 'column % already exists', trusted_colname;
             end;
             begin
-                select _i->'constraints'->'primary_key' into _pk;
-                if _pk is not null then
+                select untrusted_i->'constraints'->'primary_key' into untrusted_pk;
+                if untrusted_pk is not null then
                     begin
-                        execute 'alter table ' || _table_name || ' add primary key ' || '(' || _colname || ')';
+                        execute format('alter table %I add primary key (%s)', trusted_table_name, trusted_colname);
                     exception
                         when invalid_table_definition then raise notice 'primary key already exists';
                     end;
                 end if;
             end;
             begin
-                select _i->'constraints'->'not_null' into _nn;
-                if _nn is not null then
-                    execute 'alter table ' || _table_name || ' alter column ' || _colname || ' set not null';
+                select untrusted_i->'constraints'->'not_null' into untrusted_nn;
+                if untrusted_nn is not null then
+                    execute format('alter table %I alter column %I set not null', trusted_table_name, trusted_colname);
                 end if;
             end;
         end loop;
-        execute 'alter table ' || _table_name || ' enable row level security';
-        execute 'alter table ' || _table_name || ' force row level security';
-        -- TODO: eventually move the select grant up and grant it on all user defined rows only
-        execute 'grant insert, select, update, delete on ' || _table_name || ' to public';
-        execute 'create policy row_ownership_insert_policy on ' || _table_name || ' for insert with check (true)';
-        execute 'create policy row_ownership_select_policy on ' || _table_name || ' for select using (row_owner = current_user)';
-        execute 'create policy row_ownership_delete_policy on ' || _table_name || ' for delete using (row_owner = current_user)';
-        execute 'create policy row_ownership_select_group_policy on ' || _table_name || ' for select using (roles_have_common_group_and_is_data_user(current_user::text, row_owner))';
-        execute 'create policy row_owbership_update_policy on ' || _table_name || ' for update using (row_owner = current_user) with check (row_owner = current_user)';
+        execute format('alter table %I enable row level security', trusted_table_name);
+        execute format('alter table %I force row level security', trusted_table_name);
+        -- TODO: perhaps move the select grant up and grant it on all user defined rows only
+        execute format('grant insert, select, update, delete on %I to public', trusted_table_name);
+        execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
+        execute format('create policy row_ownership_select_policy on %I for select using (row_owner = current_user)', trusted_table_name);
+        execute format('create policy row_ownership_delete_policy on %I for delete using (row_owner = current_user)', trusted_table_name);
+        execute format('create policy row_ownership_select_group_policy on %I for select using (roles_have_common_group_and_is_data_user(current_user::text, row_owner))', trusted_table_name);
+        execute format('create policy row_owbership_update_policy on %I for update using (row_owner = current_user) with check (row_owner = current_user)', trusted_table_name);
         return 'Success';
     end;
 $$ language plpgsql;
