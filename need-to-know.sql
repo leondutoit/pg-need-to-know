@@ -333,8 +333,7 @@ create or replace function user_delete_data()
     begin
         for _table in select table_name from information_schema.tables where table_schema = 'public' and table_type != 'VIEW' loop
             begin
-                if _table in ('user_defined_groups', 'user_types', 'user_data_deletion_requests') then
-                    raise notice 'deleting data from % is not allowed', _table;
+                if _table in ('user_defined_groups', 'user_types', 'user_data_deletion_requests') then null;
                     continue;
                 end if;
                 execute 'delete from '||  _table;
@@ -369,7 +368,7 @@ create or replace function user_delete(user_name text)
                     raise exception 'Cannot delete user, DB has data belonging to % in table %', user_name, _table;
                 end if;
             exception
-                when undefined_column then raise notice '% has no user data', _table;
+                when undefined_column then null;
             end;
         end loop;
         for _g in select _group from group_memberships where _role = user_name loop
