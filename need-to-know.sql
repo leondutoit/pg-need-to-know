@@ -329,19 +329,22 @@ grant insert on user_data_deletion_requests to public;
 drop function if exists user_delete_data();
 create or replace function user_delete_data()
     returns text as $$
-    declare _table text;
+    declare trusted_table text;
     begin
-        for _table in select table_name from information_schema.tables where table_schema = 'public' and table_type != 'VIEW' loop
+        for trusted_table in select table_name from information_schema.tables
+                      where table_schema = 'public' and table_type != 'VIEW' loop
             begin
-                if _table in ('user_defined_groups', 'user_types', 'user_data_deletion_requests') then null;
+                if trusted_table in ('user_defined_groups', 'user_types', 'user_data_deletion_requests') then null;
                     continue;
                 end if;
-                execute 'delete from '||  _table;
+                execute format('delete from %I', trusted_table);
             exception
-                when insufficient_privilege then raise notice 'cannot delete data from %, permission denied', _table;
+                when insufficient_privilege
+                then raise notice 'cannot delete data from %, permission denied', trusted_table;
             end;
         end loop;
-        insert into user_data_deletion_requests (user_name, request_date) values (current_user, current_timestamp);
+        insert into user_data_deletion_requests (user_name, request_date)
+            values (current_user, current_timestamp);
         return 'all data deleted';
     end;
 $$ language plpgsql;
