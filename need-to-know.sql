@@ -259,14 +259,16 @@ grant select on user_defined_groups_memberships to public;
 drop function if exists group_add_members(json);
 create or replace function group_add_members(members json)
     returns text as $$
-    declare _i json;
-    declare _user text;
-    declare _group text;
+    declare untrusted_members json;
+    declare untrusted_i json;
+    declare trusted_user text;
+    declare trusted_group text;
     begin
-        for _i in select * from json_array_elements(members->'memberships') loop
-            select _i->>'user' into _user;
-            select _i->>'group' into _group;
-            execute 'grant ' || _user || ' to ' || _group;
+        untrusted_members := members;
+        for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
+            select quote_ident(untrusted_i->>'user') into trusted_user;
+            select quote_ident(untrusted_i->>'group') into trusted_group;
+            execute format('grant %I to %I', trusted_user, trusted_group);
         end loop;
     return 'added members to groups';
     end;
@@ -290,7 +292,6 @@ create or replace function group_list_members(group_name text)
     declare _group text;
     begin
         _group := $1;
-        raise notice '%', _group;
         return query execute 'select u.member::text from user_defined_groups_memberships u
                      where u.group_name = ' || quote_literal(_group);
     end;
