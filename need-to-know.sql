@@ -235,10 +235,12 @@ grant insert, select, delete on user_defined_groups to public; --eventually admi
 drop function if exists group_create(text);
 create or replace function group_create(group_name text)
     returns text as $$
+    declare trusted_group_name text;
     begin
-        execute 'create role ' || group_name;
-        insert into user_defined_groups values (group_name);
-        return 'created group ' || group_name;
+        trusted_group_name := quote_ident(group_name);
+        execute format('create role %I', group_name);
+        execute format('insert into user_defined_groups values ($1)') using group_name;
+        return 'group created';
     end;
 $$ language plpgsql;
 grant execute on function group_create(text) to admin_user;
