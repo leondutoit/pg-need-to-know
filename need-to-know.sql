@@ -289,11 +289,9 @@ grant execute on function group_list() to admin_user;
 drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
     returns table (member text) as $$
-    declare _group text;
     begin
-        _group := $1;
-        return query execute 'select u.member::text from user_defined_groups_memberships u
-                     where u.group_name = ' || quote_literal(_group);
+        return query execute format('select u.member::text from user_defined_groups_memberships u
+                     where u.group_name = $1') using group_name;
     end;
 $$ language plpgsql;
 grant execute on function group_list_members(text) to admin_user;
