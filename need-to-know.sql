@@ -300,14 +300,16 @@ grant execute on function group_list_members(text) to admin_user;
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
     returns text as $$
-    declare _i json;
-    declare _user text;
-    declare _group text;
+    declare untrusted_members json;
+    declare untrusted_i json;
+    declare trusted_user text;
+    declare trusted_group text;
     begin
-        for _i in select * from json_array_elements(members->'memberships') loop
-            select _i->>'user' into _user;
-            select _i->>'group' into _group;
-            execute 'revoke ' || _user || ' from ' || _group;
+        untrusted_members := members;
+        for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
+            select quote_ident(untrusted_i->>'user') into trusted_user;
+            select quote_ident(untrusted_i->>'group') into trusted_group;
+            execute format('revoke %I from %I', trusted_user, trusted_group);
         end loop;
     return 'removed members from groups';
     end;
