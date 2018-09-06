@@ -238,7 +238,7 @@ create or replace function group_create(group_name text)
     declare trusted_group_name text;
     begin
         trusted_group_name := quote_ident(group_name);
-        execute format('create role %I', group_name);
+        execute format('create role %I', trusted_group_name);
         execute format('insert into user_defined_groups values ($1)') using group_name;
         return 'group created';
     end;
