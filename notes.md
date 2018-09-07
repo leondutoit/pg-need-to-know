@@ -10,7 +10,7 @@
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
 
 ## TODO:
-- add test to ensure we cannot drop internal roles
+- add test to ensure we cannot drop internal roles (for users and groups)
 - add asserts to test_group_delete for tighter checks
 - implement user_groups
 - review table and view ownership

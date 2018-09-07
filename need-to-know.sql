@@ -402,15 +402,18 @@ grant execute on function user_delete(text) to public; -- eventually only admin_
 drop function if exists group_delete(text);
 create or replace function group_delete(group_name text)
     returns text as $$
-    declare _num_members int;
+    declare trusted_group_name text;
+    declare trusted_num_members int;
     begin
-        -- ensure group has no members
-        execute 'select count(1) from user_defined_groups_memberships u where u.group_name = ' || quote_literal(group_name) into _num_members;
-        if _num_members > 0 then
-            raise exception 'Cannot delete group %, it has % members', group_name, _num_members;
+        assert group_name in (select udg.group_name from user_defined_groups udg), 'permission denied to delete group';
+        trusted_group_name := quote_ident(group_name);
+        execute format('select count(1) from user_defined_groups_memberships u where u.group_name = $1')
+                using group_name into trusted_num_members;
+        if trusted_num_members > 0 then
+            raise exception 'Cannot delete group %, it has % members', group_name, trusted_num_members;
         end if;
-        execute 'drop role ' || group_name;
-        execute 'delete from user_defined_groups where group_name = ' || quote_literal(group_name);
+        execute format('drop role %I', trusted_group_name);
+        execute format('delete from user_defined_groups where group_name = $1') using group_name;
         return 'group deleted';
     end;
 $$ language plpgsql;
