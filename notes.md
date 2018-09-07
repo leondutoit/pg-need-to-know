@@ -10,6 +10,8 @@
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
 
 ## TODO:
+- add test to ensure we cannot drop internal roles
+- add asserts to test_group_delete for tighter checks
 - implement user_groups
 - review table and view ownership
 - alter function ownerships to admin_user

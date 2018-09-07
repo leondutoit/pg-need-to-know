@@ -354,42 +354,45 @@ grant execute on function user_delete_data() to public;
 drop function if exists user_delete(text);
 create or replace function user_delete(user_name text)
     returns text as $$
-    declare _table text;
-    declare _numrows int;
-    declare _g text;
+    declare trusted_table text;
+    declare trusted_user_name text;
+    declare trusted_numrows int;
+    declare trusted_group text;
     begin
-        -- TODO check that user_name is user defined and not an internal role
-        for _table in select table_name from information_schema.tables where table_schema = 'public' and table_type != 'VIEW' loop
+        assert user_name in (select _user_name from user_types), 'deleting role not allowed';
+        trusted_user_name := quote_ident(user_name);
+        for trusted_table in select table_name from information_schema.tables
+                              where table_schema = 'public' and table_type != 'VIEW' loop
             begin
-                -- checked by the role we are going to delete, table owner has no access to data
                 set role authenticator;
-                execute 'set role ' || user_name;
-                execute 'select count(1) from ' || _table || ' where row_owner = ' || quote_literal(user_name) into _numrows;
+                execute format('set role %I', trusted_user_name);
+                execute format('select count(1) from %I where row_owner = $1', trusted_table)
+                        using user_name into trusted_numrows;
                 set role authenticator;
                 set role admin_user;
-                if _numrows > 0 then
-                    raise exception 'Cannot delete user, DB has data belonging to % in table %', user_name, _table;
+                if trusted_numrows > 0 then
+                    raise exception 'Cannot delete user, DB has data belonging to % in table %', user_name, trusted_table;
                 end if;
             exception
                 when undefined_column then null;
             end;
         end loop;
-        for _g in select _group from group_memberships where _role = user_name loop
-            execute 'revoke ' || user_name || ' from ' || _g;
+        for trusted_group in select _group from group_memberships where _role = user_name loop
+            execute format('revoke %I from %I', trusted_user_name, trusted_group);
         end loop;
-        for _table in select table_name from information_schema.role_table_grants where grantee = quote_literal(user_name) loop
+        for trusted_table in select table_name from information_schema.role_table_grants
+                              where grantee = quote_literal(user_name) loop
             begin
-                execute 'revoke all privileges on ' || _table ' from ' || user_name;
+                execute format('revoke all privileges on %I from %I', trusted_table, user_name);
             end;
         end loop;
-        -- ensure correct role
         set role authenticator;
         set role admin_user;
-        execute 'revoke all privileges on group_memberships from ' || user_name;
-        execute 'revoke all privileges on user_data_deletion_requests from ' || user_name;
-        execute 'revoke execute on function roles_have_common_group_and_is_data_user(text, text) from ' || user_name;
-        execute 'delete from user_types where _user_name = ' || quote_literal(user_name);
-        execute 'drop role ' || user_name;
+        execute format('revoke all privileges on group_memberships from %I', trusted_user_name);
+        execute format('revoke all privileges on user_data_deletion_requests from %I', trusted_user_name);
+        execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
+        execute format('delete from user_types where _user_name = $1') using user_name;
+        execute format('drop role %I', trusted_user_name);
         return 'user deleted';
     end;
 $$ language plpgsql;
