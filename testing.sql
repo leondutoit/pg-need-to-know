@@ -152,6 +152,13 @@ create or replace function test_group_list_members()
 $$ language plpgsql;
 
 
+-- test_user_groups()
+-- cannot access internal role
+-- can list groups from a user defined role
+
+-- test_user_list()
+-- lists all user defined roles
+
 create or replace function test_group_remove_members()
     returns boolean as $$
     declare _ans text;

@@ -297,6 +297,26 @@ $$ language plpgsql;
 grant execute on function group_list_members(text) to admin_user;
 
 
+drop function if exists user_groups(text);
+create or replace function user_groups(user_name text)
+    returns table (group_name text) as $$
+    begin
+        assert user_name in (select _user_name from user_types), 'access to role not allowed';
+        return query execute format('select _group::text group_name from group_memberships where _role = $1')
+                             using user_name;
+    end;
+$$ language plpgsql;
+
+
+drop function if exists user_list();
+create or replace function user_list()
+    returns table (user_name text, user_type text) as $$
+    begin
+        return query execute format('select _user_name::text user_name, _user_type::text user_type from user_types');
+    end;
+$$ language plpgsql;
+
+
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
     returns text as $$

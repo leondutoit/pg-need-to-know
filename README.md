@@ -41,6 +41,7 @@ POST            | /rpc/group_create                         | admin_user
 POST            | /rpc/group_add_members                    | admin_user
 GET             | /rpc/group_list                           | admin_user
 GET             | /rpc/group_list_members?group_name=<name> | admin_user
+GET             | /rpc/user_list                            | admin_user
 POST            | /rpc/group_remove_members                 | admin_user
 POST            | /rpc/group_delete                         | admin_user
 GET             | /rpc/user_groups?user_name=<name>         | admin_user
@@ -131,6 +132,16 @@ Authorization: Bearer your-jwt
 [{"member": "myuser"}, {"member": "some_analyst"}]
 ```
 
+- List all users
+```bash
+POST /rpc/user_list
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+# returns
+[{"user_name": "myuser", "user_type": "data_owner"}, {"user_name": "some_analyst", "user_type": "data_user"}]
+```
+
 - Remove members from a group
 ```bash
 POST /rpc/group_remove_members
@@ -162,7 +173,7 @@ Authorization: Bearer your-jwt
 
 - A data owner deletes all their data
 ```bash
-POST/rpc/user_delete_data
+POST /rpc/user_delete_data
 Content-Type: application/json
 Authorization: Bearer your-jwt
 ```
