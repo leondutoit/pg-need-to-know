@@ -306,6 +306,7 @@ create or replace function user_groups(user_name text)
                              using user_name;
     end;
 $$ language plpgsql;
+grant execute on user_groups(text) to admin_user;
 
 
 drop function if exists user_list();
@@ -315,6 +316,7 @@ create or replace function user_list()
         return query execute format('select _user_name::text user_name, _user_type::text user_type from user_types');
     end;
 $$ language plpgsql;
+grant execute on user_list() to admin_user;
 
 
 drop function if exists group_remove_members(json);

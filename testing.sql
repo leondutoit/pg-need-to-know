@@ -153,8 +153,21 @@ $$ language plpgsql;
 
 
 -- test_user_groups()
--- cannot access internal role
--- can list groups from a user defined role
+create or replace function test_user_groups()
+    returns boolean as $$
+    declare _ans text;
+    begin
+        set role admin_user;
+        assert 'project_group' in (select user_groups('gustav')),
+            'user_groups function does not list all groups';
+        begin
+            select user_groups('authenticator') into _ans;
+        exception
+            when assert_failure then raise notice 'cannot access internal role groups - as expected';
+        end;
+        return true;
+    end;
+$$ language plpgsql;
 
 -- test_user_list()
 -- lists all user defined roles
@@ -291,6 +304,7 @@ create or replace function run_tests()
         assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
         assert (select test_group_list()), 'ERROR: test_group_list';
         assert (select test_group_list_members()), 'ERROR: test_group_list_members';
+        assert (select test_user_groups()), 'ERROR: test_user_groups';
         assert (select test_group_remove_members()), 'ERROR: test_group_remove_members';
         assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         assert (select test_user_delete()), 'ERROR: test_user_delete';
@@ -316,6 +330,7 @@ drop function test_group_add_members();
 drop function test_group_membership_data_access_policies();
 drop function test_group_list();
 drop function test_group_list_members();
+drop function test_user_groups();
 drop function test_group_remove_members();
 drop function test_user_delete_data();
 drop function test_user_delete();
