@@ -152,7 +152,6 @@ create or replace function test_group_list_members()
 $$ language plpgsql;
 
 
--- test_user_groups()
 create or replace function test_user_groups()
     returns boolean as $$
     declare _ans text;
@@ -165,12 +164,27 @@ create or replace function test_user_groups()
         exception
             when assert_failure then raise notice 'cannot access internal role groups - as expected';
         end;
+        set role authenticator;
         return true;
     end;
 $$ language plpgsql;
 
--- test_user_list()
--- lists all user defined roles
+
+create or replace function test_user_list()
+    returns boolean as $$
+    declare _ans text;
+    begin
+        set role admin_user;
+        assert (select '(gustav,data_owner)' in (select user_list()::text)), 'user_list does not work';
+        assert (select '(hannah,data_owner)' in (select user_list()::text)), 'user_list does not work';
+        assert (select '(faye,data_owner)' in (select user_list()::text)), 'user_list does not work';
+        assert (select '(project_user,data_user)' in (select user_list()::text)), 'user_list does not work';
+        assert (select '(authenticator,data_user)' not in (select user_list()::text)), 'user_list does not work - includes internal role';
+        set role authenticator;
+        return true;
+    end;
+$$ language plpgsql;
+
 
 create or replace function test_group_remove_members()
     returns boolean as $$
@@ -305,6 +319,7 @@ create or replace function run_tests()
         assert (select test_group_list()), 'ERROR: test_group_list';
         assert (select test_group_list_members()), 'ERROR: test_group_list_members';
         assert (select test_user_groups()), 'ERROR: test_user_groups';
+        assert (select test_user_list()), 'ERROR: test_user_list';
         assert (select test_group_remove_members()), 'ERROR: test_group_remove_members';
         assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         assert (select test_user_delete()), 'ERROR: test_user_delete';
@@ -331,6 +346,7 @@ drop function test_group_membership_data_access_policies();
 drop function test_group_list();
 drop function test_group_list_members();
 drop function test_user_groups();
+drop function test_user_list();
 drop function test_group_remove_members();
 drop function test_user_delete_data();
 drop function test_user_delete();
