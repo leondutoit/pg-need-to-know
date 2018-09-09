@@ -249,6 +249,11 @@ create or replace function test_user_delete()
         select user_delete('hannah') into _ans;
         assert (select count(1) from user_types where _user_name = 'hannah') = 0,
             'user deletion did not update user_types accounting table correctly';
+        begin
+            select user_delete('authenticator') into _ans;
+        exception
+            when assert_failure then raise notice 'cannot delete internal role via user_delete - as expected.';
+        end;
         set role authenticator;
         return true;
     end;
@@ -271,6 +276,13 @@ create or replace function test_group_delete()
         select user_delete('project_user') into _ans;
         set role admin_user;
         select group_delete('project_group') into _ans;
+        assert (select count(1) from user_defined_groups where group_name = 'project_group') = 0, 'group accounting not working after deletion';
+        begin
+            -- possible attack vector, since groups are just roles
+            select group_delete('authenticator') into _ans;
+        exception
+            when assert_failure then raise notice 'cannot delete internal role via group_delete - as expected.';
+        end;
         set role authenticator;
         return true;
     end;

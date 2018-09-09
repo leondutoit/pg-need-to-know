@@ -49,6 +49,8 @@ create table logs.requests(
 );
 grant usage on schema logs to public;
 grant insert on logs.requests to public;
+grant select on logs.requests to admin_user;
+
 
 drop function if exists logs.update_request_log(text, text);
 create or replace function logs.update_request_log(_current_role text, _current_row_owner text)
@@ -61,9 +63,9 @@ create or replace function logs.update_request_log(_current_role text, _current_
         execute format('insert into logs.requests (data_user, data_owner) values ($1, $2)')
                 using trusted_current_role, trusted_current_row_owner;
         return true;
-
     end;
 $$ language plpgsql;
+
 
 drop function if exists roles_have_common_group_and_is_data_user(text, text);
 create or replace function roles_have_common_group_and_is_data_user(_current_role text, _current_row_owner text)

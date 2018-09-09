@@ -9,18 +9,17 @@
 
 
 ## IP
-- add test to ensure we cannot drop internal roles (for users and groups)
-- add asserts to test_group_delete for tighter checks
 - add tests for audit log table
 - describe audit log table in readme
-
+- consider how and who to give access to audit logs
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
 - implement user_groups
 - implement user_list (list all users)
 - logging table
-
+- add test to ensure we cannot drop internal roles (for users and groups)
+- add asserts to test_group_delete for tighter checks
 
 ## TODO:
 - review table and view ownership
