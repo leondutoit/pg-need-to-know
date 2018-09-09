@@ -11,6 +11,8 @@
 ## IP
 - add test to ensure we cannot drop internal roles (for users and groups)
 - add asserts to test_group_delete for tighter checks
+- add tests for audit log table
+- describe audit log table in readme
 
 
 ## Done
@@ -24,6 +26,8 @@
 - review table and view ownership
 - alter function ownerships to admin_user
 - review consitency of parameter names: group, group_name, user, user_name
+- write up SQL API
+- separate SQL API and HTTP API into two docs
 - HTTP client tests
 - write about the model
 - make a presentation, with visual representations of the model
