@@ -38,6 +38,33 @@ grant select on group_memberships to authenticator, tsd_backend_utv_user, admin_
 
 set role tsd_backend_utv_user; --dbowner
 
+-- data request audit logging
+-- updated when RLS allows a data user to select from a data owner
+create schema if not exists logs;
+drop table if exists logs.requests;
+create table logs.requests(
+    request_time timestamptz default current_timestamp,
+    data_user text,
+    data_owner text
+);
+grant usage on schema logs to public;
+grant insert on logs.requests to public;
+
+drop function if exists logs.update_request_log(text, text);
+create or replace function logs.update_request_log(_current_role text, _current_row_owner text)
+    returns boolean as $$
+    declare trusted_current_role text;
+    declare trusted_current_row_owner text;
+    begin
+        trusted_current_role := _current_role;
+        trusted_current_row_owner := _current_row_owner;
+        execute format('insert into logs.requests (data_user, data_owner) values ($1, $2)')
+                using trusted_current_role, trusted_current_row_owner;
+        return true;
+
+    end;
+$$ language plpgsql;
+
 drop function if exists roles_have_common_group_and_is_data_user(text, text);
 create or replace function roles_have_common_group_and_is_data_user(_current_role text, _current_row_owner text)
     returns boolean as $$
@@ -46,6 +73,7 @@ create or replace function roles_have_common_group_and_is_data_user(_current_rol
     declare trusted_current_row_owner text;
     -- func vars
     declare _type text;
+    declare _log boolean;
     declare _res boolean;
     begin
         trusted_current_role := _current_role;
@@ -62,6 +90,10 @@ create or replace function roles_have_common_group_and_is_data_user(_current_rol
                 select _group from group_memberships where _role = $2)a
             where _group != $3)
         != 0') into _res using trusted_current_role, trusted_current_row_owner, 'authenticator';
+        if _res = true then
+            -- update audit logs
+            select logs.update_request_log(trusted_current_role, trusted_current_row_owner) into _log;
+        end if;
         return _res;
     end;
 $$ language plpgsql;
@@ -306,7 +338,7 @@ create or replace function user_groups(user_name text)
                              using user_name;
     end;
 $$ language plpgsql;
-grant execute on user_groups(text) to admin_user;
+grant execute on function user_groups(text) to admin_user;
 
 
 drop function if exists user_list();
@@ -316,7 +348,7 @@ create or replace function user_list()
         return query execute format('select _user_name::text user_name, _user_type::text user_type from user_types');
     end;
 $$ language plpgsql;
-grant execute on user_list() to admin_user;
+grant execute on function user_list() to admin_user;
 
 
 drop function if exists group_remove_members(json);
