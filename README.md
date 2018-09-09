@@ -8,7 +8,7 @@ A Mandatory Access Control setup for PostgreSQL which takes data ownership serio
 - Any registered data owner can insert data (registation is needed to enforce ownership)
 - Data owners are the only ones who can operate on their data by default (select, update, delete)
 - Read-only access can be granted to data users based on common group membership (data owner can never see the data of other data owners)
-- All data access must specify columns explicitly, since those containing access control and identity information are protected
+- All data access by data users is logged: which data owner successfully requested data about which data owner, when
 - Data owners can delete all their data at any time
 
 
