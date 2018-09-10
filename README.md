@@ -96,7 +96,7 @@ POST /rpc/group_add_members
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"memberships": [{"user":"myuser", "group":"analysis1_group"}, {"user":"some_analyst", "group":"analysis1_group"}]}
+{"memberships": [{"user_name":"myuser", "group_name":"analysis1_group"}, {"user_name":"some_analyst", "group_name":"analysis1_group"}]}
 ```
 
 - As the data user `some_analyst`, get data to analyse

@@ -300,8 +300,8 @@ create or replace function group_add_members(members json)
     begin
         untrusted_members := members;
         for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
-            select quote_ident(untrusted_i->>'user') into trusted_user;
-            select quote_ident(untrusted_i->>'group') into trusted_group;
+            select quote_ident(untrusted_i->>'user_name') into trusted_user;
+            select quote_ident(untrusted_i->>'group_name') into trusted_group;
             -- TODO: data_owner -> authenticator -> admin_user
             execute format('grant %I to %I', trusted_user, trusted_group);
         end loop;

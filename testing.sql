@@ -100,7 +100,11 @@ create or replace function test_group_add_members()
     declare _ans text;
     begin
         set role admin_user;
-        select group_add_members('{"memberships": [{"user":"gustav", "group":"project_group"}, {"user":"hannah", "group":"project_group"}, {"user":"project_user", "group":"project_group"}]}'::json) into _ans;
+        select group_add_members('{"memberships": [
+            {"user_name":"gustav", "group_name":"project_group"},
+            {"user_name":"hannah", "group_name":"project_group"},
+            {"user_name":"project_user", "group_name":"project_group"}]}'::json)
+        into _ans;
         set role authenticator;
         assert (select count(1) from user_defined_groups where group_name = 'project_group') = 1,
             'group creation accounting is broken';
