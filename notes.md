@@ -11,6 +11,7 @@
 - add tests for audit log table
 - describe audit log table in readme
 - consider how and who to give access to audit logs
+- move accounting and other internal tables into own schema
 - write up SQL API
 - separate SQL API and HTTP API into two docs
 - HTTP client tests

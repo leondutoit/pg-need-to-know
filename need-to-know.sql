@@ -46,7 +46,12 @@ create table logs.requests(
     data_user text,
     data_owner text
 );
+-- TODO: add RLS policies when exposing this table to users
+-- amdin_user can get everything
+-- data_owners can get logs about themselves
+-- then use /rpc/access_logs
 grant usage on schema logs to public;
+grant create on schema logs to admin_user; -- so execute can be granted/revoked when users are created/deleted
 grant insert on logs.requests to public;
 grant select on logs.requests to admin_user;
 
@@ -64,6 +69,8 @@ create or replace function logs.update_request_log(_current_role text, _current_
         return true;
     end;
 $$ language plpgsql;
+revoke all privileges on function logs.update_request_log(text, text) from public;
+alter function logs.update_request_log(text, text) owner to admin_user;
 
 
 drop function if exists roles_have_common_group_and_is_data_user(text, text);
@@ -98,8 +105,9 @@ create or replace function roles_have_common_group_and_is_data_user(_current_rol
         return _res;
     end;
 $$ language plpgsql;
+revoke all privileges on function roles_have_common_group_and_is_data_user(text, text) from public;
 alter function roles_have_common_group_and_is_data_user owner to admin_user;
-grant execute on function roles_have_common_group_and_is_data_user(text, text) to public;
+--grant execute on function roles_have_common_group_and_is_data_user(text, text) to public;
 
 
 drop function if exists sql_type_from_generic_type(text);
@@ -250,6 +258,7 @@ create or replace function user_create(user_name text, user_type text)
         execute format('grant %I to authenticator', trusted_user_name);
         execute format('grant select on group_memberships to %I', trusted_user_name);
         execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
+        execute format('grant execute on function logs.update_request_log(text, text) to %I', trusted_user_name);
         execute format('grant insert on user_data_deletion_requests to %I', trusted_user_name);
         -- TODO: grant privileges on group_add_members and group_remove_members
         -- the table also has a check constraint on it for values of _user_type
@@ -449,6 +458,7 @@ create or replace function user_delete(user_name text)
         -- TODO: revoke privileges on group_add_members and group_remove_members
         execute format('revoke all privileges on group_memberships from %I', trusted_user_name);
         execute format('revoke all privileges on user_data_deletion_requests from %I', trusted_user_name);
+        execute format('revoke execute on function logs.update_request_log(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
         execute format('delete from user_types where _user_name = $1') using user_name;
         execute format('drop role %I', trusted_user_name);
