@@ -6,14 +6,11 @@
 ## Helpful
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
-## TODO:
-- review consitency of parameter names: group, group_name, user, user_name
+## TODO
 - document and expose user_data_deletion_requests
-- group_add,remove_members - allow data owners to remove themselves
-    - and corresponding right grant and revoke
-    - and update tests accordingl
-- review table and view ownership
-- alter function ownerships to admin_user
+- add tests for audit log table
+- describe audit log table in readme
+- consider how and who to give access to audit logs
 - write up SQL API
 - separate SQL API and HTTP API into two docs
 - HTTP client tests
@@ -21,9 +18,10 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- add tests for audit log table
-- describe audit log table in readme
-- consider how and who to give access to audit logs
+- review function, table and view ownership and access - lock down
+- group_add,remove_members - allow data owners to remove themselves
+    - and corresponding right grant and revoke
+    - and update tests accordingl
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -32,3 +30,4 @@
 - logging table
 - add test to ensure we cannot drop internal roles (for users and groups)
 - add asserts to test_group_delete for tighter checks
+- review consitency of parameter names: group, group_name, user, user_name
