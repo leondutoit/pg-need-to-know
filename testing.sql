@@ -15,14 +15,6 @@ create or replace function test_table_create()
                             'mac') into _ans;
         assert (select count(1) from people) = 0, 'problem with table creation';
         set role authenticator;
-        -- ensure only admin_user can create a table
-        set role a_role_without_privileges;
-        begin
-            select table_create('{}'::json, 'mac') into _ans;
-        exception
-            when others then raise notice 'only admin_user can create tables - as expected';
-        end;
-        set role authenticator;
         return true;
     end;
 $$ language plpgsql;
@@ -308,6 +300,24 @@ create or replace function test_group_delete()
 $$ language plpgsql;
 
 
+create or replace function test_function_privileges()
+    returns boolean as $$
+    declare _ans text;
+    begin
+        -- ensure only admin_user can create a table
+        set role a_role_without_privileges;
+        begin
+            select table_create('{}'::json, 'mac') into _ans;
+            return false;
+        exception
+            when others then raise notice 'only admin_user can create tables - as expected';
+        end;
+        set role authenticator;
+        return true;
+    end;
+$$ language plpgsql;
+
+
 create or replace function teardown()
     returns boolean as $$
     declare _ans text;
@@ -356,6 +366,7 @@ create or replace function run_tests()
         assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         assert (select test_user_delete()), 'ERROR: test_user_delete';
         assert (select test_group_delete()), 'ERROR: test_group_delete';
+        assert (select test_function_privileges()), 'ERROR: test_function_privileges';
         assert (select teardown()), 'ERROR: teardown';
         raise notice 'GOOD NEWS: All tests pass :)';
         return true;
@@ -383,6 +394,7 @@ drop function test_group_remove_members();
 drop function test_user_delete_data();
 drop function test_user_delete();
 drop function test_group_delete();
+drop function test_function_privileges();
 drop function teardown();
 \echo
 \echo 'DB state after testing'
