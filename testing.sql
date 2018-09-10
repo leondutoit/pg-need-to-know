@@ -1,5 +1,6 @@
 
 set role tsd_backend_utv_user; -- dbowner
+create role a_role_without_privileges;
 
 create or replace function test_table_create()
     returns boolean as $$
@@ -7,8 +8,20 @@ create or replace function test_table_create()
     begin
         set role authenticator;
         set role admin_user;
-        select table_create('{"table_name": "people", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac') into _ans;
+        select table_create('{"table_name": "people",
+                              "columns": [
+                                    {"name": "name", "type": "text"},
+                                    {"name": "age", "type": "int"} ]}'::json,
+                            'mac') into _ans;
         assert (select count(1) from people) = 0, 'problem with table creation';
+        set role authenticator;
+        -- ensure only admin_user can create a table
+        set role a_role_without_privileges;
+        begin
+            select table_create('{}'::json, 'mac') into _ans;
+        exception
+            when others then raise notice 'only admin_user can create tables - as expected';
+        end;
         set role authenticator;
         return true;
     end;
@@ -320,6 +333,7 @@ create or replace function teardown()
         set role admin_user;
         execute 'delete from user_data_deletion_requests';
         set role authenticator;
+        drop role a_role_without_privileges;
         return true;
     end;
 $$ language plpgsql;
