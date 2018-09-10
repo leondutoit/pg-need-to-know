@@ -195,7 +195,9 @@ create or replace function test_group_remove_members()
     declare _ans text;
     begin
         set role admin_user;
-        select group_remove_members('{"memberships": [{"user":"gustav", "group":"project_group"}]}'::json) into _ans;
+        select group_remove_members('{"memberships": [
+            {"user_name":"gustav", "group_name":"project_group"}]}'::json)
+        into _ans;
         set role authenticator;
         set role project_user;
         -- now only data owner in the group is hannah

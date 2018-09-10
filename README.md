@@ -148,7 +148,7 @@ POST /rpc/group_remove_members
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"memberships": [{"user":"myuser", "group":"analysis1_group"}]}
+{"memberships": [{"user_name":"myuser", "group_name":"analysis1_group"}]}
 ```
 
 - Delete a group
