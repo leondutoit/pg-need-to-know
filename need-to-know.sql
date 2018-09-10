@@ -20,10 +20,9 @@ For plpgsql functions the following conventions for code are adopted
 
 create role authenticator createrole; -- add noinheret?
 grant authenticator to tsd_backend_utv_user;
-create role admin_user createrole; -- project admins
+create role admin_user createrole;
 grant admin_user to authenticator;
-create role app_user;
-grant app_user to authenticator;
+
 
 create or replace view group_memberships as
 select _group, _role from
@@ -252,6 +251,7 @@ create or replace function user_create(user_name text, user_type text)
         execute format('grant select on group_memberships to %I', trusted_user_name);
         execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
         execute format('grant insert on user_data_deletion_requests to %I', trusted_user_name);
+        -- TODO: grant privileges on group_add_members and group_remove_members
         -- the table also has a check constraint on it for values of _user_type
         execute format('insert into user_types (_user_name, _user_type) values ($1, $2)')
             using user_name, user_type; -- this is alright, since they are _values_ not SQL identifiers
@@ -302,6 +302,7 @@ create or replace function group_add_members(members json)
         for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
             select quote_ident(untrusted_i->>'user') into trusted_user;
             select quote_ident(untrusted_i->>'group') into trusted_group;
+            -- TODO: data_owner -> authenticator -> admin_user
             execute format('grant %I to %I', trusted_user, trusted_group);
         end loop;
     return 'added members to groups';
@@ -365,12 +366,13 @@ create or replace function group_remove_members(members json)
         for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
             select quote_ident(untrusted_i->>'user') into trusted_user;
             select quote_ident(untrusted_i->>'group') into trusted_group;
+            -- TODO: data_owner -> authenticator -> admin_user
             execute format('revoke %I from %I', trusted_user, trusted_group);
         end loop;
     return 'removed members from groups';
     end;
 $$ language plpgsql;
-grant execute on function group_remove_members(json) to admin_user;
+grant execute on function group_remove_members(json) to admin_user; -- and data owners
 
 
 drop table if exists user_data_deletion_requests;
@@ -444,6 +446,7 @@ create or replace function user_delete(user_name text)
         end loop;
         set role authenticator;
         set role admin_user;
+        -- TODO: revoke privileges on group_add_members and group_remove_members
         execute format('revoke all privileges on group_memberships from %I', trusted_user_name);
         execute format('revoke all privileges on user_data_deletion_requests from %I', trusted_user_name);
         execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
