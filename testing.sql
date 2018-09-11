@@ -282,10 +282,8 @@ create or replace function test_group_delete()
             exception
                 when others then raise notice 'non-empty group deletion prevention works as expected';
             end;
-        set role authenticator;
         -- now remove members
         select user_delete('project_user') into _ans;
-        set role admin_user;
         select group_delete('project_group') into _ans;
         assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 0, 'group accounting not working after deletion';
         begin

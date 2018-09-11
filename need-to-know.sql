@@ -354,6 +354,7 @@ create or replace function group_list_members(group_name text)
                      where u.group_name = $1') using group_name;
     end;
 $$ language plpgsql;
+revoke all privileges on function group_list_members(text) from public;
 grant execute on function group_list_members(text) to admin_user;
 
 
@@ -366,6 +367,7 @@ create or replace function user_groups(user_name text)
                              using user_name;
     end;
 $$ language plpgsql;
+revoke all privileges on function user_groups(text) from public;
 grant execute on function user_groups(text) to admin_user;
 
 
@@ -376,6 +378,7 @@ create or replace function user_list()
         return query execute format('select _user_name::text user_name, _user_type::text user_type from ntk.registered_users');
     end;
 $$ language plpgsql;
+revoke all privileges on function user_list() from public;
 grant execute on function user_list() to admin_user;
 
 
@@ -396,6 +399,7 @@ create or replace function group_remove_members(members json)
     return 'removed members from groups';
     end;
 $$ language plpgsql;
+revoke all privileges on function group_remove_members(json) from public;
 grant execute on function group_remove_members(json) to admin_user;
 
 
@@ -405,7 +409,7 @@ create table if not exists user_data_deletion_requests(
     request_date timestamptz not null
 );
 alter table user_data_deletion_requests owner to admin_user;
-grant insert on user_data_deletion_requests to public;
+grant insert on user_data_deletion_requests to public; -- too broad
 
 
 drop function if exists user_delete_data();
@@ -416,9 +420,6 @@ create or replace function user_delete_data()
         for trusted_table in select table_name from information_schema.tables
                       where table_schema = 'public' and table_type != 'VIEW' loop
             begin
-                if trusted_table in ('user_defined_groups', 'user_data_deletion_requests') then null;
-                    continue;
-                end if;
                 execute format('delete from %I', trusted_table);
             exception
                 when insufficient_privilege
@@ -479,7 +480,8 @@ create or replace function user_delete(user_name text)
         return 'user deleted';
     end;
 $$ language plpgsql;
-grant execute on function user_delete(text) to public; -- eventually only admin_user
+revoke all privileges on function user_delete(text) from public;
+grant execute on function user_delete(text) to admin_user;
 
 
 drop function if exists group_delete(text);
@@ -500,3 +502,5 @@ create or replace function group_delete(group_name text)
         return 'group deleted';
     end;
 $$ language plpgsql;
+revoke all privileges on function group_delete(text) from public;
+grant execute on function group_delete(text) to admin_user;
