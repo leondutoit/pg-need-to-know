@@ -299,15 +299,15 @@ $$ language plpgsql;
 grant execute on function group_create(text) to admin_user;
 
 
-drop view if exists user_defined_groups_memberships cascade;
-create or replace view user_defined_groups_memberships as
+drop view if exists ntk.user_defined_groups_memberships cascade;
+create or replace view ntk.user_defined_groups_memberships as
     select group_name, _role member from
         (select group_name from ntk.user_defined_groups)a
         join
         (select _group, _role from ntk.group_memberships)b
         on a.group_name = b._group;
-alter view user_defined_groups_memberships owner to admin_user;
-grant select on user_defined_groups_memberships to public;
+alter view ntk.user_defined_groups_memberships owner to admin_user;
+grant select on ntk.user_defined_groups_memberships to public;
 
 
 drop function if exists group_add_members(json);
@@ -345,7 +345,7 @@ drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
     returns table (member text) as $$
     begin
-        return query execute format('select u.member::text from user_defined_groups_memberships u
+        return query execute format('select u.member::text from ntk.user_defined_groups_memberships u
                      where u.group_name = $1') using group_name;
     end;
 $$ language plpgsql;
@@ -487,7 +487,7 @@ create or replace function group_delete(group_name text)
     begin
         assert group_name in (select udg.group_name from ntk.user_defined_groups udg), 'permission denied to delete group';
         trusted_group_name := quote_ident(group_name);
-        execute format('select count(1) from user_defined_groups_memberships u where u.group_name = $1')
+        execute format('select count(1) from ntk.user_defined_groups_memberships u where u.group_name = $1')
                 using group_name into trusted_num_members;
         if trusted_num_members > 0 then
             raise exception 'Cannot delete group %, it has % members', group_name, trusted_num_members;

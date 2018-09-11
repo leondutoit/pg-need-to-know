@@ -112,7 +112,7 @@ create or replace function test_group_add_members()
         --set role authenticator;
         assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 1,
             'group creation accounting is broken';
-        assert (select count(member) from user_defined_groups_memberships where group_name = 'project_group') = 3,
+        assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
             'adding members to groups is broken';
         return true;
     end;
@@ -207,7 +207,7 @@ create or replace function test_group_remove_members()
         -- now only data owner in the group is hannah
         assert (select count(1) from people) = 1,
             'project_user has unauthorized data access to people, something went wrong then removing gustav from project_group';
-        assert (select count(1) from user_defined_groups_memberships where member = 'gustav' and group_name = 'project_group') = 0,
+        assert (select count(1) from ntk.user_defined_groups_memberships where member = 'gustav' and group_name = 'project_group') = 0,
             'gustav is still recorded as being a member of project_group in the accounting view';
         set role authenticator;
         return true;
