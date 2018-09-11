@@ -279,10 +279,10 @@ $$ language plpgsql;
 grant execute on function user_create(text, text) to admin_user;
 
 
-drop table if exists user_defined_groups cascade;
-create table if not exists user_defined_groups(group_name text unique);
-alter table user_defined_groups owner to admin_user;
-grant select on user_defined_groups to public;
+drop table if exists ntk.user_defined_groups cascade;
+create table if not exists ntk.user_defined_groups (group_name text unique);
+alter table ntk.user_defined_groups owner to admin_user;
+grant select on ntk.user_defined_groups to public;
 
 
 drop function if exists group_create(text);
@@ -292,7 +292,7 @@ create or replace function group_create(group_name text)
     begin
         trusted_group_name := quote_ident(group_name);
         execute format('create role %I', trusted_group_name);
-        execute format('insert into user_defined_groups values ($1)') using group_name;
+        execute format('insert into ntk.user_defined_groups values ($1)') using group_name;
         return 'group created';
     end;
 $$ language plpgsql;
@@ -302,7 +302,7 @@ grant execute on function group_create(text) to admin_user;
 drop view if exists user_defined_groups_memberships cascade;
 create or replace view user_defined_groups_memberships as
     select group_name, _role member from
-        (select group_name from user_defined_groups)a
+        (select group_name from ntk.user_defined_groups)a
         join
         (select _group, _role from ntk.group_memberships)b
         on a.group_name = b._group;
@@ -333,9 +333,9 @@ grant execute on function group_add_members(json) to admin_user;
 
 drop function if exists group_list();
 create or replace function group_list()
-    returns setof user_defined_groups as $$
+    returns setof ntk.user_defined_groups as $$
     begin
-        return query select group_name from user_defined_groups;
+        return query select group_name from ntk.user_defined_groups;
     end;
 $$ language plpgsql;
 grant execute on function group_list() to admin_user;
@@ -485,7 +485,7 @@ create or replace function group_delete(group_name text)
     declare trusted_group_name text;
     declare trusted_num_members int;
     begin
-        assert group_name in (select udg.group_name from user_defined_groups udg), 'permission denied to delete group';
+        assert group_name in (select udg.group_name from ntk.user_defined_groups udg), 'permission denied to delete group';
         trusted_group_name := quote_ident(group_name);
         execute format('select count(1) from user_defined_groups_memberships u where u.group_name = $1')
                 using group_name into trusted_num_members;
@@ -493,7 +493,7 @@ create or replace function group_delete(group_name text)
             raise exception 'Cannot delete group %, it has % members', group_name, trusted_num_members;
         end if;
         execute format('drop role %I', trusted_group_name);
-        execute format('delete from user_defined_groups where group_name = $1') using group_name;
+        execute format('delete from ntk.user_defined_groups where group_name = $1') using group_name;
         return 'group deleted';
     end;
 $$ language plpgsql;

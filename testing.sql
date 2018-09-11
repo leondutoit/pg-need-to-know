@@ -58,12 +58,12 @@ create or replace function test_group_create()
     begin
         set role admin_user;
         select group_create('project_group') into _ans;
-        assert (select count(1) from user_defined_groups where group_name = 'project_group') = 1,
+        assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 1,
             'problem recording user defined group creation in accounting table';
         -- check role exists
         set role authenticator;
         set role tsd_backend_utv_user; -- db owner, get from variable
-        set role project_group;
+        set role project_group; -- look up in system catalogues instead (when authenticator is no longer a member of db owner, which it should not be)
         set role authenticator;
         return true;
     end;
@@ -109,8 +109,8 @@ create or replace function test_group_add_members()
             {"user_name":"hannah", "group_name":"project_group"},
             {"user_name":"project_user", "group_name":"project_group"}]}'::json)
         into _ans;
-        set role authenticator;
-        assert (select count(1) from user_defined_groups where group_name = 'project_group') = 1,
+        --set role authenticator;
+        assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 1,
             'group creation accounting is broken';
         assert (select count(member) from user_defined_groups_memberships where group_name = 'project_group') = 3,
             'adding members to groups is broken';
@@ -288,7 +288,7 @@ create or replace function test_group_delete()
         select user_delete('project_user') into _ans;
         set role admin_user;
         select group_delete('project_group') into _ans;
-        assert (select count(1) from user_defined_groups where group_name = 'project_group') = 0, 'group accounting not working after deletion';
+        assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 0, 'group accounting not working after deletion';
         begin
             -- possible attack vector, since groups are just roles
             select group_delete('authenticator') into _ans;
