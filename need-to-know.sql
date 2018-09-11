@@ -326,12 +326,12 @@ create or replace function group_add_members(members json)
         for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
             select quote_ident(untrusted_i->>'user_name') into trusted_user;
             select quote_ident(untrusted_i->>'group_name') into trusted_group;
-            -- TODO: data_owner -> authenticator -> admin_user
             execute format('grant %I to %I', trusted_user, trusted_group);
         end loop;
     return 'added members to groups';
     end;
 $$ language plpgsql;
+revoke all privileges on function group_add_members(json) from public;
 grant execute on function group_add_members(json) to admin_user;
 
 
@@ -342,6 +342,7 @@ create or replace function group_list()
         return query select group_name from ntk.user_defined_groups;
     end;
 $$ language plpgsql;
+revoke all privileges on function group_list() from public;
 grant execute on function group_list() to admin_user;
 
 
@@ -390,13 +391,12 @@ create or replace function group_remove_members(members json)
         for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
             select quote_ident(untrusted_i->>'user_name') into trusted_user;
             select quote_ident(untrusted_i->>'group_name') into trusted_group;
-            -- TODO: data_owner -> authenticator -> admin_user
             execute format('revoke %I from %I', trusted_user, trusted_group);
         end loop;
     return 'removed members from groups';
     end;
 $$ language plpgsql;
-grant execute on function group_remove_members(json) to admin_user; -- and data owners
+grant execute on function group_remove_members(json) to admin_user;
 
 
 drop table if exists user_data_deletion_requests;
@@ -470,7 +470,6 @@ create or replace function user_delete(user_name text)
         end loop;
         set role authenticator;
         set role admin_user;
-        -- TODO: revoke privileges on group_add_members and group_remove_members
         execute format('revoke all privileges on ntk.group_memberships from %I', trusted_user_name);
         execute format('revoke all privileges on user_data_deletion_requests from %I', trusted_user_name);
         execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);

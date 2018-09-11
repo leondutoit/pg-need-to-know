@@ -109,7 +109,6 @@ create or replace function test_group_add_members()
             {"user_name":"hannah", "group_name":"project_group"},
             {"user_name":"project_user", "group_name":"project_group"}]}'::json)
         into _ans;
-        --set role authenticator;
         assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 1,
             'group creation accounting is broken';
         assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
@@ -312,21 +311,35 @@ create or replace function test_function_privileges()
             return false;
         exception
             when others then raise notice
-            'only admin_user can create tables - as expected';
+            'table_create only callable by admin_user - as expected';
         end;
         begin
             select user_create('', '') into _ans;
             return false;
         exception
             when others then raise notice
-            'only admin_user can create users - as expected';
+            'user_create only callable by admin_user - as expected';
         end;
         begin
             select group_create('') into _ans;
             return false;
         exception
             when others then raise notice
-            'only admin_user can creae groups - as expected';
+            'group_create only callable by admin_user - as expected';
+        end;
+        begin
+            select group_add_members(''::json) into _ans;
+            return false;
+        exception
+            when others then raise notice
+            'group_add_members only callable by admin_user - as expected';
+        end;
+        begin
+            select group_list() into _ans;
+            return false;
+        exception
+            when others then raise notice
+            'group_list only callable by admin_user - as expected';
         end;
         set role authenticator;
         return true;

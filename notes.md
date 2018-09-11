@@ -7,6 +7,7 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
+- metadata for groups?
 - document and expose user_data_deletion_requests
 - add tests for audit log table
 - describe audit log table in readme
