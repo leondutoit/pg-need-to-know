@@ -88,7 +88,7 @@ create or replace function roles_have_common_group_and_is_data_user(_current_rol
     begin
         trusted_current_role := _current_role;
         trusted_current_row_owner := _current_row_owner;
-        execute format('select _user_type from registered_users where _user_name = $1')
+        execute format('select _user_type from ntk.registered_users where _user_name = $1')
             into _type using trusted_current_role;
         if _type != 'data_user'
             then return false;
@@ -242,16 +242,15 @@ create or replace function parse_generic_table_def(definition json)
     end;
 $$ language plpgsql;
 revoke all privileges on function parse_generic_table_def(json) from public;
-alter function parse_mac_generic_def owner to admin_user;
+alter function parse_generic_table_def owner to admin_user;
 
 
--- own schema?
-drop table if exists registered_users;
-create table if not exists registered_users(
+drop table if exists ntk.registered_users;
+create table if not exists ntk.registered_users(
     _user_name text not null,
     _user_type text not null check (_user_type in ('data_owner', 'data_user')));
-alter table registered_users owner to admin_user;
-grant select on registered_users to public; -- part of RLS policy
+alter table ntk.registered_users owner to admin_user;
+grant select on ntk.registered_users to public; -- part of RLS policy
 
 
 drop function if exists user_create(text, text);
@@ -270,7 +269,7 @@ create or replace function user_create(user_name text, user_type text)
         execute format('grant insert on user_data_deletion_requests to %I', trusted_user_name);
         -- TODO: grant privileges on group_add_members and group_remove_members
         -- the table also has a check constraint on it for values of _user_type
-        execute format('insert into registered_users (_user_name, _user_type) values ($1, $2)')
+        execute format('insert into ntk.registered_users (_user_name, _user_type) values ($1, $2)')
             using user_name, user_type; -- this is alright, since they are _values_ not SQL identifiers
         return 'user created';
     end;
@@ -353,7 +352,7 @@ drop function if exists user_groups(text);
 create or replace function user_groups(user_name text)
     returns table (group_name text) as $$
     begin
-        assert user_name in (select _user_name from registered_users), 'access to role not allowed';
+        assert user_name in (select _user_name from ntk.registered_users), 'access to role not allowed';
         return query execute format('select _group::text group_name from group_memberships where _role = $1')
                              using user_name;
     end;
@@ -365,7 +364,7 @@ drop function if exists user_list();
 create or replace function user_list()
     returns table (user_name text, user_type text) as $$
     begin
-        return query execute format('select _user_name::text user_name, _user_type::text user_type from registered_users');
+        return query execute format('select _user_name::text user_name, _user_type::text user_type from ntk.registered_users');
     end;
 $$ language plpgsql;
 grant execute on function user_list() to admin_user;
@@ -409,7 +408,7 @@ create or replace function user_delete_data()
         for trusted_table in select table_name from information_schema.tables
                       where table_schema = 'public' and table_type != 'VIEW' loop
             begin
-                if trusted_table in ('user_defined_groups', 'registered_users', 'user_data_deletion_requests') then null;
+                if trusted_table in ('user_defined_groups', 'user_data_deletion_requests') then null;
                     continue;
                 end if;
                 execute format('delete from %I', trusted_table);
@@ -434,7 +433,7 @@ create or replace function user_delete(user_name text)
     declare trusted_numrows int;
     declare trusted_group text;
     begin
-        assert user_name in (select _user_name from registered_users), 'deleting role not allowed';
+        assert user_name in (select _user_name from ntk.registered_users), 'deleting role not allowed';
         trusted_user_name := quote_ident(user_name);
         for trusted_table in select table_name from information_schema.tables
                               where table_schema = 'public' and table_type != 'VIEW' loop
@@ -468,7 +467,7 @@ create or replace function user_delete(user_name text)
         execute format('revoke all privileges on user_data_deletion_requests from %I', trusted_user_name);
         execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
-        execute format('delete from registered_users where _user_name = $1') using user_name;
+        execute format('delete from ntk.registered_users where _user_name = $1') using user_name;
         execute format('drop role %I', trusted_user_name);
         return 'user deleted';
     end;

@@ -11,13 +11,13 @@
 - add tests for audit log table
 - describe audit log table in readme
 - consider how and who to give access to audit logs
-- move accounting and other internal tables into own schema
 - HTTP client tests
 - write about the model
 - make a presentation, with visual representations of the model
 
 ## IP
 - review function, table and view ownership and access - lock down
+- move accounting and other internal tables into own schema
 - group_add,remove_members - allow data owners to remove themselves
     - and corresponding right grant and revoke
     - and update tests accordingl
