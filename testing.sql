@@ -26,19 +26,19 @@ create or replace function test_user_create()
     begin
         set role admin_user;
         select user_create('gustav', 'data_owner') into _ans;
-        assert (select _user_type from user_types where _user_name = 'gustav') = 'data_owner',
+        assert (select _user_type from registered_users where _user_name = 'gustav') = 'data_owner',
             'problem with user creation';
         select user_create('hannah', 'data_owner') into _ans;
-        assert (select _user_type from user_types where _user_name = 'hannah') = 'data_owner',
+        assert (select _user_type from registered_users where _user_name = 'hannah') = 'data_owner',
             'problem with user creation';
         select user_create('faye', 'data_owner') into _ans;
-        assert (select _user_type from user_types where _user_name = 'faye') = 'data_owner',
+        assert (select _user_type from registered_users where _user_name = 'faye') = 'data_owner',
             'problem with user creation';
         select user_create('project_user', 'data_user') into _ans;
-        assert (select _user_type from user_types where _user_name = 'project_user') = 'data_user',
+        assert (select _user_type from registered_users where _user_name = 'project_user') = 'data_user',
             'problem with user creation';
-        assert (select count(1) from user_types where _user_name in ('gustav', 'hannah', 'faye', 'project_user')) = 4,
-            'not all newly created users are recorded in the user_types table';
+        assert (select count(1) from registered_users where _user_name in ('gustav', 'hannah', 'faye', 'project_user')) = 4,
+            'not all newly created users are recorded in the registered_users table';
         -- test that the rolse actually exist
         set role gustav;
         set role authenticator;
@@ -258,8 +258,8 @@ create or replace function test_user_delete()
         set role authenticator;
         set role admin_user;
         select user_delete('hannah') into _ans;
-        assert (select count(1) from user_types where _user_name = 'hannah') = 0,
-            'user deletion did not update user_types accounting table correctly';
+        assert (select count(1) from registered_users where _user_name = 'hannah') = 0,
+            'user deletion did not update registered_users accounting table correctly';
         begin
             select user_delete('authenticator') into _ans;
         exception

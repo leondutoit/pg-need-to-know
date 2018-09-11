@@ -1,5 +1,5 @@
 
-# MAC model
+# Mandatory Access Control model
 
 ## Roles
 
