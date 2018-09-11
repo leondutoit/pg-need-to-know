@@ -13,6 +13,9 @@ For plpgsql functions the following conventions for code are adopted
 - untrusted variable are never used for dynamic sql statement generation
 - declarations for variables that are used to store parameters are
   distinguished from variables used to store internal state by comments
+- function, table and view ownership is granted to the admin_user when
+  the admin_user needs to grant usage on those objects to other roles,
+  otherwise the admin_user only has the minimum privileges necessary
 
 */
 
@@ -296,8 +299,7 @@ create or replace function group_create(group_name text)
         return 'group created';
     end;
 $$ language plpgsql;
--- revoke
--- ownership
+revoke all privileges on function group_create(text) from public;
 grant execute on function group_create(text) to admin_user;
 
 

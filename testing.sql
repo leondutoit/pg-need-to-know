@@ -311,15 +311,22 @@ create or replace function test_function_privileges()
             select table_create('{}'::json, 'mac') into _ans;
             return false;
         exception
-            when others then raise notice 'only admin_user can create tables - as expected';
+            when others then raise notice
+            'only admin_user can create tables - as expected';
         end;
-        set role authenticator;
-        set role anon;
         begin
             select user_create('', '') into _ans;
             return false;
         exception
-            when others then raise notice 'only admin_user can create users - as expected';
+            when others then raise notice
+            'only admin_user can create users - as expected';
+        end;
+        begin
+            select group_create('') into _ans;
+            return false;
+        exception
+            when others then raise notice
+            'only admin_user can creae groups - as expected';
         end;
         set role authenticator;
         return true;
