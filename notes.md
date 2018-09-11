@@ -19,10 +19,10 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- review function, table and view ownership and access - lock down, test
-- metadata for groups
-- allow data owners to remove themselves from groups, and view their membership
-    - update an accounting table ntk.group_removal_logs
+- allow data owners to:
+    - view their group membership, with metadata
+    - remove themselves from groups
+        - update an accounting table ntk.group_removal_logs
     - and corresponding right grant and revoke
     - and update tests accordingly
 
@@ -37,3 +37,5 @@
 - write up SQL API
 - separate SQL API and HTTP API into two docs
 - move accounting and other internal tables into own schema
+- review function, table and view ownership and access - lock down, test
+- metadata for groups

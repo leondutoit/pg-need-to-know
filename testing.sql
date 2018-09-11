@@ -57,7 +57,7 @@ create or replace function test_group_create()
     declare _ans text;
     begin
         set role admin_user;
-        select group_create('project_group') into _ans;
+        select group_create('project_group', '{"consent_reference": 1234}'::json) into _ans;
         assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 1,
             'problem recording user defined group creation in accounting table';
         -- check role exists
@@ -139,7 +139,7 @@ create or replace function test_group_list()
     returns boolean as $$
     begin
         set role admin_user;
-        assert (select '(project_group)' in (select group_list()::text)), 'group list does not work';
+        assert (select 'project_group' in (select group_list()::text)), 'group list does not work';
         set role authenticator;
         return true;
     end;

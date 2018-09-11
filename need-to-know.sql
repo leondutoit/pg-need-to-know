@@ -45,8 +45,6 @@ grant select on pg_authid to tsd_backend_utv_user, admin_user;
 grant select on ntk.group_memberships to tsd_backend_utv_user, admin_user;
 
 
---set role tsd_backend_utv_user; --dbowner
-
 -- data request audit logging
 -- updated when RLS allows a data user to select from a data owner
 drop table if exists ntk.requests;
@@ -257,6 +255,9 @@ alter table ntk.registered_users owner to admin_user;
 grant select on ntk.registered_users to public; -- part of RLS policy
 
 
+-- register_data_owner
+-- register_data_user
+
 drop function if exists user_create(text, text);
 create or replace function user_create(user_name text, user_type text)
     returns text as $$
@@ -283,24 +284,30 @@ grant execute on function user_create(text, text) to admin_user;
 
 
 drop table if exists ntk.user_defined_groups cascade;
-create table if not exists ntk.user_defined_groups (group_name text unique);
+create table if not exists ntk.user_defined_groups (
+    group_name text unique,
+    group_metadata json not null
+);
 alter table ntk.user_defined_groups owner to admin_user;
 grant select on ntk.user_defined_groups to public;
+-- add ntk.group_deletion_logs table for accounting purposes
 
 
-drop function if exists group_create(text);
-create or replace function group_create(group_name text)
+--- should add metadata too
+drop function if exists group_create(text, json);
+create or replace function group_create(group_name text, group_metadata json)
     returns text as $$
     declare trusted_group_name text;
     begin
         trusted_group_name := quote_ident(group_name);
         execute format('create role %I', trusted_group_name);
-        execute format('insert into ntk.user_defined_groups values ($1)') using group_name;
+        execute format('insert into ntk.user_defined_groups values ($1, $2)')
+            using group_name, group_metadata;
         return 'group created';
     end;
 $$ language plpgsql;
-revoke all privileges on function group_create(text) from public;
-grant execute on function group_create(text) to admin_user;
+revoke all privileges on function group_create(text, json) from public;
+grant execute on function group_create(text, json) to admin_user;
 
 
 drop view if exists ntk.user_defined_groups_memberships cascade;
@@ -337,9 +344,9 @@ grant execute on function group_add_members(json) to admin_user;
 
 drop function if exists group_list();
 create or replace function group_list()
-    returns setof ntk.user_defined_groups as $$
+    returns table (group_name text) as $$
     begin
-        return query select group_name from ntk.user_defined_groups;
+        return query select udg.group_name from ntk.user_defined_groups udg;
     end;
 $$ language plpgsql;
 revoke all privileges on function group_list() from public;
@@ -358,6 +365,10 @@ revoke all privileges on function group_list_members(text) from public;
 grant execute on function group_list_members(text) to admin_user;
 
 
+-- need a version for this where data owners can see their own groups
+-- maybe change the signature where the default value of user_name is
+-- the current_user
+-- should also show group metadata
 drop function if exists user_groups(text);
 create or replace function user_groups(user_name text)
     returns table (group_name text) as $$
@@ -382,6 +393,7 @@ revoke all privileges on function user_list() from public;
 grant execute on function user_list() to admin_user;
 
 
+-- need a wrapper for this: something like user_group_remove
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
     returns text as $$
