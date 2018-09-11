@@ -22,6 +22,8 @@ create role authenticator createrole; -- add noinheret?
 grant authenticator to tsd_backend_utv_user;
 create role admin_user createrole;
 grant admin_user to authenticator;
+create role anon;
+grant anon to authenticator;
 
 
 create or replace view group_memberships as
