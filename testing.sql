@@ -339,6 +339,48 @@ create or replace function test_function_privileges()
             when others then raise notice
             'group_list only callable by admin_user - as expected';
         end;
+        begin
+            select group_list_members('') into _ans;
+            return false;
+        exception
+            when others then raise notice
+            'group_list_members only callable by admin_user - as expected';
+        end;
+        begin
+            select user_groups('') into _ans;
+            return false;
+        exception
+            when others then raise notice
+            'user_groups only callable by admin_user - as expected';
+        end;
+        begin
+            select user_list() into _ans;
+            return false;
+        exception
+            when others then raise notice
+            'user_list only callable by admin_user - as expected';
+        end;
+        begin
+            select group_remove_members(''::json) into _ans;
+            return false;
+        exception
+            when others then raise notice
+            'group_remove_members only callable by admin_user - as expected';
+        end;
+        begin
+            select user_delete('') into _ans;
+            return false;
+        exception
+            when others then raise notice
+            'user_delete only callable by admin_user - as expected';
+        end;
+        begin
+            select group_delete('') into _ans;
+            return false;
+        exception
+            when others then raise notice
+            'group_delete only callable by admin_user - as expected';
+        end;
         set role authenticator;
         return true;
     end;
