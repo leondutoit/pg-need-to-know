@@ -314,6 +314,14 @@ create or replace function test_function_privileges()
             when others then raise notice 'only admin_user can create tables - as expected';
         end;
         set role authenticator;
+        set role anon;
+        begin
+            select user_create('', '') into _ans;
+            return false;
+        exception
+            when others then raise notice 'only admin_user can create users - as expected';
+        end;
+        set role authenticator;
         return true;
     end;
 $$ language plpgsql;

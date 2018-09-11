@@ -276,7 +276,8 @@ create or replace function user_create(user_name text, user_type text)
         return 'user created';
     end;
 $$ language plpgsql;
-grant execute on function user_create(text, text) to admin_user;
+revoke all privileges on function user_create(text, text) from public;
+alter function user_create owner to admin_user;
 
 
 drop table if exists ntk.user_defined_groups cascade;
