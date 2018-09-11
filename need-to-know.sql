@@ -409,7 +409,6 @@ create table if not exists user_data_deletion_requests(
     request_date timestamptz not null
 );
 alter table user_data_deletion_requests owner to admin_user;
-grant insert on user_data_deletion_requests to public; -- too broad
 
 
 drop function if exists user_delete_data();
