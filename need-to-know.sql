@@ -70,7 +70,7 @@ create or replace function logs.update_request_log(_current_role text, _current_
     end;
 $$ language plpgsql;
 revoke all privileges on function logs.update_request_log(text, text) from public;
-alter function logs.update_request_log(text, text) owner to admin_user;
+alter function logs.update_request_log owner to admin_user;
 
 
 drop function if exists roles_have_common_group_and_is_data_user(text, text);
@@ -243,12 +243,14 @@ revoke all privileges on function parse_generic_table_def(json) from public;
 alter function parse_mac_generic_def owner to admin_user;
 
 
+-- should not be exposed via the API
+-- consider moving to own schema
 drop table if exists user_types;
 create table if not exists user_types(
     _user_name text not null,
     _user_type text not null check (_user_type in ('data_owner', 'data_user')));
 alter table user_types owner to authenticator;
-grant insert, select, delete on user_types to public; -- eventually only app_user, admin_user
+grant insert, select, delete on user_types to public; -- too broad atm
 
 
 drop function if exists user_create(text, text);
