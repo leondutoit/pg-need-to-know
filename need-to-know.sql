@@ -25,23 +25,28 @@ grant admin_user to authenticator;
 create role anon;
 grant anon to authenticator;
 
+-- internal schema
+create schema if not exists ntk;
+grant usage on schema ntk to public;
+grant create on schema ntk to admin_user; -- so execute can be granted/revoked when users are created/deleted
 
-create or replace view group_memberships as
+
+-- move to ntk schema
+create or replace view ntk.group_memberships as
 select _group, _role from
     (select * from
         (select rolname as _group, oid from pg_authid)a join
         (select roleid, member from pg_auth_members)b on a.oid = b.member)c
     join (select rolname as _role, oid from pg_authid)d on c.roleid = d.oid;
-alter view group_memberships owner to admin_user;
-grant select on pg_authid to authenticator, tsd_backend_utv_user, admin_user;
-grant select on group_memberships to authenticator, tsd_backend_utv_user, admin_user;
+alter view ntk.group_memberships owner to admin_user;
+grant select on pg_authid to tsd_backend_utv_user, admin_user;
+grant select on ntk.group_memberships to tsd_backend_utv_user, admin_user;
 
 
 set role tsd_backend_utv_user; --dbowner
 
 -- data request audit logging
 -- updated when RLS allows a data user to select from a data owner
-create schema if not exists ntk;
 drop table if exists ntk.requests;
 create table ntk.requests(
     request_time timestamptz default current_timestamp,
@@ -52,8 +57,6 @@ create table ntk.requests(
 -- amdin_user can get everything
 -- data_owners can get logs about themselves
 -- then use /rpc/access_logs
-grant usage on schema ntk to public;
-grant create on schema ntk to admin_user; -- so execute can be granted/revoked when users are created/deleted
 grant insert on ntk.requests to public;
 grant select on ntk.requests to admin_user;
 
@@ -95,9 +98,9 @@ create or replace function roles_have_common_group_and_is_data_user(_current_rol
         end if;
         execute format('select (
             select count(_group) from (
-                select _group from group_memberships where _role = $1
+                select _group from ntk.group_memberships where _role = $1
                 intersect
-                select _group from group_memberships where _role = $2)a
+                select _group from ntk.group_memberships where _role = $2)a
             where _group != $3)
         != 0') into _res using trusted_current_role, trusted_current_row_owner, 'authenticator';
         if _res = true then
@@ -263,7 +266,7 @@ create or replace function user_create(user_name text, user_type text)
         trusted_user_type := quote_literal(user_type);
         execute format('create role %I', trusted_user_name);
         execute format('grant %I to authenticator', trusted_user_name);
-        execute format('grant select on group_memberships to %I', trusted_user_name);
+        execute format('grant select on ntk.group_memberships to %I', trusted_user_name);
         execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
         execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
         execute format('grant insert on user_data_deletion_requests to %I', trusted_user_name);
@@ -301,7 +304,7 @@ create or replace view user_defined_groups_memberships as
     select group_name, _role member from
         (select group_name from user_defined_groups)a
         join
-        (select _group, _role from group_memberships)b
+        (select _group, _role from ntk.group_memberships)b
         on a.group_name = b._group;
 grant select on user_defined_groups_memberships to public;
 
@@ -353,7 +356,7 @@ create or replace function user_groups(user_name text)
     returns table (group_name text) as $$
     begin
         assert user_name in (select _user_name from ntk.registered_users), 'access to role not allowed';
-        return query execute format('select _group::text group_name from group_memberships where _role = $1')
+        return query execute format('select _group::text group_name from ntk.group_memberships where _role = $1')
                              using user_name;
     end;
 $$ language plpgsql;
@@ -451,7 +454,7 @@ create or replace function user_delete(user_name text)
                 when undefined_column then null;
             end;
         end loop;
-        for trusted_group in select _group from group_memberships where _role = user_name loop
+        for trusted_group in select _group from ntk.group_memberships where _role = user_name loop
             execute format('revoke %I from %I', trusted_user_name, trusted_group);
         end loop;
         for trusted_table in select table_name from information_schema.role_table_grants
@@ -463,7 +466,7 @@ create or replace function user_delete(user_name text)
         set role authenticator;
         set role admin_user;
         -- TODO: revoke privileges on group_add_members and group_remove_members
-        execute format('revoke all privileges on group_memberships from %I', trusted_user_name);
+        execute format('revoke all privileges on ntk.group_memberships from %I', trusted_user_name);
         execute format('revoke all privileges on user_data_deletion_requests from %I', trusted_user_name);
         execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
