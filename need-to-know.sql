@@ -148,7 +148,7 @@ create or replace function sql_type_from_generic_type(_type text)
     end;
 $$ language plpgsql;
 revoke all privileges on function sql_type_from_generic_type(text) from public;
-alter function sql_type_from_generic_type owner to admin_user;
+grant execute on function sql_type_from_generic_type(text) to admin_user;
 
 
 drop function if exists table_create(json, text, int);
@@ -174,7 +174,7 @@ create or replace function table_create(definition json, type text, form_id int 
     end;
 $$ language plpgsql;
 revoke all privileges on function table_create(json, text, int) from public;
-alter function table_create owner to admin_user;
+grant execute on function table_create(json, text, int) to admin_user;
 
 
 drop function if exists parse_mac_table_def(json);
@@ -233,7 +233,7 @@ create or replace function parse_mac_table_def(definition json)
     end;
 $$ language plpgsql;
 revoke all privileges on function parse_mac_table_def(json) from public;
-alter function parse_mac_table_def owner to admin_user;
+grant execute on function parse_mac_table_def(json) to admin_user;
 
 
 drop function if exists parse_generic_table_def(json);
@@ -244,7 +244,6 @@ create or replace function parse_generic_table_def(definition json)
     end;
 $$ language plpgsql;
 revoke all privileges on function parse_generic_table_def(json) from public;
-alter function parse_generic_table_def owner to admin_user;
 
 
 drop table if exists ntk.registered_users;
@@ -277,7 +276,7 @@ create or replace function user_create(user_name text, user_type text)
     end;
 $$ language plpgsql;
 revoke all privileges on function user_create(text, text) from public;
-alter function user_create owner to admin_user;
+grant execute on function user_create(text, text) to admin_user;
 
 
 drop table if exists ntk.user_defined_groups cascade;
@@ -297,6 +296,8 @@ create or replace function group_create(group_name text)
         return 'group created';
     end;
 $$ language plpgsql;
+-- revoke
+-- ownership
 grant execute on function group_create(text) to admin_user;
 
 
