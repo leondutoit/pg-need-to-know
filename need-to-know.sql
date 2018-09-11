@@ -41,9 +41,9 @@ set role tsd_backend_utv_user; --dbowner
 
 -- data request audit logging
 -- updated when RLS allows a data user to select from a data owner
-create schema if not exists logs;
-drop table if exists logs.requests;
-create table logs.requests(
+create schema if not exists ntk;
+drop table if exists ntk.requests;
+create table ntk.requests(
     request_time timestamptz default current_timestamp,
     data_user text,
     data_owner text
@@ -52,27 +52,27 @@ create table logs.requests(
 -- amdin_user can get everything
 -- data_owners can get logs about themselves
 -- then use /rpc/access_logs
-grant usage on schema logs to public;
-grant create on schema logs to admin_user; -- so execute can be granted/revoked when users are created/deleted
-grant insert on logs.requests to public;
-grant select on logs.requests to admin_user;
+grant usage on schema ntk to public;
+grant create on schema ntk to admin_user; -- so execute can be granted/revoked when users are created/deleted
+grant insert on ntk.requests to public;
+grant select on ntk.requests to admin_user;
 
 
-drop function if exists logs.update_request_log(text, text);
-create or replace function logs.update_request_log(_current_role text, _current_row_owner text)
+drop function if exists ntk.update_request_log(text, text);
+create or replace function ntk.update_request_log(_current_role text, _current_row_owner text)
     returns boolean as $$
     declare trusted_current_role text;
     declare trusted_current_row_owner text;
     begin
         trusted_current_role := _current_role;
         trusted_current_row_owner := _current_row_owner;
-        execute format('insert into logs.requests (data_user, data_owner) values ($1, $2)')
+        execute format('insert into ntk.requests (data_user, data_owner) values ($1, $2)')
                 using trusted_current_role, trusted_current_row_owner;
         return true;
     end;
 $$ language plpgsql;
-revoke all privileges on function logs.update_request_log(text, text) from public;
-alter function logs.update_request_log owner to admin_user;
+revoke all privileges on function ntk.update_request_log(text, text) from public;
+alter function ntk.update_request_log owner to admin_user;
 
 
 drop function if exists roles_have_common_group_and_is_data_user(text, text);
@@ -102,7 +102,7 @@ create or replace function roles_have_common_group_and_is_data_user(_current_rol
         != 0') into _res using trusted_current_role, trusted_current_row_owner, 'authenticator';
         if _res = true then
             -- update audit logs
-            select logs.update_request_log(trusted_current_role, trusted_current_row_owner) into _log;
+            select ntk.update_request_log(trusted_current_role, trusted_current_row_owner) into _log;
         end if;
         return _res;
     end;
@@ -245,14 +245,13 @@ revoke all privileges on function parse_generic_table_def(json) from public;
 alter function parse_mac_generic_def owner to admin_user;
 
 
--- should not be exposed via the API
--- consider moving to own schema
+-- own schema?
 drop table if exists registered_users;
 create table if not exists registered_users(
     _user_name text not null,
     _user_type text not null check (_user_type in ('data_owner', 'data_user')));
-alter table registered_users owner to authenticator;
-grant insert, select, delete on registered_users to public; -- too broad atm
+alter table registered_users owner to admin_user;
+grant select on registered_users to public; -- part of RLS policy
 
 
 drop function if exists user_create(text, text);
@@ -267,7 +266,7 @@ create or replace function user_create(user_name text, user_type text)
         execute format('grant %I to authenticator', trusted_user_name);
         execute format('grant select on group_memberships to %I', trusted_user_name);
         execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
-        execute format('grant execute on function logs.update_request_log(text, text) to %I', trusted_user_name);
+        execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
         execute format('grant insert on user_data_deletion_requests to %I', trusted_user_name);
         -- TODO: grant privileges on group_add_members and group_remove_members
         -- the table also has a check constraint on it for values of _user_type
@@ -467,7 +466,7 @@ create or replace function user_delete(user_name text)
         -- TODO: revoke privileges on group_add_members and group_remove_members
         execute format('revoke all privileges on group_memberships from %I', trusted_user_name);
         execute format('revoke all privileges on user_data_deletion_requests from %I', trusted_user_name);
-        execute format('revoke execute on function logs.update_request_log(text, text) from %I', trusted_user_name);
+        execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
         execute format('delete from registered_users where _user_name = $1') using user_name;
         execute format('drop role %I', trusted_user_name);
