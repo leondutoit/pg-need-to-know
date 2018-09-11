@@ -7,7 +7,9 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
-- metadata for groups?
+- separate registration functions for data_owners and data_users
+    - use user_create internally, adapt privileges
+- RLS policy to only allow data_owners to insert into tables
 - document and expose user_data_deletion_requests
 - add tests for audit log table
 - describe audit log table in readme
@@ -17,11 +19,12 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- review function, table and view ownership and access - lock down
-- move accounting and other internal tables into own schema
-- group_add,remove_members - allow data owners to remove themselves
+- review function, table and view ownership and access - lock down, test
+- metadata for groups
+- allow data owners to remove themselves from groups, and view their membership
+    - update an accounting table ntk.group_removal_logs
     - and corresponding right grant and revoke
-    - and update tests accordingl
+    - and update tests accordingly
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -33,3 +36,4 @@
 - review consitency of parameter names: group, group_name, user, user_name
 - write up SQL API
 - separate SQL API and HTTP API into two docs
+- move accounting and other internal tables into own schema
