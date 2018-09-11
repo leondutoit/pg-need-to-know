@@ -18,8 +18,8 @@ For plpgsql functions the following conventions for code are adopted
 
 -- as the superuser
 
-create role authenticator createrole; -- add noinheret?
-grant authenticator to tsd_backend_utv_user;
+create role authenticator noinherit with password 'replaceme';
+grant authenticator to tsd_backend_utv_user; -- TODO remove
 create role admin_user createrole;
 grant admin_user to authenticator;
 create role anon;
@@ -31,7 +31,6 @@ grant usage on schema ntk to public;
 grant create on schema ntk to admin_user; -- so execute can be granted/revoked when users are created/deleted
 
 
--- move to ntk schema
 create or replace view ntk.group_memberships as
 select _group, _role from
     (select * from
@@ -43,7 +42,7 @@ grant select on pg_authid to tsd_backend_utv_user, admin_user;
 grant select on ntk.group_memberships to tsd_backend_utv_user, admin_user;
 
 
-set role tsd_backend_utv_user; --dbowner
+--set role tsd_backend_utv_user; --dbowner
 
 -- data request audit logging
 -- updated when RLS allows a data user to select from a data owner
@@ -282,7 +281,8 @@ grant execute on function user_create(text, text) to admin_user;
 
 drop table if exists user_defined_groups cascade;
 create table if not exists user_defined_groups(group_name text unique);
-grant insert, select, delete on user_defined_groups to public; --eventually admin
+alter table user_defined_groups owner to admin_user;
+grant select on user_defined_groups to public;
 
 
 drop function if exists group_create(text);
@@ -306,6 +306,7 @@ create or replace view user_defined_groups_memberships as
         join
         (select _group, _role from ntk.group_memberships)b
         on a.group_name = b._group;
+alter view user_defined_groups_memberships owner to admin_user;
 grant select on user_defined_groups_memberships to public;
 
 

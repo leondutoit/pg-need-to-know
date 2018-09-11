@@ -232,8 +232,10 @@ create or replace function test_user_delete_data()
         assert (select count(1) from people) = 0, 'data for gustav not deleted from table people';
         assert (select count(1) from people2) = 0, 'data for gustav not deleted from table people2';
         set role authenticator;
+        set role admin_user;
         assert (select count(1) from user_data_deletion_requests where user_name = 'gustav') >= 1,
             'problem recording the data deletion request from gustav';
+        set role authenticator;
         return true;
     end;
 $$ language plpgsql;
