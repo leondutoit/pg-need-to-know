@@ -7,8 +7,10 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
+- metadata for users (so admins can sort and search on this when creating groups)
 - separate registration functions for data_owners and data_users
     - use user_create internally, adapt privileges
+    - o_ and u_ to indicate owner and user, and to ensure uniqueness in the case where the same person registers for both roles
 - RLS policy to only allow data_owners to insert into tables
 - document and expose user_data_deletion_requests
 - add tests for audit log table

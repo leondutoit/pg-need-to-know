@@ -139,7 +139,8 @@ create or replace function test_group_list()
     returns boolean as $$
     begin
         set role admin_user;
-        assert (select 'project_group' in (select group_list()::text)), 'group list does not work';
+        assert (select '(project_group,"{""consent_reference"": 1234}")' in (select group_list()::text)),
+            'group list does not work';
         set role authenticator;
         return true;
     end;

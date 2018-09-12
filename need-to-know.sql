@@ -249,7 +249,7 @@ revoke all privileges on function parse_generic_table_def(json) from public;
 
 drop table if exists ntk.registered_users;
 create table if not exists ntk.registered_users(
-    _user_name text not null,
+    _user_name text not null unique,
     _user_type text not null check (_user_type in ('data_owner', 'data_user')));
 alter table ntk.registered_users owner to admin_user;
 grant select on ntk.registered_users to public; -- part of RLS policy
@@ -290,10 +290,10 @@ create table if not exists ntk.user_defined_groups (
 );
 alter table ntk.user_defined_groups owner to admin_user;
 grant select on ntk.user_defined_groups to public;
--- add ntk.group_deletion_logs table for accounting purposes
+
+-- add group_deletion_logs table for accounting purposes
 
 
---- should add metadata too
 drop function if exists group_create(text, json);
 create or replace function group_create(group_name text, group_metadata json)
     returns text as $$
@@ -344,9 +344,10 @@ grant execute on function group_add_members(json) to admin_user;
 
 drop function if exists group_list();
 create or replace function group_list()
-    returns table (group_name text) as $$
+    returns table (group_name text, group_metadata json) as $$
     begin
-        return query select udg.group_name from ntk.user_defined_groups udg;
+        return query select udg.group_name, udg.group_metadata
+                     from ntk.user_defined_groups udg;
     end;
 $$ language plpgsql;
 revoke all privileges on function group_list() from public;
