@@ -18,7 +18,8 @@
     - o_ and u_ to indicate owner and user, and to ensure uniqueness in the case where the same person registers for both roles
     - update docs
 - RLS policy to only allow data_owners to insert into tables, update model
-- document and expose user_data_deletion_requests
+- document user_data_deletion_requests
+- expose audit logs to data owners and admin via RLS and a view
 - add tests for audit log table
 - describe audit log table in readme
 - consider how and who to give access to audit logs

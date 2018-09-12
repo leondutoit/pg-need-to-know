@@ -21,7 +21,7 @@ For plpgsql functions the following conventions for code are adopted
 
 -- as the superuser
 
-create role authenticator noinherit with password 'replaceme';
+create role authenticator noinherit login with password 'replaceme';
 grant authenticator to tsd_backend_utv_user; -- TODO remove
 create role admin_user createrole;
 grant admin_user to authenticator;
@@ -272,8 +272,7 @@ create or replace function user_create(user_name text, user_type text)
         execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
         execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
         execute format('grant execute on function user_groups(text) to %I', trusted_user_name);
-        -- TODO: grant privileges group_remove_members wrapper function
-        -- the table also has a check constraint on it for values of _user_type
+        execute format('grant execute on function user_group_remove(text) to %I', trusted_user_name);
         execute format('insert into ntk.registered_users (_user_name, _user_type) values ($1, $2)')
             using user_name, user_type; -- this is alright, since they are _values_ not SQL identifiers
         return 'user created';
@@ -404,10 +403,30 @@ revoke all privileges on function user_list() from public;
 grant execute on function user_list() to admin_user;
 
 
--- need a variant of this: something like user_group_remove
--- with a default param value set to set to current_user
--- and a acheck that it is a data owner
--- and then update ntk.user_initiated_group_removals
+drop function if exists user_group_remove(text);
+create or replace function user_group_remove(group_name text)
+    returns text as $$
+    declare trusted_current_role text;
+    declare trusted_group text;
+    begin
+        assert current_user::text in (select _user_name from ntk.registered_users),
+            'access to role not allowed';
+        assert group_name in (select udg.group_name from ntk.user_defined_groups udg),
+            'access to group not allowed';
+        trusted_current_role := current_user::text;
+        trusted_group := quote_ident(group_name);
+        set role authenticator;
+        set role admin_user;
+        execute format('revoke %I from %I', trusted_current_role, trusted_group);
+        execute format('insert into ntk.user_initiated_group_removals (user_name, group_name) values ($1, $2)')
+                using trusted_current_role, group_name;
+        set role authenticator;
+        return 'removed user from group';
+    end;
+$$ language plpgsql;
+revoke all privileges on function user_group_remove(text) from public;
+alter function user_group_remove owner to admin_user;
+
 
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
@@ -430,7 +449,7 @@ revoke all privileges on function group_remove_members(json) from public;
 grant execute on function group_remove_members(json) to admin_user;
 
 
-drop table if exists ntk.user_data_deletion_requests;
+drop table if exists ntk.user_data_deletion_requests cascade;
 create table if not exists ntk.user_data_deletion_requests(
     user_name text not null,
     request_date timestamptz not null
@@ -505,6 +524,7 @@ create or replace function user_delete(user_name text)
         execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function user_groups(text) from %I', trusted_user_name);
+        execute format('revoke execute on function user_group_remove(text) from %I', trusted_user_name);
         execute format('delete from ntk.registered_users where _user_name = $1') using user_name;
         execute format('drop role %I', trusted_user_name);
         return 'user deleted';

@@ -199,6 +199,26 @@ create or replace function test_user_list()
 $$ language plpgsql;
 
 
+create or replace function test_user_group_remove()
+    returns boolean as $$
+    declare _ans text;
+    begin
+        set role admin_user;
+        select group_add_members('{"memberships": [
+            {"user_name":"faye", "group_name":"project_group"}]}'::json) into _ans;
+        set role authenticator;
+        set role faye;
+        select user_group_remove('project_group') into _ans;
+        set role authenticator;
+        set role admin_user;
+        assert (select group_name from ntk.user_initiated_group_removals
+                where user_name = 'faye') = 'project_group',
+            'group removal accounting does not work';
+        return true;
+    end;
+$$ language plpgsql;
+
+
 create or replace function test_group_remove_members()
     returns boolean as $$
     declare _ans text;
@@ -308,7 +328,7 @@ create or replace function test_function_privileges()
     returns boolean as $$
     declare _ans text;
     begin
-        -- ensure only admin_user can create a table
+        -- ensure unauthenticated requests cannot use sql api
         set role anon;
         begin
             select table_create('{}'::json, 'mac') into _ans;
@@ -366,6 +386,7 @@ create or replace function test_function_privileges()
             when others then raise notice
             'user_list only callable by admin_user - as expected';
         end;
+        -- user_group_remove
         begin
             select group_remove_members(''::json) into _ans;
             return false;
@@ -417,6 +438,7 @@ create or replace function teardown()
         -- clear out accounting table
         set role admin_user;
         execute 'delete from user_data_deletion_requests';
+        --execute 'delete from ntk.user_initiated_group_removals'
         set role authenticator;
         return true;
     end;
@@ -436,6 +458,7 @@ create or replace function run_tests()
         assert (select test_group_list_members()), 'ERROR: test_group_list_members';
         assert (select test_user_groups()), 'ERROR: test_user_groups';
         assert (select test_user_list()), 'ERROR: test_user_list';
+        assert (select test_user_group_remove()), 'ERROR: test_user_group_remove';
         assert (select test_group_remove_members()), 'ERROR: test_group_remove_members';
         assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         assert (select test_user_delete()), 'ERROR: test_user_delete';
