@@ -11,9 +11,11 @@ POST            | /rpc/group_add_members                    | admin_user
 GET             | /rpc/group_list                           | admin_user
 GET             | /rpc/group_list_members?group_name=<name> | admin_user
 GET             | /rpc/user_list                            | admin_user
+POST            | /rpc/user_group_remove                    | data owner
 POST            | /rpc/group_remove_members                 | admin_user
 POST            | /rpc/group_delete                         | admin_user
 GET             | /rpc/user_groups?user_name=<name>         | admin_user
+GET             | /rpc/user_groups                          | data owner
 POST            | /rpc/user_delete_data                     | data owner
 POST            | /rpc/user_delete                          | admin_user
 ```
@@ -111,6 +113,15 @@ Authorization: Bearer your-jwt
 [{"user_name": "myuser", "user_type": "data_owner"}, {"user_name": "some_analyst", "user_type": "data_user"}]
 ```
 
+- Remove yourself from a group, as a data owner
+```bash
+POST /rpc/user_group_remove
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"group_name": "analysis1_group"}
+```
+
 - Remove members from a group
 ```bash
 POST /rpc/group_remove_members
@@ -138,6 +149,15 @@ Authorization: Bearer your-jwt
 
 # returns
 [{"group_name": "analysis1_group"}]
+```
+
+- List all groups that one belongs to (as a data owner)
+```bash
+GET /rpc/user_groups
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+# returns {group_name, group_metadata}
 ```
 
 - A data owner deletes all their data
