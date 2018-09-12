@@ -404,10 +404,11 @@ revoke all privileges on function user_list() from public;
 grant execute on function user_list() to admin_user;
 
 
--- need a wrapper for this: something like user_group_remove
+-- need a variant of this: something like user_group_remove
 -- with a default param value set to set to current_user
 -- and a acheck that it is a data owner
 -- and then update ntk.user_initiated_group_removals
+
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
     returns text as $$
