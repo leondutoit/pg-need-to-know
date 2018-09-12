@@ -272,7 +272,6 @@ create or replace function user_create(user_name text, user_type text)
         execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
         execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
         execute format('grant execute on function user_groups(text) to %I', trusted_user_name);
-        execute format('grant insert on user_data_deletion_requests to %I', trusted_user_name);
         -- TODO: grant privileges group_remove_members wrapper function
         -- the table also has a check constraint on it for values of _user_type
         execute format('insert into ntk.registered_users (_user_name, _user_type) values ($1, $2)')
@@ -292,7 +291,18 @@ create table if not exists ntk.user_defined_groups (
 alter table ntk.user_defined_groups owner to admin_user;
 grant select on ntk.user_defined_groups to public;
 
--- add group_deletion_logs table for accounting purposes
+
+drop table if exists ntk.user_initiated_group_removals cascade;
+create table ntk.user_initiated_group_removals(
+    removal_date timestamptz default current_timestamp,
+    user_name text not null,
+    group_name text not null
+);
+alter table ntk.user_initiated_group_removals owner to admin_user;
+grant insert on ntk.user_initiated_group_removals to public;
+create or replace view user_initiated_group_removals as
+    select * from ntk.user_initiated_group_removals;
+alter view user_initiated_group_removals owner to admin_user;
 
 
 drop function if exists group_create(text, json);
@@ -397,6 +407,7 @@ grant execute on function user_list() to admin_user;
 -- need a wrapper for this: something like user_group_remove
 -- with a default param value set to set to current_user
 -- and a acheck that it is a data owner
+-- and then update ntk.user_initiated_group_removals
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
     returns text as $$
@@ -418,12 +429,16 @@ revoke all privileges on function group_remove_members(json) from public;
 grant execute on function group_remove_members(json) to admin_user;
 
 
-drop table if exists user_data_deletion_requests;
-create table if not exists user_data_deletion_requests(
+drop table if exists ntk.user_data_deletion_requests;
+create table if not exists ntk.user_data_deletion_requests(
     user_name text not null,
     request_date timestamptz not null
 );
-alter table user_data_deletion_requests owner to admin_user;
+alter table ntk.user_data_deletion_requests owner to admin_user;
+grant insert on ntk.user_data_deletion_requests to public;
+create or replace view user_data_deletion_requests as
+    select * from ntk.user_data_deletion_requests;
+alter view user_data_deletion_requests owner to admin_user;
 
 
 drop function if exists user_delete_data();
@@ -440,7 +455,7 @@ create or replace function user_delete_data()
                 then raise notice 'cannot delete data from %, permission denied', trusted_table;
             end;
         end loop;
-        insert into user_data_deletion_requests (user_name, request_date)
+        insert into ntk.user_data_deletion_requests (user_name, request_date)
             values (current_user, current_timestamp);
         return 'all data deleted';
     end;
@@ -486,7 +501,6 @@ create or replace function user_delete(user_name text)
         set role authenticator;
         set role admin_user;
         execute format('revoke all privileges on ntk.group_memberships from %I', trusted_user_name);
-        execute format('revoke all privileges on user_data_deletion_requests from %I', trusted_user_name);
         execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function user_groups(text) from %I', trusted_user_name);

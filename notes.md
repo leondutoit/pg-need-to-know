@@ -7,6 +7,7 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
+- reimplement user_data_deletion_requests as a view, with the table being in ntk schema (similar to group removal logs)
 - metadata for users (so admins can sort and search on this when creating groups)
 - separate registration functions for data_owners and data_users
     - use user_create internally, adapt privileges
@@ -22,11 +23,8 @@
 
 ## IP
 - allow data owners to:
-    - view their group membership, with metadata
     - remove themselves from groups
         - update an accounting table ntk.group_removal_logs
-    - and corresponding right grant and revoke
-    - and update tests accordingly
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -41,3 +39,4 @@
 - move accounting and other internal tables into own schema
 - review function, table and view ownership and access - lock down, test
 - metadata for groups
+- data owners view their group membership, with metadata
