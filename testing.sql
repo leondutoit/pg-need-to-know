@@ -165,13 +165,18 @@ create or replace function test_user_groups()
     declare _ans text;
     begin
         set role admin_user;
-        assert 'project_group' in (select user_groups('gustav')),
+        select user_groups('gustav')::text into _ans;
+        assert '(project_group,"{""consent_reference"": 1234}")' in (select user_groups('gustav')::text),
             'user_groups function does not list all groups';
         begin
             select user_groups('authenticator') into _ans;
         exception
             when assert_failure then raise notice 'cannot access internal role groups - as expected';
         end;
+        set role authenticator;
+        set role gustav;
+        assert '(project_group,"{""consent_reference"": 1234}")' in (select user_groups()::text),
+            'user_groups function does not list all groups';
         set role authenticator;
         return true;
     end;

@@ -271,8 +271,9 @@ create or replace function user_create(user_name text, user_type text)
         execute format('grant select on ntk.group_memberships to %I', trusted_user_name);
         execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
         execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
+        execute format('grant execute on function user_groups(text) to %I', trusted_user_name);
         execute format('grant insert on user_data_deletion_requests to %I', trusted_user_name);
-        -- TODO: grant privileges on group_add_members and group_remove_members
+        -- TODO: grant privileges group_remove_members wrapper function
         -- the table also has a check constraint on it for values of _user_type
         execute format('insert into ntk.registered_users (_user_name, _user_type) values ($1, $2)')
             using user_name, user_type; -- this is alright, since they are _values_ not SQL identifiers
@@ -366,21 +367,20 @@ revoke all privileges on function group_list_members(text) from public;
 grant execute on function group_list_members(text) to admin_user;
 
 
--- need a version for this where data owners can see their own groups
--- maybe change the signature where the default value of user_name is
--- the current_user
--- should also show group metadata
 drop function if exists user_groups(text);
-create or replace function user_groups(user_name text)
-    returns table (group_name text) as $$
+create or replace function user_groups(user_name text default current_user::text)
+    returns table (group_name text, group_metadata json) as $$
     begin
         assert user_name in (select _user_name from ntk.registered_users), 'access to role not allowed';
-        return query execute format('select _group::text group_name from ntk.group_memberships where _role = $1')
-                             using user_name;
+        return query execute format('select a.group_name, b.group_metadata from
+                                        (select _group::text group_name from ntk.group_memberships where _role = $1)a
+                                         join
+                                        (select udg.group_name, udg.group_metadata from ntk.user_defined_groups udg)b
+                                    on a.group_name = b.group_name') using user_name;
     end;
 $$ language plpgsql;
 revoke all privileges on function user_groups(text) from public;
-grant execute on function user_groups(text) to admin_user;
+alter function user_groups owner to admin_user;
 
 
 drop function if exists user_list();
@@ -395,6 +395,8 @@ grant execute on function user_list() to admin_user;
 
 
 -- need a wrapper for this: something like user_group_remove
+-- with a default param value set to set to current_user
+-- and a acheck that it is a data owner
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
     returns text as $$
@@ -487,6 +489,7 @@ create or replace function user_delete(user_name text)
         execute format('revoke all privileges on user_data_deletion_requests from %I', trusted_user_name);
         execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
+        execute format('revoke execute on function user_groups(text) from %I', trusted_user_name);
         execute format('delete from ntk.registered_users where _user_name = $1') using user_name;
         execute format('drop role %I', trusted_user_name);
         return 'user deleted';
