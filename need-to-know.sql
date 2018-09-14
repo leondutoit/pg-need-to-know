@@ -256,8 +256,11 @@ create table if not exists ntk.registered_users(
 );
 alter table ntk.registered_users owner to admin_user;
 grant select on ntk.registered_users to public; -- part of RLS policy
-# rather expose this through a view that the function user_list
-# then the admin_user can see everything they need
+create or replace view registered_users as
+    select registration_date, _user_name as user_name,
+           _user_type as user_type, user_metadata
+    from ntk.registered_users;
+alter view registered_users owner to admin_user;
 
 
 drop function if exists user_register(text, text, json);
@@ -415,7 +418,7 @@ $$ language plpgsql;
 revoke all privileges on function user_groups(text) from public;
 alter function user_groups owner to admin_user;
 
-# deprecate in favour of a view called registered_users
+-- deprecate in favour of a view called registered_users
 drop function if exists user_list();
 create or replace function user_list()
     returns table (user_name text, user_type text) as $$
