@@ -7,7 +7,6 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
-- move functions into ntk - which should not be exopsed to the api
 - test permissions on informational views
 - full review of docs
 - write about the model
@@ -15,8 +14,10 @@
 - make a presentation, with visual representations of the model
 
 ## IP
+- move functions into ntk - which should not be exopsed to the api
 - expose audit logs to data owners and admin via RLS and a view
 - add tests for audit log table
+- remove hard-coded non-generic names
 - describe audit log table in readme
 
 ## Done

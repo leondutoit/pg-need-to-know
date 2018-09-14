@@ -79,8 +79,8 @@ alter function ntk.update_request_log owner to admin_user;
 
 
 -- todo: move into ntk so not exposed to api
-drop function if exists roles_have_common_group_and_is_data_user(text, text);
-create or replace function roles_have_common_group_and_is_data_user(_current_role text, _current_row_owner text)
+drop function if exists ntk.roles_have_common_group_and_is_data_user(text, text);
+create or replace function ntk.roles_have_common_group_and_is_data_user(_current_role text, _current_row_owner text)
     returns boolean as $$
     -- param vars
     declare trusted_current_role text;
@@ -111,8 +111,8 @@ create or replace function roles_have_common_group_and_is_data_user(_current_rol
         return _res;
     end;
 $$ language plpgsql;
-revoke all privileges on function roles_have_common_group_and_is_data_user(text, text) from public;
-alter function roles_have_common_group_and_is_data_user owner to admin_user;
+revoke all privileges on function ntk.roles_have_common_group_and_is_data_user(text, text) from public;
+alter function ntk.roles_have_common_group_and_is_data_user owner to admin_user;
 
 -- move into ntk
 drop function if exists sql_type_from_generic_type(text);
@@ -229,7 +229,7 @@ create or replace function parse_mac_table_def(definition json)
         execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
         execute format('create policy row_ownership_select_policy on %I for select using (row_owner = current_user)', trusted_table_name);
         execute format('create policy row_ownership_delete_policy on %I for delete using (row_owner = current_user)', trusted_table_name);
-        execute format('create policy row_ownership_select_group_policy on %I for select using (roles_have_common_group_and_is_data_user(current_user::text, row_owner))', trusted_table_name);
+        execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(current_user::text, row_owner))', trusted_table_name);
         execute format('create policy row_owbership_update_policy on %I for update using (row_owner = current_user) with check (row_owner = current_user)', trusted_table_name);
         return 'Success';
     end;
@@ -303,7 +303,7 @@ create or replace function user_create(user_name text, user_type text, user_meta
         execute format('create role %I', trusted_user_name);
         execute format('grant %I to authenticator', trusted_user_name);
         execute format('grant select on ntk.group_memberships to %I', trusted_user_name);
-        execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
+        execute format('grant execute on function ntk.roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
         execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
         execute format('grant execute on function user_groups(text) to %I', trusted_user_name);
         execute format('grant execute on function user_group_remove(text) to %I', trusted_user_name);
@@ -538,7 +538,7 @@ create or replace function user_delete(user_name text)
         set role admin_user;
         execute format('revoke all privileges on ntk.group_memberships from %I', trusted_user_name);
         execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);
-        execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
+        execute format('revoke execute on function ntk.roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function user_groups(text) from %I', trusted_user_name);
         execute format('revoke execute on function user_group_remove(text) from %I', trusted_user_name);
         execute format('delete from ntk.registered_users where _user_name = $1') using user_name;
