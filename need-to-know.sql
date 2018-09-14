@@ -255,8 +255,28 @@ alter table ntk.registered_users owner to admin_user;
 grant select on ntk.registered_users to public; -- part of RLS policy
 
 
--- register_data_owner
--- register_data_user
+drop function if exists user_register(text, text, json);
+create or replace function user_register(user_name text, user_type text, user_metadata json)
+    returns text as $$
+    declare _ans text;
+    begin
+        assert (select bool_or(user_name ilike arr_element||'%')
+                from unnest(ARRAY['owner_','user_']) x(arr_element)),
+            'user name must start with either "owner_" to indicate that a data owner is being registered or "user_" to indicate that a data user is being registered';
+        assert (select length(user_name) <= 63),
+            'the maximum allowed user name length is 63 characters';
+        assert (select bool_or(user_type ilike arr_element||'%')
+                from unnest(ARRAY['data_owner','data_user']) x(arr_element)),
+            'user_type must be either "data_owner" or "data_user"';
+        set role admin_user;
+        -- TODO: add metadata
+        select user_create(user_name, user_type) into _ans;
+        return 'user created';
+    end;
+$$ language plpgsql;
+revoke all privileges on function user_register(text, text, json) from public;
+grant execute on function user_register(text, text, json) to anon;
+
 
 drop function if exists user_create(text, text);
 create or replace function user_create(user_name text, user_type text)
