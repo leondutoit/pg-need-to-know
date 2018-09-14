@@ -11,14 +11,13 @@
 - add tests for audit log table
 - describe audit log table in readme
 - consider how and who to give access to audit logs
+- test permissions on informational views
 - full review of docs
 - write about the model
 - HTTP client tests
 - make a presentation, with visual representations of the model
 
 ## IP
-- give admin_user access to registered user via a view, remove user_list function
-- replace group_list with a groups view
 - add informational views in http api overview, with explanations
 - RLS policy to only allow data_owners to insert into tables, update model
 
@@ -49,3 +48,5 @@
     - use user_create internally, adapt privileges
     - require and enforce owner_ and user_ to indicate owner and user, and to ensure uniqueness in the case where the same person registers for both roles
     - update docs (http api - with new naming conventions)
+- give admin_user access to registered user via a view, remove user_list function
+- replace group_list with a groups view

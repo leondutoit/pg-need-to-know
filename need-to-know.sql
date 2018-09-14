@@ -316,6 +316,8 @@ create table if not exists ntk.user_defined_groups (
 );
 alter table ntk.user_defined_groups owner to admin_user;
 grant select on ntk.user_defined_groups to public;
+create view groups as select * from ntk.user_defined_groups;
+alter view groups owner to admin_user;
 
 
 drop table if exists ntk.user_initiated_group_removals cascade;
@@ -377,18 +379,6 @@ create or replace function group_add_members(members json)
 $$ language plpgsql;
 revoke all privileges on function group_add_members(json) from public;
 grant execute on function group_add_members(json) to admin_user;
-
--- deprecate in favour of a view called groups
-drop function if exists group_list();
-create or replace function group_list()
-    returns table (group_name text, group_metadata json) as $$
-    begin
-        return query select udg.group_name, udg.group_metadata
-                     from ntk.user_defined_groups udg;
-    end;
-$$ language plpgsql;
-revoke all privileges on function group_list() from public;
-grant execute on function group_list() to admin_user;
 
 
 drop function if exists group_list_members(text);

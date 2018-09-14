@@ -161,7 +161,7 @@ create or replace function test_group_list()
     returns boolean as $$
     begin
         set role admin_user;
-        assert (select '(project_group,"{""consent_reference"": 1234}")' in (select group_list()::text)),
+        assert (select count(1) from groups where group_name = 'project_group') = 1,
             'group list does not work';
         set role authenticator;
         return true;
@@ -378,13 +378,6 @@ create or replace function test_function_privileges()
             'group_add_members only callable by admin_user - as expected';
         end;
         begin
-            select group_list() into _ans;
-            return false;
-        exception
-            when others then raise notice
-            'group_list only callable by admin_user - as expected';
-        end;
-        begin
             select group_list_members('') into _ans;
             return false;
         exception
@@ -427,6 +420,7 @@ create or replace function test_function_privileges()
             'group_delete only callable by admin_user - as expected';
         end;
         set role authenticator;
+        -- test permissions on informational views
         return true;
     end;
 $$ language plpgsql;
