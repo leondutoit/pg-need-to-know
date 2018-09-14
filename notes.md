@@ -7,7 +7,7 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
-- RLS policy to only allow data_owners to insert into tables, update model
+
 - expose audit logs to data owners and admin via RLS and a view
 - add tests for audit log table
 - describe audit log table in readme
@@ -17,12 +17,7 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- metadata for users (so admins can sort and search on this when creating groups), update docs, registation date
-- registration function for data_owners and data_users
-    - exec as anon
-    - use user_create internally, adapt privileges
-    - require and enforce owner_ and user_ to indicate owner and user, and to ensure uniqueness in the case where the same person registers for both roles
-    - update docs
+- RLS policy to only allow data_owners to insert into tables, update model
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -45,3 +40,9 @@
     - group_create, group_list (metadata)
 - document group removal logging view
 - document user_data_deletion_requests
+- metadata for users (so admins can sort and search on this when creating groups), update docs, registation date
+- registration function for data_owners and data_users
+    - exec as anon
+    - use user_create internally, adapt privileges
+    - require and enforce owner_ and user_ to indicate owner and user, and to ensure uniqueness in the case where the same person registers for both roles
+    - update docs (http api - with new naming conventions)

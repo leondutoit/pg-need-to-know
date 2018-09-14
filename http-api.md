@@ -32,15 +32,15 @@ Authorization: Bearer your-jwt
 {"definition": {"table_name": "people", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}, "type": "mac" }
 ```
 
-- Create a new user, either a data owner, or a data user
+- Register as a new user, either a data owner, or a data user
 ```bash
-POST /rpc/user_create
+POST /rpc/user_register
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"user_name": "myuser", "type": "data_owner"}
+{"user_name": "owner_12345", "type": "data_owner", "user_metadata": {"some": "info"}}
 # or
-{"user_name": "some_analyst", "type": "data_user"}
+{"user_name": "user_some_analyst", "type": "data_user", "user_metadata": {"some": "info"}}
 ```
 
 - Collect data from `myuser`
