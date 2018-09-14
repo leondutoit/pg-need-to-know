@@ -53,6 +53,22 @@ create or replace function test_user_create()
         set role user_project_user;
         set role authenticator;
         -- check that the constraints on the public method are correctly enforced
+        set role anon;
+        begin
+            select user_register('jhbewf903rnk', 'data_owner', '{}'::json) into _ans;
+        exception when assert_failure then raise notice
+            'user name pattern check works - as expected';
+        end;
+        begin
+            select user_register('owner_kwqfhbjhegr2478yptg3nrb093409yin42oib32409n12n03281e79821rh21or9812yr', 'data_owner', '{}'::json) into _ans;
+        exception when assert_failure then raise notice
+            'user length restriction check works - as expected';
+        end;
+        begin
+            select user_register('owner_1234', 'data_person', '{}'::json) into _ans;
+        exception when assert_failure then raise notice
+            'user type check works - as expected';
+        end;
         return true;
     end;
 $$ language plpgsql;
