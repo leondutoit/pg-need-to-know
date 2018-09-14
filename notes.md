@@ -18,8 +18,8 @@
 
 ## IP
 - give admin_user access to registered user via a view, remove user_list function
-    - do the same for groups
-- add informational views in http api overview
+- replace group_list with a groups view
+- add informational views in http api overview, with explanations
 - RLS policy to only allow data_owners to insert into tables, update model
 
 ## Done

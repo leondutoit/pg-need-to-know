@@ -418,17 +418,6 @@ $$ language plpgsql;
 revoke all privileges on function user_groups(text) from public;
 alter function user_groups owner to admin_user;
 
--- deprecate in favour of a view called registered_users
-drop function if exists user_list();
-create or replace function user_list()
-    returns table (user_name text, user_type text) as $$
-    begin
-        return query execute format('select _user_name::text user_name, _user_type::text user_type from ntk.registered_users');
-    end;
-$$ language plpgsql;
-revoke all privileges on function user_list() from public;
-grant execute on function user_list() to admin_user;
-
 
 drop function if exists user_group_remove(text);
 create or replace function user_group_remove(group_name text)

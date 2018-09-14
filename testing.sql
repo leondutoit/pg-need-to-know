@@ -210,11 +210,8 @@ create or replace function test_user_list()
     declare _ans text;
     begin
         set role admin_user;
-        assert (select '(owner_gustav,data_owner)' in (select user_list()::text)), 'user_list does not work';
-        assert (select '(owner_hannah,data_owner)' in (select user_list()::text)), 'user_list does not work';
-        assert (select '(owner_faye,data_owner)' in (select user_list()::text)), 'user_list does not work';
-        assert (select '(user_project_user,data_user)' in (select user_list()::text)), 'user_list does not work';
-        assert (select '(authenticator,data_user)' not in (select user_list()::text)), 'user_list does not work - includes internal role';
+        assert (select count(1) from registered_users where user_name = 'owner_gustav') = 1,
+            'registered_users accounting view does not work';
         set role authenticator;
         return true;
     end;
@@ -400,13 +397,6 @@ create or replace function test_function_privileges()
         exception
             when others then raise notice
             'user_groups only callable by admin_user - as expected';
-        end;
-        begin
-            select user_list() into _ans;
-            return false;
-        exception
-            when others then raise notice
-            'user_list only callable by admin_user - as expected';
         end;
         begin
             select user_group_remove() into _ans;
