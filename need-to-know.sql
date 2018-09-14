@@ -249,10 +249,15 @@ revoke all privileges on function parse_generic_table_def(json) from public;
 
 drop table if exists ntk.registered_users;
 create table if not exists ntk.registered_users(
+    registration_date timestamptz default current_timestamp,
     _user_name text not null unique,
-    _user_type text not null check (_user_type in ('data_owner', 'data_user')));
+    _user_type text not null check (_user_type in ('data_owner', 'data_user')),
+    user_metadata json
+);
 alter table ntk.registered_users owner to admin_user;
 grant select on ntk.registered_users to public; -- part of RLS policy
+# rather expose this through a view that the function user_list
+# then the admin_user can see everything they need
 
 
 drop function if exists user_register(text, text, json);
@@ -269,8 +274,7 @@ create or replace function user_register(user_name text, user_type text, user_me
                 from unnest(ARRAY['data_owner','data_user']) x(arr_element)),
             'user_type must be either "data_owner" or "data_user"';
         set role admin_user;
-        -- TODO: add metadata
-        select user_create(user_name, user_type) into _ans;
+        select user_create(user_name, user_type, user_metadata) into _ans;
         return 'user created';
     end;
 $$ language plpgsql;
@@ -278,8 +282,8 @@ revoke all privileges on function user_register(text, text, json) from public;
 grant execute on function user_register(text, text, json) to anon;
 
 
-drop function if exists user_create(text, text);
-create or replace function user_create(user_name text, user_type text)
+drop function if exists user_create(text, text, json);
+create or replace function user_create(user_name text, user_type text, user_metadata json)
     returns text as $$
     declare trusted_user_name text;
     declare trusted_user_type text;
@@ -293,13 +297,13 @@ create or replace function user_create(user_name text, user_type text)
         execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
         execute format('grant execute on function user_groups(text) to %I', trusted_user_name);
         execute format('grant execute on function user_group_remove(text) to %I', trusted_user_name);
-        execute format('insert into ntk.registered_users (_user_name, _user_type) values ($1, $2)')
-            using user_name, user_type; -- this is alright, since they are _values_ not SQL identifiers
+        execute format('insert into ntk.registered_users (_user_name, _user_type, user_metadata) values ($1, $2, $3)')
+            using user_name, user_type, user_metadata;
         return 'user created';
     end;
 $$ language plpgsql;
-revoke all privileges on function user_create(text, text) from public;
-grant execute on function user_create(text, text) to admin_user;
+revoke all privileges on function user_create(text, text, json) from public;
+grant execute on function user_create(text, text, json) to admin_user;
 
 
 drop table if exists ntk.user_defined_groups cascade;
@@ -411,7 +415,7 @@ $$ language plpgsql;
 revoke all privileges on function user_groups(text) from public;
 alter function user_groups owner to admin_user;
 
-
+# consider removing this, replacing it with a view
 drop function if exists user_list();
 create or replace function user_list()
     returns table (user_name text, user_type text) as $$

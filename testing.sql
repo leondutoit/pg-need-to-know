@@ -24,29 +24,35 @@ create or replace function test_user_create()
     declare _ans text;
     begin
         set role admin_user;
-        select user_create('gustav', 'data_owner') into _ans;
-        assert (select _user_type from ntk.registered_users where _user_name = 'gustav') = 'data_owner',
+        select user_create('owner_gustav', 'data_owner', '{}'::json) into _ans;
+        assert (select _user_type from ntk.registered_users where _user_name = 'owner_gustav') = 'data_owner',
             'problem with user creation';
-        select user_create('hannah', 'data_owner') into _ans;
-        assert (select _user_type from ntk.registered_users where _user_name = 'hannah') = 'data_owner',
+        select user_create('owner_hannah', 'data_owner', '{}'::json) into _ans;
+        assert (select _user_type from ntk.registered_users where _user_name = 'owner_hannah') = 'data_owner',
             'problem with user creation';
-        select user_create('faye', 'data_owner') into _ans;
-        assert (select _user_type from ntk.registered_users where _user_name = 'faye') = 'data_owner',
+        select user_create('owner_faye', 'data_owner', '{}'::json) into _ans;
+        assert (select _user_type from ntk.registered_users where _user_name = 'owner_faye') = 'data_owner',
             'problem with user creation';
-        select user_create('project_user', 'data_user') into _ans;
-        assert (select _user_type from ntk.registered_users where _user_name = 'project_user') = 'data_user',
+        set role authenticator;
+        set role anon;
+        -- make sure the public method also works
+        select user_register('user_project_user', 'data_user', '{}'::json) into _ans;
+        set role authenticator;
+        set role admin_user;
+        assert (select _user_type from ntk.registered_users where _user_name = 'user_project_user') = 'data_user',
             'problem with user creation';
-        assert (select count(1) from ntk.registered_users where _user_name in ('gustav', 'hannah', 'faye', 'project_user')) = 4,
+        assert (select count(1) from ntk.registered_users where _user_name in ('owner_gustav', 'owner_hannah', 'owner_faye', 'user_project_user')) = 4,
             'not all newly created users are recorded in the ntk.registered_users table';
         -- test that the rolse actually exist
-        set role gustav;
+        set role owner_gustav;
         set role authenticator;
-        set role hannah;
+        set role owner_hannah;
         set role authenticator;
-        set role faye;
+        set role owner_faye;
         set role authenticator;
-        set role project_user;
+        set role user_project_user;
         set role authenticator;
+        -- check that the constraints on the public method are correctly enforced
         return true;
     end;
 $$ language plpgsql;
@@ -73,23 +79,23 @@ $$ language plpgsql;
 create or replace function test_defult_data_owner_policies()
     returns boolean as $$
     begin
-        set role gustav;
-        insert into people (name, age) values ('Gustav de la Croix', 1);
+        set role owner_gustav;
+        insert into people (name, age) values ('owner_Gustav de la Croix', 1);
         set role authenticator;
-        set role hannah;
-        insert into people (name, age) values ('Hannah le Roux', 29);
+        set role owner_hannah;
+        insert into people (name, age) values ('owner_Hannah le Roux', 29);
         set role authenticator;
-        set role faye;
-        insert into people (name, age) values ('Faye Thompson', 58);
+        set role owner_faye;
+        insert into people (name, age) values ('owner_Faye Thompson', 58);
         set role authenticator;
-        set role gustav;
-        assert (select count(1) from people) = 1, 'gustav has unauthorized data access';
+        set role owner_gustav;
+        assert (select count(1) from people) = 1, 'owner_gustav has unauthorized data access';
         set role authenticator;
-        set role hannah;
-        assert (select count(1) from people) = 1, 'hannah has unauthorized data access';
+        set role owner_hannah;
+        assert (select count(1) from people) = 1, 'owner_hannah has unauthorized data access';
         set role authenticator;
-        set role project_user;
-        assert (select count(1) from people) = 0, 'project_user has unauthorized data access';
+        set role user_project_user;
+        assert (select count(1) from people) = 0, 'user_project_user has unauthorized data access';
         set role authenticator;
         set role admin_user; -- make sure RLS is forced on table owner too
         assert (select count(1) from people) = 0, 'admin_user has unauthorized data access';
@@ -105,9 +111,9 @@ create or replace function test_group_add_members()
     begin
         set role admin_user;
         select group_add_members('{"memberships": [
-            {"user_name":"gustav", "group_name":"project_group"},
-            {"user_name":"hannah", "group_name":"project_group"},
-            {"user_name":"project_user", "group_name":"project_group"}]}'::json)
+            {"user_name":"owner_gustav", "group_name":"project_group"},
+            {"user_name":"owner_hannah", "group_name":"project_group"},
+            {"user_name":"user_project_user", "group_name":"project_group"}]}'::json)
         into _ans;
         assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 1,
             'group creation accounting is broken';
@@ -121,14 +127,14 @@ $$ language plpgsql;
 create or replace function test_group_membership_data_access_policies()
     returns boolean as $$
     begin
-        set role gustav;
-        assert (select count(1) from people) = 1, 'data owner, gustav, has unauthorized data access';
+        set role owner_gustav;
+        assert (select count(1) from people) = 1, 'data owner, owner_gustav, has unauthorized data access';
         set role authenticator;
-        set role hannah;
-        assert (select count(1) from people) = 1, 'data owner, hannah, has unauthorized data access';
+        set role owner_hannah;
+        assert (select count(1) from people) = 1, 'data owner, owner_hannah, has unauthorized data access';
         set role authenticator;
-        set role project_user;
-        assert (select count(1) from people) = 2, 'RLS policy for data user, project_user, is broken';
+        set role user_project_user;
+        assert (select count(1) from people) = 2, 'RLS policy for data user, user_project_user, is broken';
         set role authenticator;
         return true;
     end;
@@ -151,9 +157,9 @@ create or replace function test_group_list_members()
     returns boolean as $$
     begin
         set role admin_user;
-        assert 'gustav' in (select group_list_members('project_group')), 'listing group members does not work';
-        assert 'hannah' in (select group_list_members('project_group')), 'listing group members does not work';
-        assert 'project_user' in (select group_list_members('project_group')), 'listing group members does not work';
+        assert 'owner_gustav' in (select group_list_members('project_group')), 'listing group members does not work';
+        assert 'owner_hannah' in (select group_list_members('project_group')), 'listing group members does not work';
+        assert 'user_project_user' in (select group_list_members('project_group')), 'listing group members does not work';
         set role authenticator;
         return true;
     end;
@@ -165,8 +171,8 @@ create or replace function test_user_groups()
     declare _ans text;
     begin
         set role admin_user;
-        select user_groups('gustav')::text into _ans;
-        assert '(project_group,"{""consent_reference"": 1234}")' in (select user_groups('gustav')::text),
+        select user_groups('owner_gustav')::text into _ans;
+        assert '(project_group,"{""consent_reference"": 1234}")' in (select user_groups('owner_gustav')::text),
             'user_groups function does not list all groups';
         begin
             select user_groups('authenticator') into _ans;
@@ -174,7 +180,7 @@ create or replace function test_user_groups()
             when assert_failure then raise notice 'cannot access internal role groups - as expected';
         end;
         set role authenticator;
-        set role gustav;
+        set role owner_gustav;
         assert '(project_group,"{""consent_reference"": 1234}")' in (select user_groups()::text),
             'user_groups function does not list all groups';
         set role authenticator;
@@ -188,10 +194,10 @@ create or replace function test_user_list()
     declare _ans text;
     begin
         set role admin_user;
-        assert (select '(gustav,data_owner)' in (select user_list()::text)), 'user_list does not work';
-        assert (select '(hannah,data_owner)' in (select user_list()::text)), 'user_list does not work';
-        assert (select '(faye,data_owner)' in (select user_list()::text)), 'user_list does not work';
-        assert (select '(project_user,data_user)' in (select user_list()::text)), 'user_list does not work';
+        assert (select '(owner_gustav,data_owner)' in (select user_list()::text)), 'user_list does not work';
+        assert (select '(owner_hannah,data_owner)' in (select user_list()::text)), 'user_list does not work';
+        assert (select '(owner_faye,data_owner)' in (select user_list()::text)), 'user_list does not work';
+        assert (select '(user_project_user,data_user)' in (select user_list()::text)), 'user_list does not work';
         assert (select '(authenticator,data_user)' not in (select user_list()::text)), 'user_list does not work - includes internal role';
         set role authenticator;
         return true;
@@ -205,14 +211,14 @@ create or replace function test_user_group_remove()
     begin
         set role admin_user;
         select group_add_members('{"memberships": [
-            {"user_name":"faye", "group_name":"project_group"}]}'::json) into _ans;
+            {"user_name":"owner_faye", "group_name":"project_group"}]}'::json) into _ans;
         set role authenticator;
-        set role faye;
+        set role owner_faye;
         select user_group_remove('project_group') into _ans;
         set role authenticator;
         set role admin_user;
         assert (select group_name from ntk.user_initiated_group_removals
-                where user_name = 'faye') = 'project_group',
+                where user_name = 'owner_faye') = 'project_group',
             'group removal accounting does not work';
         return true;
     end;
@@ -225,15 +231,15 @@ create or replace function test_group_remove_members()
     begin
         set role admin_user;
         select group_remove_members('{"memberships": [
-            {"user_name":"gustav", "group_name":"project_group"}]}'::json)
+            {"user_name":"owner_gustav", "group_name":"project_group"}]}'::json)
         into _ans;
         set role authenticator;
-        set role project_user;
-        -- now only data owner in the group is hannah
+        set role user_project_user;
+        -- now only data owner in the group is owner_hannah
         assert (select count(1) from people) = 1,
-            'project_user has unauthorized data access to people, something went wrong then removing gustav from project_group';
-        assert (select count(1) from ntk.user_defined_groups_memberships where member = 'gustav' and group_name = 'project_group') = 0,
-            'gustav is still recorded as being a member of project_group in the accounting view';
+            'user_project_user has unauthorized data access to people, something went wrong then removing owner_gustav from project_group';
+        assert (select count(1) from ntk.user_defined_groups_memberships where member = 'owner_gustav' and group_name = 'project_group') = 0,
+            'owner_gustav is still recorded as being a member of project_group in the accounting view';
         set role authenticator;
         return true;
     end;
@@ -250,16 +256,16 @@ create or replace function test_user_delete_data()
         select table_create('{"table_name": "people2", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac') into _ans;
         set role authenticator;
         -- insert some data
-        set role gustav;
-        insert into people2 (name, age) values ('Gustav de la Croix', 10);
+        set role owner_gustav;
+        insert into people2 (name, age) values ('owner_Gustav de la Croix', 10);
         -- delete the data
         select user_delete_data() into _ans;
-        assert (select count(1) from people) = 0, 'data for gustav not deleted from table people';
-        assert (select count(1) from people2) = 0, 'data for gustav not deleted from table people2';
+        assert (select count(1) from people) = 0, 'data for owner_gustav not deleted from table people';
+        assert (select count(1) from people2) = 0, 'data for owner_gustav not deleted from table people2';
         set role authenticator;
         set role admin_user;
-        assert (select count(1) from user_data_deletion_requests where user_name = 'gustav') >= 1,
-            'problem recording the data deletion request from gustav';
+        assert (select count(1) from user_data_deletion_requests where user_name = 'owner_gustav') >= 1,
+            'problem recording the data deletion request from owner_gustav';
         set role authenticator;
         return true;
     end;
@@ -272,19 +278,19 @@ create or replace function test_user_delete()
     begin
         set role admin_user;
         begin
-            select user_delete('hannah') into _ans; -- should fail, because data still present
+            select user_delete('owner_hannah') into _ans; -- should fail, because data still present
         exception
             when others then raise notice 'existing data check in order, when deleting a user';
         end;
         set role authenticator;
         -- if the above worked, wrongly so, then the next part will fail
-        -- because it will be impossible to set the role to hannah
-        set role hannah;
+        -- because it will be impossible to set the role to owner_hannah
+        set role owner_hannah;
         select user_delete_data() into _ans;
         set role authenticator;
         set role admin_user;
-        select user_delete('hannah') into _ans;
-        assert (select count(1) from ntk.registered_users where _user_name = 'hannah') = 0,
+        select user_delete('owner_hannah') into _ans;
+        assert (select count(1) from ntk.registered_users where _user_name = 'owner_hannah') = 0,
             'user deletion did not update ntk.registered_users accounting table correctly';
         begin
             select user_delete('authenticator') into _ans;
@@ -309,7 +315,7 @@ create or replace function test_group_delete()
                 when others then raise notice 'non-empty group deletion prevention works as expected';
             end;
         -- now remove members
-        select user_delete('project_user') into _ans;
+        select user_delete('user_project_user') into _ans;
         select group_delete('project_group') into _ans;
         assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 0, 'group accounting not working after deletion';
         begin
@@ -424,17 +430,17 @@ create or replace function teardown()
     returns boolean as $$
     declare _ans text;
     begin
-        -- delete gustav
+        -- delete owner_gustav
         set role authenticator;
         set role admin_user;
-        select user_delete('gustav') into _ans;
+        select user_delete('owner_gustav') into _ans;
         set role authenticator;
-        -- delete faye
-        set role faye;
+        -- delete owner_faye
+        set role owner_faye;
         select user_delete_data() into _ans;
         set role authenticator;
         set role admin_user;
-        select user_delete('faye') into _ans;
+        select user_delete('owner_faye') into _ans;
         set role authenticator;
         -- drop tables
         set role admin_user;
