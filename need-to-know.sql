@@ -164,7 +164,7 @@ create or replace function table_create(definition json, type text, form_id int 
         untrusted_type := type;
         untrusted_form_id := form_id;
         if untrusted_type = 'mac' then
-            select parse_mac_table_def(untrusted_definition) into _res;
+            select ntk.parse_mac_table_def(untrusted_definition) into _res;
             return _res;
         elsif untrusted_type = 'generic' then
             select parse_generic_table_def(untrusted_definition) into _res;
@@ -178,8 +178,8 @@ revoke all privileges on function table_create(json, text, int) from public;
 grant execute on function table_create(json, text, int) to admin_user;
 
 -- move into ntk
-drop function if exists parse_mac_table_def(json);
-create or replace function parse_mac_table_def(definition json)
+drop function if exists ntk.parse_mac_table_def(json);
+create or replace function ntk.parse_mac_table_def(definition json)
     returns text as $$
     -- param vars
     declare untrusted_definition json;
@@ -233,8 +233,8 @@ create or replace function parse_mac_table_def(definition json)
         return 'Success';
     end;
 $$ language plpgsql;
-revoke all privileges on function parse_mac_table_def(json) from public;
-grant execute on function parse_mac_table_def(json) to admin_user;
+revoke all privileges on function ntk.parse_mac_table_def(json) from public;
+grant execute on function ntk.parse_mac_table_def(json) to admin_user;
 
 -- move into ntk
 drop function if exists parse_generic_table_def(json);
