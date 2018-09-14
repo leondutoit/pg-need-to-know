@@ -115,6 +115,13 @@ create or replace function test_defult_data_owner_policies()
         set role authenticator;
         set role admin_user; -- make sure RLS is forced on table owner too
         assert (select count(1) from people) = 0, 'admin_user has unauthorized data access';
+        begin
+            set role user_project_user;
+            insert into people (name, age) values ('Steve', 90);
+        exception
+            when foreign_key_violation then raise notice
+                'data user cannot insert data - as expected';
+        end;
         set role authenticator;
         return true;
     end;

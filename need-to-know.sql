@@ -309,7 +309,9 @@ create or replace function user_create(user_name text, user_type text, user_meta
         execute format('grant execute on function user_group_remove(text) to %I', trusted_user_name);
         execute format('insert into ntk.registered_users (_user_name, _user_type, user_metadata) values ($1, $2, $3)')
             using user_name, user_type, user_metadata;
-        execute format('insert into ntk.data_owners values ($1)') using user_name;
+        if user_type = 'data_owner' then
+            execute format('insert into ntk.data_owners values ($1)') using user_name;
+        end if;
         return 'user created';
     end;
 $$ language plpgsql;
