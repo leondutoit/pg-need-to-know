@@ -78,7 +78,6 @@ revoke all privileges on function ntk.update_request_log(text, text) from public
 alter function ntk.update_request_log owner to admin_user;
 
 
--- todo: move into ntk so not exposed to api
 drop function if exists ntk.roles_have_common_group_and_is_data_user(text, text);
 create or replace function ntk.roles_have_common_group_and_is_data_user(_current_role text, _current_row_owner text)
     returns boolean as $$
@@ -114,9 +113,9 @@ $$ language plpgsql;
 revoke all privileges on function ntk.roles_have_common_group_and_is_data_user(text, text) from public;
 alter function ntk.roles_have_common_group_and_is_data_user owner to admin_user;
 
--- move into ntk
-drop function if exists sql_type_from_generic_type(text);
-create or replace function sql_type_from_generic_type(_type text)
+
+drop function if exists ntk.sql_type_from_generic_type(text);
+create or replace function ntk.sql_type_from_generic_type(_type text)
     returns text as $$
     declare untrusted_type text;
     begin
@@ -149,8 +148,8 @@ create or replace function sql_type_from_generic_type(_type text)
         end case;
     end;
 $$ language plpgsql;
-revoke all privileges on function sql_type_from_generic_type(text) from public;
-grant execute on function sql_type_from_generic_type(text) to admin_user;
+revoke all privileges on function ntk.sql_type_from_generic_type(text) from public;
+grant execute on function ntk.sql_type_from_generic_type(text) to admin_user;
 
 
 drop function if exists table_create(json, text, int);
@@ -198,7 +197,7 @@ create or replace function parse_mac_table_def(definition json)
         trusted_table_name := quote_ident(untrusted_definition->>'table_name');
         execute format('create table if not exists %I (row_owner text default current_user references ntk.data_owners (user_name))', trusted_table_name);
         for untrusted_i in select * from json_array_elements(untrusted_columns) loop
-            select sql_type_from_generic_type(untrusted_i->>'type') into trusted_dtype;
+            select ntk.sql_type_from_generic_type(untrusted_i->>'type') into trusted_dtype;
             select quote_ident(untrusted_i->>'name') into trusted_colname;
             begin
                 execute format('alter table %I add column %I %s', trusted_table_name, trusted_colname, trusted_dtype);
