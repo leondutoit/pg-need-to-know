@@ -7,16 +7,19 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
-
 - expose audit logs to data owners and admin via RLS and a view
 - add tests for audit log table
 - describe audit log table in readme
 - consider how and who to give access to audit logs
-- HTTP client tests
+- full review of docs
 - write about the model
+- HTTP client tests
 - make a presentation, with visual representations of the model
 
 ## IP
+- give admin_user access to registered user via a view, remove user_list function
+    - do the same for groups
+- add informational views in http api overview
 - RLS policy to only allow data_owners to insert into tables, update model
 
 ## Done

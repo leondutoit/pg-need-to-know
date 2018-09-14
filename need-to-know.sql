@@ -375,7 +375,7 @@ $$ language plpgsql;
 revoke all privileges on function group_add_members(json) from public;
 grant execute on function group_add_members(json) to admin_user;
 
-
+-- deprecate in favour of a view called groups
 drop function if exists group_list();
 create or replace function group_list()
     returns table (group_name text, group_metadata json) as $$
@@ -415,7 +415,7 @@ $$ language plpgsql;
 revoke all privileges on function user_groups(text) from public;
 alter function user_groups owner to admin_user;
 
-# consider removing this, replacing it with a view
+# deprecate in favour of a view called registered_users
 drop function if exists user_list();
 create or replace function user_list()
     returns table (user_name text, user_type text) as $$
