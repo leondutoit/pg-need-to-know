@@ -78,6 +78,7 @@ revoke all privileges on function ntk.update_request_log(text, text) from public
 alter function ntk.update_request_log owner to admin_user;
 
 
+-- todo: move into ntk so not exposed to api
 drop function if exists roles_have_common_group_and_is_data_user(text, text);
 create or replace function roles_have_common_group_and_is_data_user(_current_role text, _current_row_owner text)
     returns boolean as $$
@@ -113,26 +114,7 @@ $$ language plpgsql;
 revoke all privileges on function roles_have_common_group_and_is_data_user(text, text) from public;
 alter function roles_have_common_group_and_is_data_user owner to admin_user;
 
-
-drop function if exists ntk.current_user_is_data_owner();
-create or replace function ntk.current_user_is_data_owner()
-    returns boolean as $$
-    declare trusted_current_role text;
-    declare _type text;
-    begin
-    trusted_current_role := current_user::text;
-        execute format('select _user_type from ntk.registered_users where _user_name = $1')
-            into _type using trusted_current_role;
-        if _type != 'data_owner'
-            then return false;
-        end if;
-        return true;
-    end;
-$$ language plpgsql;
-revoke all privileges on function ntk.current_user_is_data_owner from public;
-alter function ntk.current_user_is_data_owner owner to admin_user;
-
-
+-- move into ntk
 drop function if exists sql_type_from_generic_type(text);
 create or replace function sql_type_from_generic_type(_type text)
     returns text as $$
@@ -196,7 +178,7 @@ $$ language plpgsql;
 revoke all privileges on function table_create(json, text, int) from public;
 grant execute on function table_create(json, text, int) to admin_user;
 
-
+-- move into ntk
 drop function if exists parse_mac_table_def(json);
 create or replace function parse_mac_table_def(definition json)
     returns text as $$
@@ -214,7 +196,7 @@ create or replace function parse_mac_table_def(definition json)
         untrusted_definition := definition;
         untrusted_columns := untrusted_definition->'columns';
         trusted_table_name := quote_ident(untrusted_definition->>'table_name');
-        execute format('create table if not exists %I (row_owner text default current_user)', trusted_table_name);
+        execute format('create table if not exists %I (row_owner text default current_user references ntk.data_owners (user_name))', trusted_table_name);
         for untrusted_i in select * from json_array_elements(untrusted_columns) loop
             select sql_type_from_generic_type(untrusted_i->>'type') into trusted_dtype;
             select quote_ident(untrusted_i->>'name') into trusted_colname;
@@ -255,7 +237,7 @@ $$ language plpgsql;
 revoke all privileges on function parse_mac_table_def(json) from public;
 grant execute on function parse_mac_table_def(json) to admin_user;
 
-
+-- move into ntk
 drop function if exists parse_generic_table_def(json);
 create or replace function parse_generic_table_def(definition json)
     returns text as $$
@@ -282,6 +264,12 @@ create or replace view registered_users as
 alter view registered_users owner to admin_user;
 
 
+drop table if exists ntk.data_owners;
+create table if not exists ntk.data_owners(user_name text not null unique);
+alter table ntk.data_owners owner to admin_user;
+grant insert on ntk.data_owners to public;
+
+
 drop function if exists user_register(text, text, json);
 create or replace function user_register(user_name text, user_type text, user_metadata json)
     returns text as $$
@@ -303,7 +291,7 @@ $$ language plpgsql;
 revoke all privileges on function user_register(text, text, json) from public;
 grant execute on function user_register(text, text, json) to anon;
 
-
+-- move into ntk
 drop function if exists user_create(text, text, json);
 create or replace function user_create(user_name text, user_type text, user_metadata json)
     returns text as $$
@@ -316,12 +304,12 @@ create or replace function user_create(user_name text, user_type text, user_meta
         execute format('grant %I to authenticator', trusted_user_name);
         execute format('grant select on ntk.group_memberships to %I', trusted_user_name);
         execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
-        execute format('grant execute on function ntk.current_user_is_data_owner() to %I', trusted_user_name);
         execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
         execute format('grant execute on function user_groups(text) to %I', trusted_user_name);
         execute format('grant execute on function user_group_remove(text) to %I', trusted_user_name);
         execute format('insert into ntk.registered_users (_user_name, _user_type, user_metadata) values ($1, $2, $3)')
             using user_name, user_type, user_metadata;
+        execute format('insert into ntk.data_owners values ($1)') using user_name;
         return 'user created';
     end;
 $$ language plpgsql;
@@ -549,10 +537,10 @@ create or replace function user_delete(user_name text)
         execute format('revoke all privileges on ntk.group_memberships from %I', trusted_user_name);
         execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
-        execute format('revoke execute on function ntk.current_user_is_data_owner() from %I', trusted_user_name);
         execute format('revoke execute on function user_groups(text) from %I', trusted_user_name);
         execute format('revoke execute on function user_group_remove(text) from %I', trusted_user_name);
         execute format('delete from ntk.registered_users where _user_name = $1') using user_name;
+        execute format('delete from ntk.data_owners where user_name = $1') using user_name;
         execute format('drop role %I', trusted_user_name);
         return 'user deleted';
     end;

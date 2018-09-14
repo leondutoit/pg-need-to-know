@@ -305,6 +305,8 @@ create or replace function test_user_delete()
         select user_delete('owner_hannah') into _ans;
         assert (select count(1) from ntk.registered_users where _user_name = 'owner_hannah') = 0,
             'user deletion did not update ntk.registered_users accounting table correctly';
+        assert (select count(1) from ntk.data_owners where user_name = 'owner_hannah') = 0,
+            'user deletion did not update ntk.data_owners accounting table correctly';
         begin
             select user_delete('authenticator') into _ans;
         exception

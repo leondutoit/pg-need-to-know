@@ -1,14 +1,16 @@
 # pg-need-to-know
 
-A Mandatory Access Control setup for PostgreSQL which takes data ownership seriously, and allows data owners to make their data available to data users on a need to know basis.
+A Mandatory Access Control setup for PostgreSQL which allows data owners to make their data available to data users on a need to know basis.
 
 
 ## Features
 
-- Any registered data owner can insert data (registation is needed to enforce ownership)
+- Administrators can set up access control for data analysis based on group membership
+- Only registered data owners can insert data (registation is needed to enforce ownership)
 - Data owners are the only ones who can operate on their data by default (select, update, delete)
 - Read-only access can be granted to data users based on common group membership (data owner can never see the data of other data owners)
 - All data access by data users is logged: which data owner successfully requested data about which data owner, when
+- Data owners can remove themselves from groups, revoking access to their data at any time
 - Data owners can delete all their data at any time
 
 

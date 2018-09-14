@@ -7,6 +7,7 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
+- move functions into ntk - which should not be exopsed to the api
 - test permissions on informational views
 - full review of docs
 - write about the model
@@ -14,7 +15,6 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- RLS policy to only allow data_owners to insert into tables, update model
 - expose audit logs to data owners and admin via RLS and a view
 - add tests for audit log table
 - describe audit log table in readme
@@ -49,3 +49,4 @@
 - give admin_user access to registered user via a view, remove user_list function
 - replace group_list with a groups view
 - add informational views in http api overview, with explanations
+- only allow data_owners to insert into tables, update model
