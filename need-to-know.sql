@@ -167,7 +167,7 @@ create or replace function table_create(definition json, type text, form_id int 
             select ntk.parse_mac_table_def(untrusted_definition) into _res;
             return _res;
         elsif untrusted_type = 'generic' then
-            select parse_generic_table_def(untrusted_definition) into _res;
+            select ntk.parse_generic_table_def(untrusted_definition) into _res;
             return _res;
         else
             raise exception using message = 'Unrecognised table definition type.';
@@ -177,7 +177,7 @@ $$ language plpgsql;
 revoke all privileges on function table_create(json, text, int) from public;
 grant execute on function table_create(json, text, int) to admin_user;
 
--- move into ntk
+
 drop function if exists ntk.parse_mac_table_def(json);
 create or replace function ntk.parse_mac_table_def(definition json)
     returns text as $$
@@ -236,15 +236,15 @@ $$ language plpgsql;
 revoke all privileges on function ntk.parse_mac_table_def(json) from public;
 grant execute on function ntk.parse_mac_table_def(json) to admin_user;
 
--- move into ntk
-drop function if exists parse_generic_table_def(json);
-create or replace function parse_generic_table_def(definition json)
+
+drop function if exists ntk.parse_generic_table_def(json);
+create or replace function ntk.parse_generic_table_def(definition json)
     returns text as $$
     begin
         return 'Not implemented - did nothing.';
     end;
 $$ language plpgsql;
-revoke all privileges on function parse_generic_table_def(json) from public;
+revoke all privileges on function ntk.parse_generic_table_def(json) from public;
 
 
 drop table if exists ntk.registered_users cascade;
@@ -283,16 +283,16 @@ create or replace function user_register(user_name text, user_type text, user_me
                 from unnest(ARRAY['data_owner','data_user']) x(arr_element)),
             'user_type must be either "data_owner" or "data_user"';
         set role admin_user;
-        select user_create(user_name, user_type, user_metadata) into _ans;
+        select ntk.user_create(user_name, user_type, user_metadata) into _ans;
         return 'user created';
     end;
 $$ language plpgsql;
 revoke all privileges on function user_register(text, text, json) from public;
 grant execute on function user_register(text, text, json) to anon;
 
--- move into ntk
-drop function if exists user_create(text, text, json);
-create or replace function user_create(user_name text, user_type text, user_metadata json)
+
+drop function if exists ntk.user_create(text, text, json);
+create or replace function ntk.user_create(user_name text, user_type text, user_metadata json)
     returns text as $$
     declare trusted_user_name text;
     declare trusted_user_type text;
@@ -314,8 +314,8 @@ create or replace function user_create(user_name text, user_type text, user_meta
         return 'user created';
     end;
 $$ language plpgsql;
-revoke all privileges on function user_create(text, text, json) from public;
-grant execute on function user_create(text, text, json) to admin_user;
+revoke all privileges on function ntk.user_create(text, text, json) from public;
+grant execute on function ntk.user_create(text, text, json) to admin_user;
 
 
 drop table if exists ntk.user_defined_groups cascade;

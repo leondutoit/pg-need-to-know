@@ -4,7 +4,6 @@
 ```sql
 table_create(definition json, type text)
 user_register(user_name text, user_type text, user_metadata json)
-user_create(user_name text, user_type text, user_metadata json)
 group_create(group_name text)
 group_add_members(members json)
 group_list_members(user_name text)

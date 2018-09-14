@@ -24,13 +24,13 @@ create or replace function test_user_create()
     declare _ans text;
     begin
         set role admin_user;
-        select user_create('owner_gustav', 'data_owner', '{}'::json) into _ans;
+        select ntk.user_create('owner_gustav', 'data_owner', '{}'::json) into _ans;
         assert (select _user_type from ntk.registered_users where _user_name = 'owner_gustav') = 'data_owner',
             'problem with user creation';
-        select user_create('owner_hannah', 'data_owner', '{}'::json) into _ans;
+        select ntk.user_create('owner_hannah', 'data_owner', '{}'::json) into _ans;
         assert (select _user_type from ntk.registered_users where _user_name = 'owner_hannah') = 'data_owner',
             'problem with user creation';
-        select user_create('owner_faye', 'data_owner', '{}'::json) into _ans;
+        select ntk.user_create('owner_faye', 'data_owner', '{}'::json) into _ans;
         assert (select _user_type from ntk.registered_users where _user_name = 'owner_faye') = 'data_owner',
             'problem with user creation';
         set role authenticator;
@@ -366,11 +366,11 @@ create or replace function test_function_privileges()
             'table_create only callable by admin_user - as expected';
         end;
         begin
-            select user_create('', '') into _ans;
+            select ntk.user_create('', '') into _ans;
             return false;
         exception
             when others then raise notice
-            'user_create only callable by admin_user - as expected';
+            'ntk.user_create only callable by admin_user - as expected';
         end;
         begin
             select group_create('') into _ans;
@@ -470,7 +470,7 @@ create or replace function run_tests()
     returns boolean as $$
     begin
         assert (select test_table_create()), 'ERROR: test_table_create';
-        assert (select test_user_create()), 'ERROR: test_user_create';
+        assert (select test_user_create()), 'ERROR: test_ntk.user_create';
         assert (select test_group_create()), 'ERROR: test_group_create';
         assert (select test_defult_data_owner_policies()), 'ERROR: test_defult_data_owner_policies';
         assert (select test_group_add_members()), 'ERROR: test_group_add_members';
