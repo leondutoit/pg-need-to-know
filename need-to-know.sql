@@ -21,7 +21,7 @@ For plpgsql functions the following conventions for code are adopted
 
 -- as the superuser
 
-create role authenticator noinherit login with password 'replaceme';
+create role authenticator noinherit login password 'replaceme';
 grant authenticator to tsd_backend_utv_user; -- TODO remove
 create role admin_user createrole;
 grant admin_user to authenticator;
@@ -112,6 +112,25 @@ create or replace function roles_have_common_group_and_is_data_user(_current_rol
 $$ language plpgsql;
 revoke all privileges on function roles_have_common_group_and_is_data_user(text, text) from public;
 alter function roles_have_common_group_and_is_data_user owner to admin_user;
+
+
+drop function if exists ntk.current_user_is_data_owner();
+create or replace function ntk.current_user_is_data_owner()
+    returns boolean as $$
+    declare trusted_current_role text;
+    declare _type text;
+    begin
+    trusted_current_role := current_user::text;
+        execute format('select _user_type from ntk.registered_users where _user_name = $1')
+            into _type using trusted_current_role;
+        if _type != 'data_owner'
+            then return false;
+        end if;
+        return true;
+    end;
+$$ language plpgsql;
+revoke all privileges on function ntk.current_user_is_data_owner from public;
+alter function ntk.current_user_is_data_owner owner to admin_user;
 
 
 drop function if exists sql_type_from_generic_type(text);
@@ -247,7 +266,7 @@ $$ language plpgsql;
 revoke all privileges on function parse_generic_table_def(json) from public;
 
 
-drop table if exists ntk.registered_users;
+drop table if exists ntk.registered_users cascade;
 create table if not exists ntk.registered_users(
     registration_date timestamptz default current_timestamp,
     _user_name text not null unique,
@@ -297,6 +316,7 @@ create or replace function user_create(user_name text, user_type text, user_meta
         execute format('grant %I to authenticator', trusted_user_name);
         execute format('grant select on ntk.group_memberships to %I', trusted_user_name);
         execute format('grant execute on function roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
+        execute format('grant execute on function ntk.current_user_is_data_owner() to %I', trusted_user_name);
         execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
         execute format('grant execute on function user_groups(text) to %I', trusted_user_name);
         execute format('grant execute on function user_group_remove(text) to %I', trusted_user_name);
@@ -529,6 +549,7 @@ create or replace function user_delete(user_name text)
         execute format('revoke all privileges on ntk.group_memberships from %I', trusted_user_name);
         execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
+        execute format('revoke execute on function ntk.current_user_is_data_owner() from %I', trusted_user_name);
         execute format('revoke execute on function user_groups(text) from %I', trusted_user_name);
         execute format('revoke execute on function user_group_remove(text) from %I', trusted_user_name);
         execute format('delete from ntk.registered_users where _user_name = $1') using user_name;
