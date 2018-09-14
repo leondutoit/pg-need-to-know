@@ -386,7 +386,13 @@ create or replace function test_function_privileges()
             when others then raise notice
             'user_list only callable by admin_user - as expected';
         end;
-        -- user_group_remove
+        begin
+            select user_group_remove() into _ans;
+            return false;
+        exception
+            when others then raise notice
+            'user_list only callable by admin_user - as expected';
+        end;
         begin
             select group_remove_members(''::json) into _ans;
             return false;
@@ -438,7 +444,7 @@ create or replace function teardown()
         -- clear out accounting table
         set role admin_user;
         execute 'delete from user_data_deletion_requests';
-        --execute 'delete from ntk.user_initiated_group_removals'
+        execute 'delete from ntk.user_initiated_group_removals';
         set role authenticator;
         return true;
     end;
