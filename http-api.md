@@ -58,7 +58,7 @@ POST /rpc/group_create
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"group_name": "analysis1_group"}
+{"group_name": "analysis1_group", "group_metadata": {"consent_reference": 1}}
 ```
 
 - Add members to the group to enable data access
@@ -90,7 +90,7 @@ Content-Type: application/json
 Authorization: Bearer your-jwt
 
 # returns
-[{"group_name": "analysis1_group"}]
+[{"group_name": "analysis1_group", "group_metadata": {"consent_reference": 1}}]
 ```
 
 - List all members in a specific group
@@ -174,4 +174,22 @@ Content-Type: application/json
 Authorization: Bearer your-jwt
 
 {"user_name": "myuser"}
+```
+
+- As the admin user, see user initiated group removals
+```bash
+GET /user_initiated_group_removals
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+# returns {removal_date, user_name, group_name}
+```
+
+- As the admin user, see user data deletion requests
+```bash
+GET /user_data_deletion_requests
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+# returns {user_name, request_date}
 ```

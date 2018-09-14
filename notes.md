@@ -7,13 +7,6 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
-- test anon permissions on user_group_remove
-- metadata for users (so admins can sort and search on this when creating groups), update docs
-- registration function for data_owners and data_users
-    - exec as anon
-    - use user_create internally, adapt privileges
-    - require and enforce owner_ and user_ to indicate owner and user, and to ensure uniqueness in the case where the same person registers for both roles
-    - update docs
 - RLS policy to only allow data_owners to insert into tables, update model
 - expose audit logs to data owners and admin via RLS and a view
 - add tests for audit log table
@@ -24,12 +17,12 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- update http and sql api docs
-    - group_create, group_list (metadata),
-    - user_groups, new signature, metadata
-    - user_group_remove
-- document group removal logging view
-- document user_data_deletion_requests
+- metadata for users (so admins can sort and search on this when creating groups), update docs, registation date
+- registration function for data_owners and data_users
+    - exec as anon
+    - use user_create internally, adapt privileges
+    - require and enforce owner_ and user_ to indicate owner and user, and to ensure uniqueness in the case where the same person registers for both roles
+    - update docs
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -47,3 +40,8 @@
 - data owners view their group membership, with metadata
 - reimplement user_data_deletion_requests as a view, with the table being in ntk schema (similar to group removal logs)
 - data owners: remove themselves from groups and update an accounting table ntk.group_removal_logs
+- test anon permissions on user_group_remove
+- update http and sql api docs
+    - group_create, group_list (metadata)
+- document group removal logging view
+- document user_data_deletion_requests
