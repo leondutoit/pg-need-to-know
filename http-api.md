@@ -138,6 +138,7 @@ Authorization: Bearer your-jwt
 {"user_name": "myuser"}
 ```
 
+- see an overview of registered users, along with metadata
 ```bash
 GET /registered_users
 Content-Type: application/json
@@ -146,6 +147,7 @@ Authorization: Bearer your-jwt
 # returns {registration_date, user_name, user_type, user_metadata}
 ```
 
+- see all user defined groups, with metadata
 ```bash
 GET /groups
 Content-Type: application/json
@@ -172,6 +174,7 @@ Authorization: Bearer your-jwt
 # returns {user_name, request_date}
 ```
 
+- get audit information about which data users access data about which data owners, when
 ```bash
 GET /audit_logs
 Content-Type: application/json
