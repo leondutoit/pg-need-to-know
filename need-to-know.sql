@@ -45,20 +45,17 @@ grant select on pg_authid to tsd_backend_utv_user, admin_user;
 grant select on ntk.group_memberships to tsd_backend_utv_user, admin_user;
 
 
--- data request audit logging
--- updated when RLS allows a data user to select from a data owner
-drop table if exists ntk.requests;
-create table ntk.requests(
+drop table if exists audit_logs;
+create table audit_logs(
     request_time timestamptz default current_timestamp,
     data_user text,
     data_owner text
 );
--- TODO: add RLS policies when exposing this table to users
--- amdin_user can get everything
--- data_owners can get logs about themselves
--- then use /rpc/access_logs
-grant insert on ntk.requests to public;
-grant select on ntk.requests to admin_user;
+grant insert, select on audit_logs to public;
+alter table audit_logs enable row level security;
+alter table audit_logs owner to admin_user;
+create policy select_for_data_owners on audit_logs for select using (data_owner = current_user);
+create policy insert_policy_for_public on audit_logs for insert with check (true);
 
 
 drop function if exists ntk.update_request_log(text, text);
@@ -69,7 +66,7 @@ create or replace function ntk.update_request_log(_current_role text, _current_r
     begin
         trusted_current_role := _current_role;
         trusted_current_row_owner := _current_row_owner;
-        execute format('insert into ntk.requests (data_user, data_owner) values ($1, $2)')
+        execute format('insert into audit_logs (data_user, data_owner) values ($1, $2)')
                 using trusted_current_role, trusted_current_row_owner;
         return true;
     end;

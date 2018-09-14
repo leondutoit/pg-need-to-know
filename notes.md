@@ -8,16 +8,14 @@
 
 ## TODO
 - test permissions on informational views
+- remove hard-coded non-generic names, check all todos
 - full review of docs
 - write about the model
 - HTTP client tests
 - make a presentation, with visual representations of the model
 
 ## IP
-- move functions into ntk - which should not be exopsed to the api
-- expose audit logs to data owners and admin via RLS and a view
 - add tests for audit log table
-- remove hard-coded non-generic names
 - describe audit log table in readme
 
 ## Done
@@ -51,3 +49,5 @@
 - replace group_list with a groups view
 - add informational views in http api overview, with explanations
 - only allow data_owners to insert into tables, update model
+- move functions into ntk - which should not be exopsed to the api
+- expose audit logs to data owners and admin via RLS
