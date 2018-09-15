@@ -244,6 +244,39 @@ $$ language plpgsql;
 revoke all privileges on function ntk.parse_generic_table_def(json) from public;
 
 
+drop function if exists table_group_access_grant(text, text);
+create or replace function table_group_access_grant(table_name text, group_name text)
+    returns text
+    begin
+        return 'granted access to table';
+    end;
+$$ language plpgsql;
+revoke all privileges on function table_group_access_grant(text, text) from public;
+grant execute on function table_group_access_grant(text, text) to admin_user;
+
+
+drop function if exists table_group_access_view(text);
+create or replace function table_group_access_view(table_name text)
+    returns table (table_name text, group_name text)
+    begin
+        return query '...';
+    end;
+$$ language plpgsql;
+revoke all privileges on function table_group_access_view(text) from public;
+grant execute on function table_group_access_view(text) to admin_user;
+
+
+drop function if exists table_group_access_revoke(text, text);
+create or replace function table_group_access_revoke(table_name text, group_name text)
+    returns text
+    begin
+        return 'revoked access to table';
+    end;
+$$ language plpgsql;
+revoke all privileges on function table_group_access_revoke(text, text) from public;
+grant execute on function table_group_access_revoke(text, text) to admin_user;
+
+
 drop table if exists ntk.registered_users cascade;
 create table if not exists ntk.registered_users(
     registration_date timestamptz default current_timestamp,

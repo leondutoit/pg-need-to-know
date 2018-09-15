@@ -13,6 +13,7 @@ SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
 
 ## TODO
 - test permissions on informational views
+- think about ability to add group members based on user metadata vals
 - remove hard-coded non-generic names, check all todos
 - full review of docs
 - write about the model - on MAC, three use cases - data organisation up to the admin
