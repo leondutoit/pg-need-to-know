@@ -6,16 +6,22 @@
 ## Helpful
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
+```sql
+-- access a comment
+SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
+```
+
 ## TODO
 - test permissions on informational views
 - remove hard-coded non-generic names, check all todos
 - full review of docs
-- write about the model
+- write about the model - on MAC, three use cases - data organisation up to the admin
 - HTTP client tests
 - make a presentation, with visual representations of the model
 
 ## IP
-- add tests for audit log table
+- enforce group level table access
+- add tests for audit log table - access rules, content
 - describe audit log table in readme
 
 ## Done
