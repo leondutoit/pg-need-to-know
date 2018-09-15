@@ -37,9 +37,9 @@ grant create on schema ntk to admin_user; -- so execute can be granted/revoked w
 create or replace view ntk.group_memberships as
 select _group, _role from
     (select * from
-        (select rolname as _group, oid from pg_authid)a join
+        (select rolname as _role, oid from pg_authid)a join
         (select roleid, member from pg_auth_members)b on a.oid = b.member)c
-    join (select rolname as _role, oid from pg_authid)d on c.roleid = d.oid;
+    join (select rolname as _group, oid from pg_authid)d on c.roleid = d.oid;
 alter view ntk.group_memberships owner to admin_user;
 grant select on pg_authid to tsd_backend_utv_user, admin_user;
 grant select on ntk.group_memberships to tsd_backend_utv_user, admin_user;
@@ -101,7 +101,6 @@ create or replace function ntk.roles_have_common_group_and_is_data_user(_current
             where _group != $3)
         != 0') into _res using trusted_current_role, trusted_current_row_owner, 'authenticator';
         if _res = true then
-            -- update audit logs
             select ntk.update_request_log(trusted_current_role, trusted_current_row_owner) into _log;
         end if;
         return _res;
@@ -118,7 +117,6 @@ create or replace function ntk.sql_type_from_generic_type(_type text)
     begin
         untrusted_type := _type;
         case
-            -- even though redundant this prevent SQL injection
             when untrusted_type = 'int' then return 'int';
             when untrusted_type = 'text' then return 'text';
             when untrusted_type = 'json' then return 'json';
@@ -220,7 +218,9 @@ create or replace function ntk.parse_mac_table_def(definition json)
         end loop;
         execute format('alter table %I enable row level security', trusted_table_name);
         execute format('alter table %I force row level security', trusted_table_name);
-        -- TODO: perhaps move the select grant up and grant it on all user defined rows only
+        -- TODO: remove select from this grant
+        -- enforce group-level access via new functions:
+        -- table_group_access_<grant,view,revoke>
         execute format('grant insert, select, update, delete on %I to public', trusted_table_name);
         execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
         execute format('create policy row_ownership_select_policy on %I for select using (row_owner = current_user)', trusted_table_name);
@@ -297,7 +297,7 @@ create or replace function ntk.user_create(user_name text, user_type text, user_
         trusted_user_name := quote_ident(user_name);
         trusted_user_type := quote_literal(user_type);
         execute format('create role %I', trusted_user_name);
-        execute format('grant %I to authenticator', trusted_user_name);
+        execute format('grant authenticator to %I', trusted_user_name);
         execute format('grant select on ntk.group_memberships to %I', trusted_user_name);
         execute format('grant execute on function ntk.roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
         execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
@@ -378,7 +378,7 @@ create or replace function group_add_members(members json)
         for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
             select quote_ident(untrusted_i->>'user_name') into trusted_user;
             select quote_ident(untrusted_i->>'group_name') into trusted_group;
-            execute format('grant %I to %I', trusted_user, trusted_group);
+            execute format('grant %I to %I', trusted_group, trusted_user);
         end loop;
     return 'added members to groups';
     end;
@@ -429,7 +429,7 @@ create or replace function user_group_remove(group_name text)
         trusted_group := quote_ident(group_name);
         set role authenticator;
         set role admin_user;
-        execute format('revoke %I from %I', trusted_current_role, trusted_group);
+        execute format('revoke %I from %I', trusted_group, trusted_current_role);
         execute format('insert into ntk.user_initiated_group_removals (user_name, group_name) values ($1, $2)')
                 using trusted_current_role, group_name;
         set role authenticator;
@@ -452,7 +452,7 @@ create or replace function group_remove_members(members json)
         for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
             select quote_ident(untrusted_i->>'user_name') into trusted_user;
             select quote_ident(untrusted_i->>'group_name') into trusted_group;
-            execute format('revoke %I from %I', trusted_user, trusted_group);
+            execute format('revoke %I from %I', trusted_group, trusted_user);
         end loop;
     return 'removed members from groups';
     end;
@@ -480,6 +480,7 @@ create or replace function user_delete_data()
     begin
         for trusted_table in select table_name from information_schema.tables
                       where table_schema = 'public' and table_type != 'VIEW' loop
+            if trusted_table = 'audit_logs' then continue; end if;
             begin
                 execute format('delete from %I', trusted_table);
             exception
@@ -522,7 +523,8 @@ create or replace function user_delete(user_name text)
             end;
         end loop;
         for trusted_group in select _group from ntk.group_memberships where _role = user_name loop
-            execute format('revoke %I from %I', trusted_user_name, trusted_group);
+            raise notice 'revoking % from % in user_delete', trusted_user_name, trusted_group;
+            execute format('revoke %I from %I',  trusted_group, trusted_user_name);
         end loop;
         for trusted_table in select table_name from information_schema.role_table_grants
                               where grantee = quote_literal(user_name) loop
