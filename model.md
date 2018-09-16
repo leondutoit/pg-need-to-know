@@ -1,6 +1,13 @@
 
 # Mandatory Access Control model
 
+## Terminology
+
+- Data owner:
+- Data user:
+- Administrator:
+- Anonymous user:
+
 ## Motivation
 
 The Mandatory Access Control model enforced by `pg-need-to-know` provides the ability to manage data access based on:
@@ -18,10 +25,10 @@ In addition it provides:
 
 The rest of this document explains the model, and it's functioning, by addressing three different access control use cases. These also cover most needs.
 
-## 1. Access based on data owners
+## Access based on data owners
 
-## 2. Access based on data subsets
+## Access based on data subsets
 
-## 3. Access based on data owners and subsets
+## Access based on data owners and subsets
 
 ## Summary

@@ -21,9 +21,11 @@ SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
 - make a presentation, with visual representations of the model
 
 ## IP
-- enforce group level table access
+- create table_information view
+- add table descriptions using comments, show in table_information
+- rename informational tables and views to be more consistent
+- enforce group level table access and implement grant and revoke
 - add tests for audit log table - access rules, content
-- describe audit log table in readme
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -58,3 +60,4 @@ SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
 - only allow data_owners to insert into tables, update model
 - move functions into ntk - which should not be exopsed to the api
 - expose audit logs to data owners and admin via RLS
+- describe audit log table in readme

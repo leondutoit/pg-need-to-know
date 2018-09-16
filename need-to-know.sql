@@ -147,6 +147,7 @@ revoke all privileges on function ntk.sql_type_from_generic_type(text) from publ
 grant execute on function ntk.sql_type_from_generic_type(text) to admin_user;
 
 
+-- TODO: add description - store as comment
 drop function if exists table_create(json, text, int);
 create or replace function table_create(definition json, type text, form_id int default 0)
     returns text as $$
@@ -226,7 +227,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute format('create policy row_ownership_select_policy on %I for select using (row_owner = current_user)', trusted_table_name);
         execute format('create policy row_ownership_delete_policy on %I for delete using (row_owner = current_user)', trusted_table_name);
         execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(current_user::text, row_owner))', trusted_table_name);
-        execute format('create policy row_owbership_update_policy on %I for update using (row_owner = current_user) with check (row_owner = current_user)', trusted_table_name);
+        execute format('create policy row_ownership_update_policy on %I for update using (row_owner = current_user) with check (row_owner = current_user)', trusted_table_name);
         return 'Success';
     end;
 $$ language plpgsql;
@@ -244,6 +245,18 @@ $$ language plpgsql;
 revoke all privileges on function ntk.parse_generic_table_def(json) from public;
 
 
+-- show: description
+-- exclude ntk information tables
+-- only show user defined groups in array of grantees
+create or replace view table_information as
+    select table_name, array_agg(grantee::text) from information_schema.table_privileges
+        where privilege_type = 'SELECT'
+        and table_schema = 'public'
+        and grantee not in ('admin_user', 'PUBLIC')
+        group by table_name;
+alter view table_information owner to admin_user;
+
+
 drop function if exists table_group_access_grant(text, text);
 create or replace function table_group_access_grant(table_name text, group_name text)
     returns text
@@ -253,17 +266,6 @@ create or replace function table_group_access_grant(table_name text, group_name 
 $$ language plpgsql;
 revoke all privileges on function table_group_access_grant(text, text) from public;
 grant execute on function table_group_access_grant(text, text) to admin_user;
-
-
-drop function if exists table_group_access_view(text);
-create or replace function table_group_access_view(table_name text)
-    returns table (table_name text, group_name text)
-    begin
-        return query '...';
-    end;
-$$ language plpgsql;
-revoke all privileges on function table_group_access_view(text) from public;
-grant execute on function table_group_access_view(text) to admin_user;
 
 
 drop function if exists table_group_access_revoke(text, text);
