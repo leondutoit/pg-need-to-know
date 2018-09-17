@@ -6,11 +6,6 @@
 ## Helpful
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
-```sql
--- access a comment
-SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
-```
-
 ## TODO
 - test permissions on informational views
 - think about ability to add group members based on user metadata vals
@@ -22,11 +17,10 @@ SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
 - make a presentation, with visual representations of the model
 
 ## IP
-- add table descriptions using comments, show in table_information
+- add table descriptions using comments, ability to change them, show in table_information
 - create table_information view, document
 - add ability to comment on columns
-- add ability to retrieve table columns, and comments
-- enforce group level table access and implement grant and revoke
+- add ability to retrieve table columns and comments
 - add tests for audit log table - access rules, content
 
 ## Done
@@ -64,3 +58,4 @@ SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
 - expose audit logs to data owners and admin via RLS
 - describe audit log table in readme
 - rename informational tables and views to be more consistent
+- enforce group level table access and implement grant and revoke
