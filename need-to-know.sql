@@ -177,9 +177,7 @@ grant execute on function table_create(json, text, int) to admin_user;
 drop function if exists ntk.parse_mac_table_def(json);
 create or replace function ntk.parse_mac_table_def(definition json)
     returns text as $$
-    -- param vars
     declare untrusted_definition json;
-    -- func vars
     declare trusted_table_name text;
     declare untrusted_columns json;
     declare trusted_colname text;
@@ -189,6 +187,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
     declare untrusted_nn boolean;
     declare trusted_comment text;
     begin
+        -- TODO: add optional column descriptions
         untrusted_definition := definition;
         untrusted_columns := untrusted_definition->'columns';
         trusted_table_name := quote_ident(untrusted_definition->>'table_name');
@@ -244,8 +243,8 @@ grant execute on function ntk.parse_mac_table_def(json) to admin_user;
 
 -- func table_describe_column
 
-drop table if exists tm;
-create table if not exists tm(table_name text, column_name text, column_description text);
+drop table if exists tm cascade;
+create table if not exists tm(column_name text, column_description text);
 
 drop function if exists table_metadata(text);
 create or replace function table_metadata(table_name text)
@@ -257,7 +256,7 @@ create or replace function table_metadata(table_name text)
                                'user_data_deletions', 'audit_logs')),
             'access denied to table';
         return query execute format('
-            select st.relname as table_name, c.column_name, pgd.description
+            select c.column_name::text, pgd.description::text
                 from pg_catalog.pg_statio_all_tables as st
             inner join information_schema.columns c
                 on c.table_schema = st.schemaname and c.table_name = st.relname
