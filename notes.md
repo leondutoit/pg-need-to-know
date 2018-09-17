@@ -14,6 +14,7 @@ SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
 ## TODO
 - test permissions on informational views
 - think about ability to add group members based on user metadata vals
+- try to make code DRYer - utility functions for common asserts (like user and groups)
 - remove hard-coded non-generic names, check all todos
 - full review of docs
 - write about the model - on MAC, three use cases - data organisation up to the admin
@@ -23,6 +24,8 @@ SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
 ## IP
 - add table descriptions using comments, show in table_information
 - create table_information view, document
+- add ability to comment on columns
+- add ability to retrieve table columns, and comments
 - enforce group level table access and implement grant and revoke
 - add tests for audit log table - access rules, content
 
