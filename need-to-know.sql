@@ -244,18 +244,31 @@ grant execute on function ntk.parse_mac_table_def(json) to admin_user;
 
 -- func table_describe_column
 
+drop table if exists tm;
+create table if not exists tm(table_name text, column_name text, column_description text);
 
--- func table_metadata(table_name)
---select c.table_schema, st.relname as TableName, c.column_name,
---pgd.description
---from pg_catalog.pg_statio_all_tables as st
---inner join information_schema.columns c
---on c.table_schema = st.schemaname
---and c.table_name = st.relname
---left join pg_catalog.pg_description pgd
---on pgd.objoid=st.relid
---and pgd.objsubid=c.ordinal_position
---where st.relname = 'YourTableName';
+drop function if exists table_metadata(text);
+create or replace function table_metadata(table_name text)
+    returns setof tm as $$
+    begin
+        assert $1 in (select info.table_name from information_schema.tables info
+                              where info.table_schema = 'public' and info.table_type != 'VIEW'
+                              and info.table_name not in ('user_registrations', 'groups', 'user_group_removals',
+                               'user_data_deletions', 'audit_logs')),
+            'access denied to table';
+        return query execute format('
+            select st.relname as table_name, c.column_name, pgd.description
+                from pg_catalog.pg_statio_all_tables as st
+            inner join information_schema.columns c
+                on c.table_schema = st.schemaname and c.table_name = st.relname
+            left join pg_catalog.pg_description pgd
+                on pgd.objoid=st.relid
+                and pgd.objsubid=c.ordinal_position
+                where st.relname = $1') using $1;
+    end;
+$$ language plpgsql;
+revoke all privileges on function table_metadata from public;
+grant execute on function table_metadata to admin_user;
 
 
 drop function if exists ntk.parse_generic_table_def(json);
@@ -266,21 +279,6 @@ create or replace function ntk.parse_generic_table_def(definition json)
     end;
 $$ language plpgsql;
 revoke all privileges on function ntk.parse_generic_table_def(json) from public;
-
-
--- show: table description
--- SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
-create or replace view table_overview as
-    select table_name, array_agg(grantee::text) group_name
-    from information_schema.table_privileges
-        where privilege_type = 'SELECT'
-        and table_schema = 'public'
-        and grantee not in ('admin_user', 'PUBLIC')
-        and grantee in (select group_name from ntk.user_defined_groups)
-        and table_name not in ('user_registrations', 'groups', 'user_group_removals',
-                               'user_data_deletions', 'audit_logs')
-        group by table_name;
-alter view table_overview owner to admin_user;
 
 
 drop function if exists table_group_access_grant(text, text);
@@ -449,6 +447,21 @@ create or replace view ntk.user_defined_groups_memberships as
         on a.group_name = b._group;
 alter view ntk.user_defined_groups_memberships owner to admin_user;
 grant select on ntk.user_defined_groups_memberships to public;
+
+
+-- show: table description
+-- SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
+create or replace view table_overview as
+    select table_name, array_agg(grantee::text) group_name
+    from information_schema.table_privileges
+        where privilege_type = 'SELECT'
+        and table_schema = 'public'
+        and grantee not in ('PUBLIC')
+        and grantee in (select group_name from ntk.user_defined_groups)
+        and table_name not in ('user_registrations', 'groups', 'user_group_removals',
+                               'user_data_deletions', 'audit_logs')
+        group by table_name;
+alter view table_overview owner to admin_user;
 
 
 drop function if exists group_add_members(json);
