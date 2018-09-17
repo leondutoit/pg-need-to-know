@@ -20,6 +20,7 @@ POST            | /rpc/group_remove_members
 POST            | /rpc/group_delete
 GET             | /rpc/user_groups?user_name=<name>
 POST            | /rpc/user_delete
+GET             | /table_information
 GET             | /user_registrations
 GET             | /groups
 GET             | /user_group_removals
@@ -136,6 +137,13 @@ Content-Type: application/json
 Authorization: Bearer your-jwt
 
 {"user_name": "myuser"}
+```
+
+- see table information: name, description, group access
+```bash
+GET /table_information
+Content-Type: application/json
+Authorization: Bearer your-jwt
 ```
 
 - see an overview of registered users, along with metadata

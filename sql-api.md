@@ -18,6 +18,7 @@ user_delete(user_name text)
 ## Views
 
 ```sql
+table_information
 user_registrations
 groups
 user_group_removals
