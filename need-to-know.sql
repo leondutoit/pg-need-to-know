@@ -221,9 +221,8 @@ create or replace function ntk.parse_mac_table_def(definition json)
         end loop;
         execute format('alter table %I enable row level security', trusted_table_name);
         execute format('alter table %I force row level security', trusted_table_name);
-        -- TODO: remove select from this grant
-        -- enforce group-level access via new functions:
-        -- table_group_access_<grant,view,revoke>
+        -- TODO: remove select from this grant for data users
+        -- but retain it for data owners
         execute format('grant insert, select, update, delete on %I to public', trusted_table_name);
         execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
         execute format('create policy row_ownership_select_policy on %I for select using (row_owner = current_user)', trusted_table_name);
@@ -238,6 +237,27 @@ revoke all privileges on function ntk.parse_mac_table_def(json) from public;
 grant execute on function ntk.parse_mac_table_def(json) to admin_user;
 
 
+-- func: table_describe
+-- since it is highly likely that you will want to change
+-- the description over time
+-- add test
+
+-- func table_describe_column
+
+
+-- func table_metadata(table_name)
+--select c.table_schema, st.relname as TableName, c.column_name,
+--pgd.description
+--from pg_catalog.pg_statio_all_tables as st
+--inner join information_schema.columns c
+--on c.table_schema = st.schemaname
+--and c.table_name = st.relname
+--left join pg_catalog.pg_description pgd
+--on pgd.objoid=st.relid
+--and pgd.objsubid=c.ordinal_position
+--where st.relname = 'YourTableName';
+
+
 drop function if exists ntk.parse_generic_table_def(json);
 create or replace function ntk.parse_generic_table_def(definition json)
     returns text as $$
@@ -249,7 +269,8 @@ revoke all privileges on function ntk.parse_generic_table_def(json) from public;
 
 
 -- show: table description
-create or replace view table_information as
+-- SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
+create or replace view table_overview as
     select table_name, array_agg(grantee::text) group_name
     from information_schema.table_privileges
         where privilege_type = 'SELECT'
@@ -259,13 +280,25 @@ create or replace view table_information as
         and table_name not in ('user_registrations', 'groups', 'user_group_removals',
                                'user_data_deletions', 'audit_logs')
         group by table_name;
-alter view table_information owner to admin_user;
+alter view table_overview owner to admin_user;
 
 
 drop function if exists table_group_access_grant(text, text);
 create or replace function table_group_access_grant(table_name text, group_name text)
     returns text as $$
+    declare trusted_table_name text;
+    declare trusted_group_name text;
     begin
+        assert group_name in (select udg.group_name from ntk.user_defined_groups udg),
+            'access to group not allowed';
+        assert table_name in (select table_name from information_schema.tables
+                              where table_schema = 'public' and table_type != 'VIEW'
+                              and table_name not in ('user_registrations', 'groups', 'user_group_removals',
+                               'user_data_deletions', 'audit_logs')),
+            'access denied to table';
+        trusted_table_name := quote_ident(table_name);
+        trusted_group_name := quote_ident(group_name);
+        execute format('grant select on %I to %I', trusted_table_name, trusted_group_name);
         return 'granted access to table';
     end;
 $$ language plpgsql;
@@ -276,7 +309,19 @@ grant execute on function table_group_access_grant(text, text) to admin_user;
 drop function if exists table_group_access_revoke(text, text);
 create or replace function table_group_access_revoke(table_name text, group_name text)
     returns text as $$
+    declare trusted_table_name text;
+    declare trusted_group_name text;
     begin
+        assert group_name in (select udg.group_name from ntk.user_defined_groups udg),
+            'access to group not allowed';
+        assert table_name in (select table_name from information_schema.tables
+                              where table_schema = 'public' and table_type != 'VIEW'
+                              and table_name not in ('user_registrations', 'groups', 'user_group_removals',
+                               'user_data_deletions', 'audit_logs')),
+            'access denied to table';
+        trusted_table_name := quote_ident(table_name);
+        trusted_group_name := quote_ident(group_name);
+        execute format('revoke select on %I to %I');
         return 'revoked access to table';
     end;
 $$ language plpgsql;
@@ -292,7 +337,7 @@ create table if not exists ntk.registered_users(
     user_metadata json
 );
 alter table ntk.registered_users owner to admin_user;
-grant select on ntk.registered_users to public; -- part of RLS policy
+grant select on ntk.registered_users to public;
 create or replace view user_registrations as
     select registration_date, _user_name as user_name,
            _user_type as user_type, user_metadata
@@ -418,6 +463,8 @@ create or replace function group_add_members(members json)
         for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
             select quote_ident(untrusted_i->>'user_name') into trusted_user;
             select quote_ident(untrusted_i->>'group_name') into trusted_group;
+            assert trusted_group in (select udg.group_name from ntk.user_defined_groups udg),
+            'access to group not allowed';
             execute format('grant %I to %I', trusted_group, trusted_user);
         end loop;
     return 'added members to groups';
@@ -492,6 +539,8 @@ create or replace function group_remove_members(members json)
         for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
             select quote_ident(untrusted_i->>'user_name') into trusted_user;
             select quote_ident(untrusted_i->>'group_name') into trusted_group;
+            assert trusted_group in (select udg.group_name from ntk.user_defined_groups udg),
+                'access to group not allowed';
             execute format('revoke %I from %I', trusted_group, trusted_user);
         end loop;
     return 'removed members from groups';
@@ -602,6 +651,8 @@ create or replace function group_delete(group_name text)
         if trusted_num_members > 0 then
             raise exception 'Cannot delete group %, it has % members', group_name, trusted_num_members;
         end if;
+        -- TODO: if still has select rights on table -> error
+        -- must revoke before being able to delete
         execute format('drop role %I', trusted_group_name);
         execute format('delete from ntk.user_defined_groups where group_name = $1') using group_name;
         return 'group deleted';
