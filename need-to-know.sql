@@ -27,6 +27,8 @@ create role admin_user createrole;
 grant admin_user to authenticator;
 create role anon;
 grant anon to authenticator;
+create role data_owners_group;
+
 
 -- internal schema
 create schema if not exists ntk;
@@ -379,7 +381,7 @@ create or replace function ntk.user_create(user_name text, user_type text, user_
         trusted_user_name := quote_ident(user_name);
         trusted_user_type := quote_literal(user_type);
         execute format('create role %I', trusted_user_name);
-        execute format('grant authenticator to %I', trusted_user_name);
+        execute format('grant %I to authenticator', trusted_user_name);
         execute format('grant select on ntk.group_memberships to %I', trusted_user_name);
         execute format('grant execute on function ntk.roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
         execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
@@ -389,6 +391,7 @@ create or replace function ntk.user_create(user_name text, user_type text, user_
             using user_name, user_type, user_metadata;
         if user_type = 'data_owner' then
             execute format('insert into ntk.data_owners values ($1)') using user_name;
+            execute format('grant data_owners_group to %I', trusted_user_name);
         end if;
         return 'user created';
     end;
@@ -625,6 +628,7 @@ create or replace function user_delete(user_name text)
         end loop;
         for trusted_group in select _group from ntk.group_memberships where _role = user_name loop
             raise notice 'revoking % from % in user_delete', trusted_user_name, trusted_group;
+            -- this removes data_owners from the data_owners_group
             execute format('revoke %I from %I',  trusted_group, trusted_user_name);
         end loop;
         for trusted_table in select table_name from information_schema.role_table_grants
