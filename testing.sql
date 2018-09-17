@@ -20,6 +20,12 @@ create or replace function test_table_create()
 $$ language plpgsql;
 
 
+-- test_table_metadata
+    -- table_describe
+    -- table_describe_column
+    -- table_metadata view
+
+
 create or replace function test_user_create()
     returns boolean as $$
     declare _ans text;
@@ -93,8 +99,19 @@ create or replace function test_group_create()
 $$ language plpgsql;
 
 
+-- test_table_group_access_management
+    -- create an empty group,
+    -- grant,
+    -- check table_overview,
+    -- become the group
+    -- do a select,
+    -- revoke
+    -- delete the group
+
+
 create or replace function test_defult_data_owner_policies()
     returns boolean as $$
+    declare _num int;
     begin
         set role owner_gustav;
         insert into people (name, age) values ('owner_Gustav de la Croix', 1);
@@ -111,13 +128,16 @@ create or replace function test_defult_data_owner_policies()
         set role owner_hannah;
         assert (select count(1) from people) = 1, 'owner_hannah has unauthorized data access';
         set role authenticator;
-        set role user_project_user;
-        assert (select count(1) from people) = 0, 'user_project_user has unauthorized data access';
-        set role authenticator;
         set role admin_user; -- make sure RLS is forced on table owner too
         assert (select count(1) from people) = 0, 'admin_user has unauthorized data access';
+        set role user_project_user;
         begin
-            set role user_project_user;
+            select count(1) from people into _num;
+        exception
+            when insufficient_privilege then raise notice
+                'data user does not have access to the table before a group grant has been issued - as expected';
+        end;
+        begin
             insert into people (name, age) values ('Steve', 90);
         exception
             when foreign_key_violation then raise notice
@@ -150,6 +170,7 @@ $$ language plpgsql;
 
 create or replace function test_group_membership_data_access_policies()
     returns boolean as $$
+    declare _ans text;
     begin
         set role owner_gustav;
         assert (select count(1) from people) = 1, 'data owner, owner_gustav, has unauthorized data access';
@@ -157,6 +178,9 @@ create or replace function test_group_membership_data_access_policies()
         set role owner_hannah;
         assert (select count(1) from people) = 1, 'data owner, owner_hannah, has unauthorized data access';
         set role authenticator;
+        set role admin_user;
+        -- the two data owners above are in the same group as the data user below
+        select table_group_access_grant('people', 'project_group') into _ans;
         set role user_project_user;
         assert (select count(1) from people) = 2, 'RLS policy for data user, user_project_user, is broken';
         set role authenticator;
@@ -275,6 +299,8 @@ create or replace function test_user_delete_data()
         set role authenticator;
         set role admin_user;
         select table_create('{"table_name": "people2", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac') into _ans;
+        -- issue group access grant
+        select table_group_access_grant('people2', 'project_group') into _ans;
         set role authenticator;
         -- insert some data
         set role owner_gustav;
@@ -331,21 +357,33 @@ create or replace function test_group_delete()
     declare _ans text;
     begin
         set role admin_user;
-            -- test that fails if has members
-            begin
-                select group_delete('project_group') into _ans;
-            exception
-                when others then raise notice 'non-empty group deletion prevention works as expected';
-            end;
+        -- test that fails if has members
+        begin
+            select group_delete('project_group') into _ans;
+        exception
+            when others then raise notice
+                'non-empty group deletion prevention works - as expected';
+        end;
         -- now remove members
         select user_delete('user_project_user') into _ans;
+        begin
+            select group_delete('project_group') into _ans;
+        exception
+            when others then raise notice
+                'cannot delete a group if it still has select grant on a table - as expected';
+        end;
+        -- revoke existing grants
+        select table_group_access_revoke('people', 'project_group') into _ans;
+        select table_group_access_revoke('people2', 'project_group') into _ans;
         select group_delete('project_group') into _ans;
-        assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 0, 'group accounting not working after deletion';
+        assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 0,
+            'group accounting not working after deletion';
         begin
             -- possible attack vector, since groups are just roles
             select group_delete('authenticator') into _ans;
         exception
-            when assert_failure then raise notice 'cannot delete internal role via group_delete - as expected.';
+            when assert_failure then raise notice
+                'cannot delete internal role via group_delete - as expected.';
         end;
         set role authenticator;
         return true;
