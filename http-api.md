@@ -13,6 +13,9 @@ For admin_user role:
 HTTP Method     | URL
 ----------------|-------------------------------------------
 POST            | /rpc/table_create
+POST            | /rpc/table_describe
+POST            | /rpc/table_describe_columns
+GET             | /rpc/table_metadata?table_name=<name>
 POST            | /rpc/group_create
 POST            | /rpc/group_add_members
 GET             | /rpc/group_list_members?group_name=<name>
@@ -67,6 +70,33 @@ Authorization: Bearer your-jwt
     "description": "a collection of data on people"
     },
 "type": "mac" }
+```
+
+- describe your table, or change the existing description
+```bash
+POST /rpc/table_describe
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"table_name": "people", "description": "some people"}
+```
+
+- describe your table columns, or change existing ones
+```bash
+POST /rpc/table_describe_columns
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+{"descriptions": [{"column_name": "name", "description": "First name"}]}
+```
+
+- get column descriptions for a table
+```bash
+GET /rpc/table_metadata?table_name=<name>
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+# returns [{column, description}, ...]
 ```
 
 - Collect data from `myuser`
