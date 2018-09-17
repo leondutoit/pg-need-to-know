@@ -10,7 +10,8 @@ create or replace function test_table_create()
         select table_create('{"table_name": "people",
                               "columns": [
                                     {"name": "name", "type": "text"},
-                                    {"name": "age", "type": "int"} ]}'::json,
+                                    {"name": "age", "type": "int"} ],
+                              "description": "a collection of data on people"}'::json,
                             'mac') into _ans;
         assert (select count(1) from people) = 0, 'problem with table creation';
         set role authenticator;

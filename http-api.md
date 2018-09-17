@@ -61,7 +61,12 @@ POST /rpc/table_create
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"definition": {"table_name": "people", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}, "type": "mac" }
+{"definition": {
+    "table_name": "people",
+    "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ],
+    "description": "a collection of data on people"
+    },
+"type": "mac" }
 ```
 
 - Collect data from `myuser`

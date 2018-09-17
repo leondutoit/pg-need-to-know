@@ -187,10 +187,12 @@ create or replace function ntk.parse_mac_table_def(definition json)
     declare untrusted_i json;
     declare untrusted_pk boolean;
     declare untrusted_nn boolean;
+    declare trusted_comment text;
     begin
         untrusted_definition := definition;
         untrusted_columns := untrusted_definition->'columns';
         trusted_table_name := quote_ident(untrusted_definition->>'table_name');
+        trusted_comment := quote_nullable(untrusted_definition->>'description');
         execute format('create table if not exists %I (row_owner text default current_user references ntk.data_owners (user_name))', trusted_table_name);
         for untrusted_i in select * from json_array_elements(untrusted_columns) loop
             select ntk.sql_type_from_generic_type(untrusted_i->>'type') into trusted_dtype;
@@ -228,6 +230,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute format('create policy row_ownership_delete_policy on %I for delete using (row_owner = current_user)', trusted_table_name);
         execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(current_user::text, row_owner))', trusted_table_name);
         execute format('create policy row_ownership_update_policy on %I for update using (row_owner = current_user) with check (row_owner = current_user)', trusted_table_name);
+        execute format('comment on table %I is %s', trusted_table_name, trusted_comment);
         return 'Success';
     end;
 $$ language plpgsql;
@@ -261,7 +264,7 @@ alter view table_information owner to admin_user;
 
 drop function if exists table_group_access_grant(text, text);
 create or replace function table_group_access_grant(table_name text, group_name text)
-    returns text
+    returns text as $$
     begin
         return 'granted access to table';
     end;
@@ -272,7 +275,7 @@ grant execute on function table_group_access_grant(text, text) to admin_user;
 
 drop function if exists table_group_access_revoke(text, text);
 create or replace function table_group_access_revoke(table_name text, group_name text)
-    returns text
+    returns text as $$
     begin
         return 'revoked access to table';
     end;
