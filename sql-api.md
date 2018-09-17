@@ -18,10 +18,10 @@ user_delete(user_name text)
 ## Views
 
 ```sql
-registered_users
+user_registrations
 groups
-user_initiated_group_removals
-user_data_deletion_requests
+user_group_removals
+user_data_deletions
 audit_logs
 ```
 

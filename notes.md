@@ -21,9 +21,8 @@ SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
 - make a presentation, with visual representations of the model
 
 ## IP
-- create table_information view
 - add table descriptions using comments, show in table_information
-- rename informational tables and views to be more consistent
+- create table_information view, document
 - enforce group level table access and implement grant and revoke
 - add tests for audit log table - access rules, content
 
@@ -61,3 +60,4 @@ SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
 - move functions into ntk - which should not be exopsed to the api
 - expose audit logs to data owners and admin via RLS
 - describe audit log table in readme
+- rename informational tables and views to be more consistent

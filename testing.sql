@@ -217,7 +217,7 @@ create or replace function test_user_list()
     declare _ans text;
     begin
         set role admin_user;
-        assert (select count(1) from registered_users where user_name = 'owner_gustav') = 1,
+        assert (select count(1) from user_registrations where user_name = 'owner_gustav') = 1,
             'registered_users accounting view does not work';
         set role authenticator;
         return true;
@@ -284,7 +284,7 @@ create or replace function test_user_delete_data()
         assert (select count(1) from people2) = 0, 'data for owner_gustav not deleted from table people2';
         set role authenticator;
         set role admin_user;
-        assert (select count(1) from user_data_deletion_requests where user_name = 'owner_gustav') >= 1,
+        assert (select count(1) from user_data_deletions where user_name = 'owner_gustav') >= 1,
             'problem recording the data deletion request from owner_gustav';
         set role authenticator;
         return true;
@@ -458,7 +458,7 @@ create or replace function teardown()
         set role authenticator;
         -- clear out accounting table
         set role admin_user;
-        execute 'delete from user_data_deletion_requests';
+        execute 'delete from user_data_deletions';
         execute 'delete from ntk.user_initiated_group_removals';
         set role authenticator;
         return true;

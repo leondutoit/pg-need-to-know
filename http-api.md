@@ -20,10 +20,10 @@ POST            | /rpc/group_remove_members
 POST            | /rpc/group_delete
 GET             | /rpc/user_groups?user_name=<name>
 POST            | /rpc/user_delete
-GET             | /registered_users
+GET             | /user_registrations
 GET             | /groups
-GET             | /user_initiated_group_removals
-GET             | /user_data_deletion_requests
+GET             | /user_group_removals
+GET             | /user_data_deletions
 GET             | /audit_logs
 ```
 
@@ -140,7 +140,7 @@ Authorization: Bearer your-jwt
 
 - see an overview of registered users, along with metadata
 ```bash
-GET /registered_users
+GET /user_registrations
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
@@ -158,7 +158,7 @@ Authorization: Bearer your-jwt
 
 - As the admin user, see user initiated group removals
 ```bash
-GET /user_initiated_group_removals
+GET /user_group_removals
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
@@ -167,7 +167,7 @@ Authorization: Bearer your-jwt
 
 - As the admin user, see user data deletion requests
 ```bash
-GET /user_data_deletion_requests
+GET /user_data_deletions
 Content-Type: application/json
 Authorization: Bearer your-jwt
 

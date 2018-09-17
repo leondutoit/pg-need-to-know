@@ -245,14 +245,16 @@ $$ language plpgsql;
 revoke all privileges on function ntk.parse_generic_table_def(json) from public;
 
 
--- show: description
--- exclude ntk information tables
--- only show user defined groups in array of grantees
+-- show: table description
 create or replace view table_information as
-    select table_name, array_agg(grantee::text) from information_schema.table_privileges
+    select table_name, array_agg(grantee::text) group_name
+    from information_schema.table_privileges
         where privilege_type = 'SELECT'
         and table_schema = 'public'
         and grantee not in ('admin_user', 'PUBLIC')
+        and grantee in (select group_name from ntk.user_defined_groups)
+        and table_name not in ('user_registrations', 'groups', 'user_group_removals',
+                               'user_data_deletions', 'audit_logs')
         group by table_name;
 alter view table_information owner to admin_user;
 
@@ -288,11 +290,11 @@ create table if not exists ntk.registered_users(
 );
 alter table ntk.registered_users owner to admin_user;
 grant select on ntk.registered_users to public; -- part of RLS policy
-create or replace view registered_users as
+create or replace view user_registrations as
     select registration_date, _user_name as user_name,
            _user_type as user_type, user_metadata
     from ntk.registered_users;
-alter view registered_users owner to admin_user;
+alter view user_registrations owner to admin_user;
 
 
 drop table if exists ntk.data_owners;
@@ -369,9 +371,9 @@ create table ntk.user_initiated_group_removals(
 );
 alter table ntk.user_initiated_group_removals owner to admin_user;
 grant insert on ntk.user_initiated_group_removals to public;
-create or replace view user_initiated_group_removals as
+create or replace view user_group_removals as
     select * from ntk.user_initiated_group_removals;
-alter view user_initiated_group_removals owner to admin_user;
+alter view user_group_removals owner to admin_user;
 
 
 drop function if exists group_create(text, json);
@@ -503,9 +505,9 @@ create table if not exists ntk.user_data_deletion_requests(
 );
 alter table ntk.user_data_deletion_requests owner to admin_user;
 grant insert on ntk.user_data_deletion_requests to public;
-create or replace view user_data_deletion_requests as
+create or replace view user_data_deletions as
     select * from ntk.user_data_deletion_requests;
-alter view user_data_deletion_requests owner to admin_user;
+alter view user_data_deletions owner to admin_user;
 
 
 drop function if exists user_delete_data();
