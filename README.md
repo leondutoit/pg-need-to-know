@@ -8,11 +8,11 @@ Mandatory Access Control for PostgreSQL - designed to be used as a REST API.
 - Administrators can set up access control for data analysis based on group membership, and explicit group-level table access grants
 - Only registered data owners can insert data (registation is needed to enforce ownership)
 - Data owners are the only ones who can operate on their data by default (select, update, delete)
-- Read-only access can be granted to data users based on common group membership (data owner can never see the data of other data owners) and group level table access grants
-- All data access by data users is logged: which data owner successfully requested data about which data owner, when
+- Read-only access can be granted to data users based on common group membership and group level table access grants
+- Data owners can never see the data of other data owners
 - Data owners can remove themselves from groups, revoking access to their data at any time
 - Data owners can delete all their data at any time
-
+- All data access by data users is logged: which data owner successfully requested data about which data owner, and when - data owners can request these logs about themselves, while administrators can see all data access logs
 
 ## Creating the DB schema
 
