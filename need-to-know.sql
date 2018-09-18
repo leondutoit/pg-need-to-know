@@ -450,10 +450,9 @@ alter view ntk.user_defined_groups_memberships owner to admin_user;
 grant select on ntk.user_defined_groups_memberships to public;
 
 
--- show: table description
--- SELECT relname, obj_description(oid) FROM pg_class WHERE relkind = 'r';
 create or replace view table_overview as
-    select table_name, array_agg(grantee::text) group_name
+    select a.table_name, b.table_description, a.group_name from
+    (select table_name, array_agg(grantee::text) group_name
     from information_schema.table_privileges
         where privilege_type = 'SELECT'
         and table_schema = 'public'
@@ -461,7 +460,11 @@ create or replace view table_overview as
         and grantee in (select group_name from ntk.user_defined_groups)
         and table_name not in ('user_registrations', 'groups', 'user_group_removals',
                                'user_data_deletions', 'audit_logs')
-        group by table_name;
+        group by table_name)a
+    join
+    (select relname, obj_description(oid) table_description
+    from pg_class where relkind = 'r')b
+    on a.table_name = b.relname;
 alter view table_overview owner to admin_user;
 
 
