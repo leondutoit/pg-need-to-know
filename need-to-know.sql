@@ -251,7 +251,7 @@ create or replace function ntk.is_user_defined_table(table_name text)
         return true;
     end;
 $$ language plpgsql;
-revoke all privileges from function ntk.is_user_defined_table(text) from public;
+revoke all privileges on function ntk.is_user_defined_table(text) from public;
 grant execute on function ntk.is_user_defined_table(text) to admin_user;
 
 
@@ -275,7 +275,18 @@ grant execute on function table_describe(text, text) to admin_user;
 drop function if exists table_describe_columns(text, json);
 create or replace function table_describe_columns(table_name text, column_descriptions json)
     returns text as $$
+    declare trusted_table_name text;
+    declare untrusted_i json;
+    declare trusted_column_name text;
+    declare trusted_column_description text;
     begin
+        assert (select ntk.is_user_defined_table(table_name) = true);
+        trusted_table_name := quote_ident(table_name);
+        for untrusted_i in select * from json_array_elements(column_descriptions) loop
+            select quote_ident(untrusted_i->>'name') into trusted_column_name;
+            select quote_literal(untrusted_i->>'description') into trusted_column_description;
+            execute format('comment on column %I.%I is %s', trusted_table_name, trusted_column_name, trusted_column_description);
+        end loop;
         return 'column description set';
     end;
 $$ language plpgsql;

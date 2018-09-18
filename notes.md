@@ -8,8 +8,8 @@
 
 ## TODO
 - test permissions on informational views
-- think about ability to add group members based on user metadata vals
-- try to make code DRYer - utility functions for common asserts (like user and groups)
+- ability to add group members based on user metadata vals
+- make code DRYer - utility functions for common asserts (like user and groups)
 - remove hard-coded non-generic names, check all todos
 - full review of docs
 - write about the model - on MAC, three use cases - data organisation up to the admin
@@ -17,8 +17,9 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- add ability to comment on columns
-- add tests for audit log table - access rules, content
+- test metadata
+- test group access management
+- test audit log table - access rules, content
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -59,3 +60,4 @@
 - create table_information view, document
 - add table descriptions using comments, ability to change them, show in table_information
 - add ability to retrieve table columns and comments
+- add ability to comment on columns, and add/modify them later
