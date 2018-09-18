@@ -7,8 +7,7 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
-- test permissions on informational views
-- ability to add group members based on user metadata vals
+- ability to add group members based on user metadata vals, add tests
 - make code DRYer - utility functions for common asserts (like user and groups)
 - remove hard-coded non-generic names, check all todos
 - full review of docs
@@ -20,6 +19,7 @@
 - test metadata
 - test group access management
 - test audit log table - access rules, content
+- test permissions on informational views
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
