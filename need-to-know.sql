@@ -248,8 +248,8 @@ create or replace function ntk.is_user_defined_table(table_name text)
         return true;
     end;
 $$ language plpgsql;
--- maybe less access: need to see where it is used
-grant execute on function ntk.is_user_defined_table(text) to public;
+revoke all privileges from function ntk.is_user_defined_table(text) from public;
+grant execute on function ntk.is_user_defined_table(text) to admin_user;
 
 
 drop function if exists table_describe(text, text);
@@ -288,11 +288,7 @@ drop function if exists table_metadata(text);
 create or replace function table_metadata(table_name text)
     returns setof ntk.tm as $$
     begin
-        assert $1 in (select info.table_name from information_schema.tables info
-                              where info.table_schema = 'public' and info.table_type != 'VIEW'
-                              and info.table_name not in ('user_registrations', 'groups', 'user_group_removals',
-                               'user_data_deletions', 'audit_logs')),
-            'access denied to table';
+        assert (select ntk.is_user_defined_table(table_name) = true);
         return query execute format('
             select c.column_name::text, pgd.description::text
                 from pg_catalog.pg_statio_all_tables as st
@@ -326,11 +322,7 @@ create or replace function table_group_access_grant(table_name text, group_name 
     begin
         assert group_name in (select udg.group_name from ntk.user_defined_groups udg),
             'access to group not allowed';
-        assert table_name in (select info.table_name from information_schema.tables info
-                              where info.table_schema = 'public' and info.table_type != 'VIEW'
-                              and info.table_name not in ('user_registrations', 'groups', 'user_group_removals',
-                               'user_data_deletions', 'audit_logs')),
-            'access denied to table';
+        assert (select ntk.is_user_defined_table(table_name) = true);
         trusted_table_name := quote_ident(table_name);
         trusted_group_name := quote_ident(group_name);
         execute format('grant select on %I to %I', trusted_table_name, trusted_group_name);
@@ -349,11 +341,7 @@ create or replace function table_group_access_revoke(table_name text, group_name
     begin
         assert group_name in (select udg.group_name from ntk.user_defined_groups udg),
             'access to group not allowed';
-        assert table_name in (select info.table_name from information_schema.tables info
-                              where info.table_schema = 'public' and info.table_type != 'VIEW'
-                              and info.table_name not in ('user_registrations', 'groups', 'user_group_removals',
-                               'user_data_deletions', 'audit_logs')),
-            'access denied to table';
+        assert (select ntk.is_user_defined_table(table_name) = true);
         trusted_table_name := quote_ident(table_name);
         trusted_group_name := quote_ident(group_name);
         execute format('revoke select on %I from %I', trusted_table_name, trusted_group_name);
