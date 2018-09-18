@@ -66,9 +66,11 @@ Authorization: Bearer your-jwt
 
 {"definition": {
     "table_name": "people",
-    "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ],
-    "description": "a collection of data on people"
-    },
+    "description": "a collection of data on people",
+    "columns": [
+        {"name": "name", "type": "text", "description": "First name"},
+        {"name": "age", "type": "int", "description": "Age in years"}
+    ]},
 "type": "mac" }
 ```
 

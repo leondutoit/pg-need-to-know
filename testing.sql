@@ -9,8 +9,8 @@ create or replace function test_table_create()
         set role admin_user;
         select table_create('{"table_name": "people",
                               "columns": [
-                                    {"name": "name", "type": "text"},
-                                    {"name": "age", "type": "int"} ],
+                                    {"name": "name", "type": "text", "description": "First name"},
+                                    {"name": "age", "type": "int", "description": "Age in years"} ],
                               "description": "a collection of data on people"}'::json,
                             'mac') into _ans;
         assert (select count(1) from people) = 0, 'problem with table creation';

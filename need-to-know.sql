@@ -187,6 +187,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
     declare untrusted_pk boolean;
     declare untrusted_nn boolean;
     declare trusted_comment text;
+    declare trusted_column_description text;
     begin
         untrusted_definition := definition;
         untrusted_columns := untrusted_definition->'columns';
@@ -196,8 +197,10 @@ create or replace function ntk.parse_mac_table_def(definition json)
         for untrusted_i in select * from json_array_elements(untrusted_columns) loop
             select ntk.sql_type_from_generic_type(untrusted_i->>'type') into trusted_dtype;
             select quote_ident(untrusted_i->>'name') into trusted_colname;
+            select quote_nullable(untrusted_i->>'description') into trusted_column_description;
             begin
                 execute format('alter table %I add column %I %s', trusted_table_name, trusted_colname, trusted_dtype);
+                execute format('comment on column %I.%I is %s', trusted_table_name, trusted_colname, trusted_column_description);
             exception
                 when duplicate_column then raise notice 'column % already exists', trusted_colname;
             end;
@@ -476,13 +479,14 @@ grant select on ntk.user_defined_groups_memberships to public;
 
 
 create or replace view table_overview as
-    select a.table_name, b.table_description, a.group_name from
-    (select table_name, array_agg(grantee::text) group_name
+    select a.table_name, b.table_description, a.groups_with_access from
+    (select table_name, array_agg(grantee::text) groups_with_access
     from information_schema.table_privileges
         where privilege_type = 'SELECT'
         and table_schema = 'public'
         and grantee not in ('PUBLIC')
         and grantee in (select group_name from ntk.user_defined_groups)
+        or grantee = 'data_owners_group'
         and table_name not in ('user_registrations', 'groups', 'user_group_removals',
                                'user_data_deletions', 'audit_logs')
         group by table_name)a
@@ -695,7 +699,7 @@ create or replace function group_delete(group_name text)
         if trusted_num_members > 0 then
             raise exception 'Cannot delete group %, it has % members', group_name, trusted_num_members;
         end if;
-        execute format('select count(1) from table_overview where group_name @> array[$1]')
+        execute format('select count(1) from table_overview where groups_with_access @> array[$1]')
             using group_name into trusted_num_table_select_grants;
         if trusted_num_table_select_grants > 0 then
             raise exception 'Cannot delete group - still has select grants on existing tables: please check table_overview to see which tables and remove the grants';
