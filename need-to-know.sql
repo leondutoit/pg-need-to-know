@@ -149,7 +149,6 @@ revoke all privileges on function ntk.sql_type_from_generic_type(text) from publ
 grant execute on function ntk.sql_type_from_generic_type(text) to admin_user;
 
 
--- TODO: add description - store as comment
 drop function if exists table_create(json, text, int);
 create or replace function table_create(definition json, type text, form_id int default 0)
     returns text as $$
@@ -189,7 +188,6 @@ create or replace function ntk.parse_mac_table_def(definition json)
     declare untrusted_nn boolean;
     declare trusted_comment text;
     begin
-        -- TODO: add optional column descriptions
         untrusted_definition := definition;
         untrusted_columns := untrusted_definition->'columns';
         trusted_table_name := quote_ident(untrusted_definition->>'table_name');
@@ -237,15 +235,54 @@ revoke all privileges on function ntk.parse_mac_table_def(json) from public;
 grant execute on function ntk.parse_mac_table_def(json) to admin_user;
 
 
--- func: table_describe
--- since it is highly likely that you will want to change
--- the description over time
--- add test
+drop function if exists ntk.is_user_defined_table(text);
+create or replace function ntk.is_user_defined_table(table_name text)
+    returns boolean as $$
+    begin
+        assert $1 in (select info.table_name from information_schema.tables info
+                        where info.table_schema = 'public'
+                        and info.table_type != 'VIEW'
+                        and info.table_name not in
+                        ('user_registrations', 'groups', 'user_group_removals',
+                         'user_data_deletions', 'audit_logs')), 'access denied to table';
+        return true;
+    end;
+$$ language plpgsql;
+-- maybe less access: need to see where it is used
+grant execute on function ntk.is_user_defined_table(text) to public;
 
--- func table_describe_column
+
+drop function if exists table_describe(text, text);
+create or replace function table_describe(table_name text, table_description text)
+    returns text as $$
+    declare trusted_table_name text;
+    declare trusted_table_description text;
+    begin
+        assert (select ntk.is_user_defined_table(table_name) = true);
+        trusted_table_name := quote_ident(table_name);
+        trusted_table_description := quote_literal(table_description);
+        execute format('comment on table %I is %s', trusted_table_name, trusted_table_description);
+        return 'table description set';
+    end;
+$$ language plpgsql;
+revoke all privileges on function table_describe(text, text) from public;
+grant execute on function table_describe(text, text) to admin_user;
+
+
+drop function if exists table_describe_columns(text, json);
+create or replace function table_describe_columns(table_name text, column_descriptions json)
+    returns text as $$
+    begin
+        return 'column description set';
+    end;
+$$ language plpgsql;
+revoke all privileges on function table_describe_columns(text, json) from public;
+grant execute on function table_describe_columns(text, json) to admin_user;
+
 
 drop table if exists ntk.tm cascade;
 create table if not exists ntk.tm(column_name text, column_description text);
+
 
 drop function if exists table_metadata(text);
 create or replace function table_metadata(table_name text)

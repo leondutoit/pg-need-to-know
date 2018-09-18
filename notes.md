@@ -17,10 +17,7 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- add table descriptions using comments, ability to change them, show in table_information
-- create table_information view, document
 - add ability to comment on columns
-- add ability to retrieve table columns and comments
 - add tests for audit log table - access rules, content
 
 ## Done
@@ -59,3 +56,6 @@
 - describe audit log table in readme
 - rename informational tables and views to be more consistent
 - enforce group level table access and implement grant and revoke
+- create table_information view, document
+- add table descriptions using comments, ability to change them, show in table_information
+- add ability to retrieve table columns and comments

@@ -87,7 +87,7 @@ POST /rpc/table_describe_columns
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"descriptions": [{"column_name": "name", "description": "First name"}]}
+{"table_name": "people", "column_descriptions": [{"column_name": "name", "description": "First name"}]}
 ```
 
 - get column descriptions for a table
