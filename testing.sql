@@ -118,14 +118,84 @@ create or replace function test_group_create()
 $$ language plpgsql;
 
 
--- test_table_group_access_management
-    -- create an empty group,
-    -- grant,
-    -- check table_overview,
-    -- become the group
-    -- do a select,
-    -- revoke
-    -- delete the group
+create or replace function test_table_group_access_management()
+    returns boolean as $$
+    declare _ans text;
+    declare _num int;
+    begin
+        set role admin_user;
+        select table_create('{"table_name": "people3",
+                              "columns": [
+                                    {"name": "name",
+                                     "type": "text",
+                                     "description": "First name"},
+                                    {"name": "age",
+                                     "type": "int",
+                                     "description": "Age in years"} ],
+                              "description": "a collection of data on people number 3"}'::json,
+                            'mac') into _ans;
+        -- maybe via another role? db owner?
+        set role data_owners_group;
+        assert (select count(1) from people3) = 0,
+            'Problem: data_owners_group does not have default access to people3';
+        set role admin_user; -- possible?
+        select group_create('test_group') into _ans;
+        select user_register('owner_1', 'data_owner', '{}'::json) into _ans;
+        set role authenticator;
+        set role owner_1;
+        insert into people3 (name,age) values ('niel', 9);
+        -- ensure default group access works for data owners
+        assert (select count(1) from people3) = 1,
+            'default select does not work for owner_1 on people3 - data_owners_group permission is not working';
+        set role authenticator;
+        set role admin_user;
+        select user_register('user_1', 'data_user', '{}'::json) into _ans;
+        select group_add_members('{"memberships": [
+            {"user_name":"owner_1", "group_name":"test_group"},
+            {"user_name":"user_1", "group_name":"test_group"}]}'::json)
+                into _ans;
+        -- ensure group membership does not work before table access is granted
+        set role user_1;
+        begin
+            select count(1) from people3 into _num;
+        exception
+            insufficient_privilege then raise notice
+                'data owners do not have access to table before group table grant - as expected';
+        end;
+        set role authenticator;
+        set role admin_user;
+        -- ensure access grant works
+        select table_group_access_grant('people3', 'test_group') into _ans;
+        set role user_1;
+        assert (select count(1) from people3) = 1,
+            'group table grant is not working';
+        set role authenticator;
+        set role admin_user;
+        select table_group_access_revoke('people3', 'test_group') into _ans;
+        -- ensure revoking table access works
+        set role user_1;
+        begin
+            select count(1) from people3 into _num;
+        exception
+            insufficient_privilege then raise notice
+                'revoking table grant works - as expected';
+        end;
+        -- cleanup state
+        set role authenticator;
+        set role owner_1;
+        select user_delete_data() into _ans;
+        set role authenticator;
+        set role admin_user;
+        select group_remove_members('{"memberships": [
+            {"user_name":"owner_1", "group_name":"test_group"},
+            {"user_name":"user_1", "group_name":"test_group"}]}'::json)
+                into _ans;
+        select user_delete('owner_1') into _ans;
+        select user_delete('user_1') into _ans;
+        select group_delete('test_group') into _ans;
+        drop table people3;
+    end;
+$$ language plpgsql;
 
 
 create or replace function test_defult_data_owner_policies()

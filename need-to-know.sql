@@ -510,6 +510,8 @@ alter view table_overview owner to admin_user;
 
 drop function if exists group_add_members(json);
 create or replace function group_add_members(members json)
+    -- add all do's and du's to the group
+    -- add members based on metadata attrs
     returns text as $$
     declare untrusted_members json;
     declare untrusted_i json;
@@ -586,6 +588,8 @@ alter function user_group_remove owner to admin_user;
 
 drop function if exists group_remove_members(json);
 create or replace function group_remove_members(members json)
+    -- remove all do's and du's to the group
+    -- remove members based on metadata attrs
     returns text as $$
     declare untrusted_members json;
     declare untrusted_i json;

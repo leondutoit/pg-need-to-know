@@ -16,8 +16,8 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- test metadata
 - test group access management
+- convenience method to remove all members from a user-defined group: group_empty, test
 - test audit log table - access rules, content
 - test permissions on informational views
 
@@ -61,3 +61,4 @@
 - add table descriptions using comments, ability to change them, show in table_information
 - add ability to retrieve table columns and comments
 - add ability to comment on columns, and add/modify them later
+- test metadata
