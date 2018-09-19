@@ -17,7 +17,6 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- test audit log table - access rules, content
 - test permissions on informational views
 
 ## Done
@@ -62,3 +61,4 @@
 - add ability to comment on columns, and add/modify them later
 - test metadata
 - test group access management
+- test audit log table - access rules, content

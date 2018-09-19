@@ -56,6 +56,7 @@ create table audit_logs(
 grant insert, select on audit_logs to public;
 alter table audit_logs enable row level security;
 alter table audit_logs owner to admin_user;
+revoke delete on audit_logs from admin_user;
 create policy select_for_data_owners on audit_logs for select using (data_owner = current_user);
 create policy insert_policy_for_public on audit_logs for insert with check (true);
 

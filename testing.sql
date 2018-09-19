@@ -1,5 +1,4 @@
-
-set role tsd_backend_utv_user; -- dbowner
+set role tsd_backend_utv_user;
 
 create or replace function test_table_create()
     returns boolean as $$
@@ -489,6 +488,29 @@ create or replace function test_group_delete()
 $$ language plpgsql;
 
 
+create or replace function test_audit_log()
+    returns boolean as $$
+    begin
+        set role admin_user;
+        assert (select count(1) from audit_logs
+                where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah')) >= 4,
+            'audit logging not working';
+        set role authenticator;
+        set role owner_gustav;
+        assert 'owner_hannah' not in (select data_owner from audit_logs),
+            'owner_gustav has access to audit logs belonging to owner_hannah';
+        set role admin_user;
+        begin
+            delete from audit_logs;
+        exception
+            when insufficient_privilege then raise notice
+                'admin_user cannot delete audit_logs - as expected';
+        end;
+        return true;
+    end;
+$$ language plpgsql;
+
+
 create or replace function test_function_privileges()
     returns boolean as $$
     declare _ans text;
@@ -567,6 +589,12 @@ create or replace function test_function_privileges()
         end;
         set role authenticator;
         -- test permissions on informational views
+        --table_overview
+        --user_registrations
+        --groups
+        --user_group_removals
+        --user_data_deletions
+        --audit_logs
         return true;
     end;
 $$ language plpgsql;
@@ -597,6 +625,9 @@ create or replace function teardown()
         set role admin_user;
         execute 'delete from user_data_deletions';
         execute 'delete from ntk.user_initiated_group_removals';
+        -- TODO: figure out how to do this
+        -- maybe have a special role to do it
+        -- delete from audit_logs where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah');
         set role authenticator;
         return true;
     end;
@@ -624,6 +655,7 @@ create or replace function run_tests()
         assert (select test_user_delete()), 'ERROR: test_user_delete';
         assert (select test_group_delete()), 'ERROR: test_group_delete';
         assert (select test_function_privileges()), 'ERROR: test_function_privileges';
+        assert (select test_audit_log()), 'ERROR: test_audit_log';
         assert (select teardown()), 'ERROR: teardown';
         raise notice 'GOOD NEWS: All tests pass :)';
         return true;
@@ -635,8 +667,7 @@ $$ language plpgsql;
 \d
 \du
 select run_tests();
--- remove all test functions
-set role tsd_backend_utv_user; -- db owner
+set role tsd_backend_utv_user;
 drop function test_table_create();
 drop function test_table_metadata_features();
 drop function test_user_create();
@@ -654,6 +685,7 @@ drop function test_user_delete_data();
 drop function test_user_delete();
 drop function test_group_delete();
 drop function test_function_privileges();
+drop function test_audit_log();
 drop function teardown();
 \echo
 \echo 'DB state after testing'
