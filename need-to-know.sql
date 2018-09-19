@@ -651,29 +651,34 @@ create or replace function user_delete(user_name text)
     returns text as $$
     declare trusted_table text;
     declare trusted_user_name text;
+    declare trusted_user_type text;
     declare trusted_numrows int;
     declare trusted_group text;
     begin
         assert user_name in (select _user_name from ntk.registered_users), 'deleting role not allowed';
         trusted_user_name := quote_ident(user_name);
-        for trusted_table in select table_name from information_schema.tables
-                              where table_schema = 'public' and table_type != 'VIEW' loop
-            begin
-                set role authenticator;
-                execute format('set role %I', trusted_user_name);
-                execute format('select count(1) from %I where row_owner = $1', trusted_table)
-                        using user_name into trusted_numrows;
-                set role authenticator;
-                set role admin_user;
-                if trusted_numrows > 0 then
-                    raise exception 'Cannot delete user, DB has data belonging to % in table %', user_name, trusted_table;
-                end if;
-            exception
-                when undefined_column then null;
-            end;
-        end loop;
+        execute format('select _user_type from ntk.registered_users where _user_name = $1')
+                    using user_name into trusted_user_type;
+        if trusted_user_type = 'data_owner' then
+            -- data users never have data, so we do not need this check for them
+            for trusted_table in select table_name from information_schema.tables
+                                  where table_schema = 'public' and table_type != 'VIEW' loop
+                begin
+                    set role authenticator;
+                    execute format('set role %I', trusted_user_name);
+                    execute format('select count(1) from %I where row_owner = $1', trusted_table)
+                            using user_name into trusted_numrows;
+                    set role authenticator;
+                    set role admin_user;
+                    if trusted_numrows > 0 then
+                        raise exception 'Cannot delete user, DB has data belonging to % in table %', user_name, trusted_table;
+                    end if;
+                exception
+                    when undefined_column then null;
+                end;
+            end loop;
+        end if;
         for trusted_group in select _group from ntk.group_memberships where _role = user_name loop
-            raise notice 'revoking % from % in user_delete', trusted_user_name, trusted_group;
             -- this removes data_owners from the data_owners_group
             execute format('revoke %I from %I',  trusted_group, trusted_user_name);
         end loop;

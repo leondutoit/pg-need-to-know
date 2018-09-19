@@ -134,12 +134,8 @@ create or replace function test_table_group_access_management()
                                      "description": "Age in years"} ],
                               "description": "a collection of data on people number 3"}'::json,
                             'mac') into _ans;
-        -- maybe via another role? db owner?
-        set role data_owners_group;
-        assert (select count(1) from people3) = 0,
-            'Problem: data_owners_group does not have default access to people3';
-        set role admin_user; -- possible?
-        select group_create('test_group') into _ans;
+        select group_create('test_group', '{"description": "my test group"}'::json) into _ans;
+        set role anon;
         select user_register('owner_1', 'data_owner', '{}'::json) into _ans;
         set role authenticator;
         set role owner_1;
@@ -148,8 +144,9 @@ create or replace function test_table_group_access_management()
         assert (select count(1) from people3) = 1,
             'default select does not work for owner_1 on people3 - data_owners_group permission is not working';
         set role authenticator;
-        set role admin_user;
+        set role anon;
         select user_register('user_1', 'data_user', '{}'::json) into _ans;
+        set role admin_user;
         select group_add_members('{"memberships": [
             {"user_name":"owner_1", "group_name":"test_group"},
             {"user_name":"user_1", "group_name":"test_group"}]}'::json)
@@ -159,8 +156,8 @@ create or replace function test_table_group_access_management()
         begin
             select count(1) from people3 into _num;
         exception
-            insufficient_privilege then raise notice
-                'data owners do not have access to table before group table grant - as expected';
+            when insufficient_privilege then raise notice
+                'data owners do not have access to tables before group table grant - as expected';
         end;
         set role authenticator;
         set role admin_user;
@@ -177,7 +174,7 @@ create or replace function test_table_group_access_management()
         begin
             select count(1) from people3 into _num;
         exception
-            insufficient_privilege then raise notice
+            when insufficient_privilege then raise notice
                 'revoking table grant works - as expected';
         end;
         -- cleanup state
@@ -194,6 +191,7 @@ create or replace function test_table_group_access_management()
         select user_delete('user_1') into _ans;
         select group_delete('test_group') into _ans;
         drop table people3;
+        return true;
     end;
 $$ language plpgsql;
 
@@ -612,6 +610,7 @@ create or replace function run_tests()
         assert (select test_table_metadata_features()), 'ERROR: test_table_metadata_features';
         assert (select test_user_create()), 'ERROR: test_ntk.user_create';
         assert (select test_group_create()), 'ERROR: test_group_create';
+        assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
         assert (select test_defult_data_owner_policies()), 'ERROR: test_defult_data_owner_policies';
         assert (select test_group_add_members()), 'ERROR: test_group_add_members';
         assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
@@ -642,6 +641,7 @@ drop function test_table_create();
 drop function test_table_metadata_features();
 drop function test_user_create();
 drop function test_group_create();
+drop function test_table_group_access_management();
 drop function test_defult_data_owner_policies();
 drop function test_group_add_members();
 drop function test_group_membership_data_access_policies();
