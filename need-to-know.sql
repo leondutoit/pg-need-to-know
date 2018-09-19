@@ -284,7 +284,7 @@ create or replace function table_describe_columns(table_name text, column_descri
         trusted_table_name := quote_ident(table_name);
         for untrusted_i in select * from json_array_elements(column_descriptions) loop
             select quote_ident(untrusted_i->>'name') into trusted_column_name;
-            select quote_literal(untrusted_i->>'description') into trusted_column_description;
+            select quote_nullable(untrusted_i->>'description') into trusted_column_description;
             execute format('comment on column %I.%I is %s', trusted_table_name, trusted_column_name, trusted_column_description);
         end loop;
         return 'column description set';

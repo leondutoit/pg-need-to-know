@@ -9,8 +9,12 @@ create or replace function test_table_create()
         set role admin_user;
         select table_create('{"table_name": "people",
                               "columns": [
-                                    {"name": "name", "type": "text", "description": "First name"},
-                                    {"name": "age", "type": "int", "description": "Age in years"} ],
+                                    {"name": "name",
+                                     "type": "text",
+                                     "description": "First name"},
+                                    {"name": "age",
+                                     "type": "int",
+                                     "description": "Age in years"} ],
                               "description": "a collection of data on people"}'::json,
                             'mac') into _ans;
         assert (select count(1) from people) = 0, 'problem with table creation';
@@ -20,10 +24,24 @@ create or replace function test_table_create()
 $$ language plpgsql;
 
 
--- test_table_metadata
-    -- table_describe
-    -- table_describe_column
-    -- table_metadata view
+create or replace function test_table_metadata_features()
+    returns boolean as $$
+    declare _ans text;
+    begin
+        set role admin_user;
+        assert (select 'a collection of data on people' in (select table_description from table_overview)),
+            'table description not set correctly during initial table creation or table_overview does not work';
+        assert (select '(name,"First name")' in (select table_metadata('people')::text)),
+            'column description not set correctly during initial table creation';
+        select table_describe('people', 'a new description') into _ans;
+        select table_describe_columns('people', '[{"name":"name","description":"Surname of the person"}]'::json) into _ans;
+        assert (select 'a new description' in (select table_description from table_overview)),
+            'table description not set correctly using table_describe';
+        assert (select '(name,"Surname of the person")' in (select table_metadata('people')::text)),
+            'column description not set correctly using table_describe_columns';
+        return true;
+    end;
+$$ language plpgsql;
 
 
 create or replace function test_user_create()
@@ -48,7 +66,8 @@ create or replace function test_user_create()
         set role admin_user;
         assert (select _user_type from ntk.registered_users where _user_name = 'user_project_user') = 'data_user',
             'problem with user creation';
-        assert (select count(1) from ntk.registered_users where _user_name in ('owner_gustav', 'owner_hannah', 'owner_faye', 'user_project_user')) = 4,
+        assert (select count(1) from ntk.registered_users where _user_name in
+                    ('owner_gustav', 'owner_hannah', 'owner_faye', 'user_project_user')) = 4,
             'not all newly created users are recorded in the ntk.registered_users table';
         -- test that the rolse actually exist
         set role owner_gustav;
@@ -173,16 +192,19 @@ create or replace function test_group_membership_data_access_policies()
     declare _ans text;
     begin
         set role owner_gustav;
-        assert (select count(1) from people) = 1, 'data owner, owner_gustav, has unauthorized data access';
+        assert (select count(1) from people) = 1,
+            'data owner, owner_gustav, has unauthorized data access';
         set role authenticator;
         set role owner_hannah;
-        assert (select count(1) from people) = 1, 'data owner, owner_hannah, has unauthorized data access';
+        assert (select count(1) from people) = 1,
+            'data owner, owner_hannah, has unauthorized data access';
         set role authenticator;
         set role admin_user;
         -- the two data owners above are in the same group as the data user below
         select table_group_access_grant('people', 'project_group') into _ans;
         set role user_project_user;
-        assert (select count(1) from people) = 2, 'RLS policy for data user, user_project_user, is broken';
+        assert (select count(1) from people) = 2,
+            'RLS policy for data user, user_project_user, is broken';
         set role authenticator;
         return true;
     end;
@@ -205,9 +227,12 @@ create or replace function test_group_list_members()
     returns boolean as $$
     begin
         set role admin_user;
-        assert 'owner_gustav' in (select group_list_members('project_group')), 'listing group members does not work';
-        assert 'owner_hannah' in (select group_list_members('project_group')), 'listing group members does not work';
-        assert 'user_project_user' in (select group_list_members('project_group')), 'listing group members does not work';
+        assert 'owner_gustav' in (select group_list_members('project_group')),
+            'listing group members does not work';
+        assert 'owner_hannah' in (select group_list_members('project_group')),
+            'listing group members does not work';
+        assert 'user_project_user' in (select group_list_members('project_group')),
+            'listing group members does not work';
         set role authenticator;
         return true;
     end;
@@ -225,7 +250,8 @@ create or replace function test_user_groups()
         begin
             select user_groups('authenticator') into _ans;
         exception
-            when assert_failure then raise notice 'cannot access internal role groups - as expected';
+            when assert_failure then raise notice
+                'cannot access internal role groups - as expected';
         end;
         set role authenticator;
         set role owner_gustav;
@@ -283,7 +309,8 @@ create or replace function test_group_remove_members()
         -- now only data owner in the group is owner_hannah
         assert (select count(1) from people) = 1,
             'user_project_user has unauthorized data access to people, something went wrong then removing owner_gustav from project_group';
-        assert (select count(1) from ntk.user_defined_groups_memberships where member = 'owner_gustav' and group_name = 'project_group') = 0,
+        assert (select count(1) from ntk.user_defined_groups_memberships
+                where member = 'owner_gustav' and group_name = 'project_group') = 0,
             'owner_gustav is still recorded as being a member of project_group in the accounting view';
         set role authenticator;
         return true;
@@ -307,8 +334,10 @@ create or replace function test_user_delete_data()
         insert into people2 (name, age) values ('owner_Gustav de la Croix', 10);
         -- delete the data
         select user_delete_data() into _ans;
-        assert (select count(1) from people) = 0, 'data for owner_gustav not deleted from table people';
-        assert (select count(1) from people2) = 0, 'data for owner_gustav not deleted from table people2';
+        assert (select count(1) from people) = 0,
+            'data for owner_gustav not deleted from table people';
+        assert (select count(1) from people2) = 0,
+            'data for owner_gustav not deleted from table people2';
         set role authenticator;
         set role admin_user;
         assert (select count(1) from user_data_deletions where user_name = 'owner_gustav') >= 1,
@@ -344,7 +373,8 @@ create or replace function test_user_delete()
         begin
             select user_delete('authenticator') into _ans;
         exception
-            when assert_failure then raise notice 'cannot delete internal role via user_delete - as expected.';
+            when assert_failure then raise notice
+                'cannot delete internal role via user_delete - as expected.';
         end;
         set role authenticator;
         return true;
@@ -509,6 +539,7 @@ create or replace function run_tests()
     returns boolean as $$
     begin
         assert (select test_table_create()), 'ERROR: test_table_create';
+        assert (select test_table_metadata_features()), 'ERROR: test_table_metadata_features';
         assert (select test_user_create()), 'ERROR: test_ntk.user_create';
         assert (select test_group_create()), 'ERROR: test_group_create';
         assert (select test_defult_data_owner_policies()), 'ERROR: test_defult_data_owner_policies';
@@ -538,6 +569,7 @@ select run_tests();
 -- remove all test functions
 set role tsd_backend_utv_user; -- db owner
 drop function test_table_create();
+drop function test_table_metadata_features();
 drop function test_user_create();
 drop function test_group_create();
 drop function test_defult_data_owner_policies();
