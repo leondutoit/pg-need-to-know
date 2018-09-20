@@ -395,7 +395,7 @@ create or replace function user_register(user_name text, user_type text, user_me
     returns text as $$
     declare _ans text;
     begin
-        assert (select bool_or(user_name ilike arr_element||'%')
+        assert (select bool_or(user_name like arr_element||'%')
                 from unnest(ARRAY['owner_','user_']) x(arr_element)),
             'user name must start with either "owner_" to indicate that a data owner is being registered or "user_" to indicate that a data user is being registered';
         assert (select length(user_name) <= 63),
@@ -403,6 +403,11 @@ create or replace function user_register(user_name text, user_type text, user_me
         assert (select bool_or(user_type ilike arr_element||'%')
                 from unnest(ARRAY['data_owner','data_user']) x(arr_element)),
             'user_type must be either "data_owner" or "data_user"';
+        if user_name like 'owner_%' then
+            assert (user_type = 'data_owner'), 'inconsistency between user name and type';
+        elsif user_name like 'user_%' then
+            assert (user_type = 'data_user'), 'inconsistency between user name and type';
+        end if;
         set role admin_user;
         select ntk.user_create(user_name, user_type, user_metadata) into _ans;
         return 'user created';
@@ -514,8 +519,6 @@ drop function if exists group_add_members(json, json, boolean);
 create or replace function group_add_members(members json default null,
                                              metadata json default null,
                                              add_all boolean default null)
-    -- add all do's and du's to the group
-    -- add members based on metadata attrs
     returns text as $$
     declare trusted_num_params int;
     declare untrusted_members json;
@@ -607,8 +610,6 @@ drop function if exists group_remove_members(json, json, boolean);
 create or replace function group_remove_members(members json default null,
                                                 metadata json default null,
                                                 remove_all boolean default null)
-    -- remove all do's and du's to the group
-    -- remove members based on metadata attrs
     returns text as $$
     declare untrusted_members json;
     declare untrusted_i json;
