@@ -534,8 +534,16 @@ create or replace function group_add_members(members json default null,
                 'access to group not allowed';
                 execute format('grant %I to %I', trusted_group, trusted_user);
             end loop;
+            return 'added members to groups';
+        elsif metadata is not null then
+            null;
+            return 'added members to groups';
+        elsif add_all = true then
+            null;
+            return 'added members to groups';
+        else
+            return 'members NOT added to groups';
         end if;
-        return 'added members to groups';
     end;
 $$ language plpgsql;
 revoke all privileges on function group_add_members(json, json, boolean) from public;
@@ -598,7 +606,7 @@ alter function user_group_remove owner to admin_user;
 drop function if exists group_remove_members(json, json, boolean);
 create or replace function group_remove_members(members json default null,
                                                 metadata json default null,
-                                                add_all boolean default null)
+                                                remove_all boolean default null)
     -- remove all do's and du's to the group
     -- remove members based on metadata attrs
     returns text as $$
@@ -607,7 +615,7 @@ create or replace function group_remove_members(members json default null,
     declare trusted_user text;
     declare trusted_group text;
     begin
-        assert (select count(1) from unnest(array[members::text, metadata::text, add_all::text]) x where x is not null) = 1,
+        assert (select count(1) from unnest(array[members::text, metadata::text, remove_all::text]) x where x is not null) = 1,
             'only one parameter is allowed to be used in the function signature - you can only remove group members by one method per call';
         if members is not null then
             untrusted_members := members;
@@ -618,8 +626,14 @@ create or replace function group_remove_members(members json default null,
                     'access to group not allowed';
                 execute format('revoke %I from %I', trusted_group, trusted_user);
             end loop;
+            return 'removed members to groups';
+        elsif metadata is not null then
+            null;
+            return 'removed members to groups';
+        elsif remove_all = true then
+            null;
+            return 'removed members to groups';
         end if;
-        return 'removed members from groups';
     end;
 $$ language plpgsql;
 revoke all privileges on function group_remove_members(json, json, boolean) from public;
