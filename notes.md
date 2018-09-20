@@ -9,7 +9,7 @@
 ## TODO
 - delete audit logs from tests in teardown
 - make code DRYer - utility functions for common asserts (like user and groups)
-- remove hard-coded non-generic names, check all todos
+- remove hard-coded non-generic names (e.g. tsd_backend_utv_user), check all todos
 - full review of docs
 - write about the model - on MAC, three use cases - data organisation up to the admin
 - HTTP client tests

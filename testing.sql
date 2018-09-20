@@ -629,9 +629,8 @@ create or replace function teardown()
         set role admin_user;
         execute 'delete from user_data_deletions';
         execute 'delete from ntk.user_initiated_group_removals';
-        -- TODO: figure out how to do this
-        -- maybe have a special role to do it
-        -- delete from audit_logs where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah');
+        set role tsd_backend_utv_user;
+        delete from audit_logs where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah');
         set role authenticator;
         return true;
     end;
