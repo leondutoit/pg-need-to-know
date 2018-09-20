@@ -410,6 +410,8 @@ create or replace function user_register(user_name text, user_type text, user_me
         end if;
         set role admin_user;
         select ntk.user_create(user_name, user_type, user_metadata) into _ans;
+        set role authenticator;
+        set role anon;
         return 'user created';
     end;
 $$ language plpgsql;
@@ -525,6 +527,10 @@ create or replace function group_add_members(members json default null,
     declare untrusted_i json;
     declare trusted_user text;
     declare trusted_group text;
+    declare untrusted_key text;
+    declare untrusted_val text;
+    declare trusted_user_name text;
+    declare trusted_group_name text;
     begin
         assert (select count(1) from unnest(array[members::text, metadata::text, add_all::text]) x where x is not null) = 1,
             'only one parameter is allowed to be used in the function signature - you can only add group members by one method per call';
@@ -539,7 +545,18 @@ create or replace function group_add_members(members json default null,
             end loop;
             return 'added members to groups';
         elsif metadata is not null then
-            null;
+            untrusted_key := quote_literal(metadata->>'key');
+            untrusted_val := metadata->>'value';
+            trusted_group_name := quote_ident(metadata->>'group_name');
+            assert trusted_group_name in (select udg.group_name from ntk.user_defined_groups udg),
+                'access to group not allowed';
+            create table ntk.usernames(user_name text);
+            execute format('insert into ntk.usernames select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
+                using untrusted_val;
+            for trusted_user_name in select user_name from ntk.usernames loop
+                execute format('grant %I to %I', trusted_group_name, trusted_user_name);
+            end loop;
+            drop table ntk.usernames;
             return 'added members to groups';
         elsif add_all = true then
             null;
