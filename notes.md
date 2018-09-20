@@ -7,8 +7,7 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
-- convenience method to remove all members from a user-defined group: group_empty, test
-- ability to add group members based on user metadata vals, add tests
+- delete audit logs from tests in teardown
 - make code DRYer - utility functions for common asserts (like user and groups)
 - remove hard-coded non-generic names, check all todos
 - full review of docs
@@ -17,7 +16,8 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- test permissions on informational views
+- convenience method to remove all members from a user-defined group: group_empty, test
+- ability to add group members based on user metadata vals, add tests
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -62,3 +62,4 @@
 - test metadata
 - test group access management
 - test audit log table - access rules, content
+- test permissions on informational views

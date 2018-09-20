@@ -514,6 +514,7 @@ $$ language plpgsql;
 create or replace function test_function_privileges()
     returns boolean as $$
     declare _ans text;
+    declare i text;
     begin
         -- ensure unauthenticated requests cannot use sql api
         set role anon;
@@ -588,13 +589,16 @@ create or replace function test_function_privileges()
             'group_delete only callable by admin_user - as expected';
         end;
         set role authenticator;
-        -- test permissions on informational views
-        --table_overview
-        --user_registrations
-        --groups
-        --user_group_removals
-        --user_data_deletions
-        --audit_logs
+        for i in select unnest(array['table_overview', 'user_registrations', 'groups',
+                  'user_group_removals', 'user_data_deletions',
+                  'audit_logs']) loop
+            begin
+                execute format('select * from %I', i);
+            exception
+                when insufficient_privilege then raise notice
+                    'anon user cannot select from %  - as expected', i;
+            end;
+        end loop;
         return true;
     end;
 $$ language plpgsql;
