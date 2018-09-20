@@ -510,29 +510,36 @@ create or replace view table_overview as
 alter view table_overview owner to admin_user;
 
 
-drop function if exists group_add_members(json);
-create or replace function group_add_members(members json)
+drop function if exists group_add_members(json, json, boolean);
+create or replace function group_add_members(members json default null,
+                                             metadata json default null,
+                                             add_all boolean default null)
     -- add all do's and du's to the group
     -- add members based on metadata attrs
     returns text as $$
+    declare trusted_num_params int;
     declare untrusted_members json;
     declare untrusted_i json;
     declare trusted_user text;
     declare trusted_group text;
     begin
-        untrusted_members := members;
-        for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
-            select quote_ident(untrusted_i->>'user_name') into trusted_user;
-            select quote_ident(untrusted_i->>'group_name') into trusted_group;
-            assert trusted_group in (select udg.group_name from ntk.user_defined_groups udg),
-            'access to group not allowed';
-            execute format('grant %I to %I', trusted_group, trusted_user);
-        end loop;
-    return 'added members to groups';
+        assert (select count(1) from unnest(array[members::text, metadata::text, add_all::text]) x where x is not null) = 1,
+            'only one parameter is allowed to be used in the function signature - you can only add group members by one method per call';
+        if members is not null then
+            untrusted_members := members;
+            for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
+                select quote_ident(untrusted_i->>'user_name') into trusted_user;
+                select quote_ident(untrusted_i->>'group_name') into trusted_group;
+                assert trusted_group in (select udg.group_name from ntk.user_defined_groups udg),
+                'access to group not allowed';
+                execute format('grant %I to %I', trusted_group, trusted_user);
+            end loop;
+        end if;
+        return 'added members to groups';
     end;
 $$ language plpgsql;
-revoke all privileges on function group_add_members(json) from public;
-grant execute on function group_add_members(json) to admin_user;
+revoke all privileges on function group_add_members(json, json, boolean) from public;
+grant execute on function group_add_members(json, json, boolean) to admin_user;
 
 
 drop function if exists group_list_members(text);
@@ -588,8 +595,10 @@ revoke all privileges on function user_group_remove(text) from public;
 alter function user_group_remove owner to admin_user;
 
 
-drop function if exists group_remove_members(json);
-create or replace function group_remove_members(members json)
+drop function if exists group_remove_members(json, json, boolean);
+create or replace function group_remove_members(members json default null,
+                                                metadata json default null,
+                                                add_all boolean default null)
     -- remove all do's and du's to the group
     -- remove members based on metadata attrs
     returns text as $$
@@ -598,19 +607,23 @@ create or replace function group_remove_members(members json)
     declare trusted_user text;
     declare trusted_group text;
     begin
-        untrusted_members := members;
-        for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
-            select quote_ident(untrusted_i->>'user_name') into trusted_user;
-            select quote_ident(untrusted_i->>'group_name') into trusted_group;
-            assert trusted_group in (select udg.group_name from ntk.user_defined_groups udg),
-                'access to group not allowed';
-            execute format('revoke %I from %I', trusted_group, trusted_user);
-        end loop;
-    return 'removed members from groups';
+        assert (select count(1) from unnest(array[members::text, metadata::text, add_all::text]) x where x is not null) = 1,
+            'only one parameter is allowed to be used in the function signature - you can only remove group members by one method per call';
+        if members is not null then
+            untrusted_members := members;
+            for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
+                select quote_ident(untrusted_i->>'user_name') into trusted_user;
+                select quote_ident(untrusted_i->>'group_name') into trusted_group;
+                assert trusted_group in (select udg.group_name from ntk.user_defined_groups udg),
+                    'access to group not allowed';
+                execute format('revoke %I from %I', trusted_group, trusted_user);
+            end loop;
+        end if;
+        return 'removed members from groups';
     end;
 $$ language plpgsql;
-revoke all privileges on function group_remove_members(json) from public;
-grant execute on function group_remove_members(json) to admin_user;
+revoke all privileges on function group_remove_members(json, json, boolean) from public;
+grant execute on function group_remove_members(json, json, boolean) to admin_user;
 
 
 drop table if exists ntk.user_data_deletion_requests cascade;
