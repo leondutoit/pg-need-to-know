@@ -48,19 +48,19 @@ create or replace function test_user_create()
     declare _ans text;
     begin
         set role admin_user;
-        select ntk.user_create('owner_gustav', 'data_owner', '{}'::json) into _ans;
+        select ntk.user_create('owner_gustav', 'data_owner', '{"institution":"A"}'::json) into _ans;
         assert (select _user_type from ntk.registered_users where _user_name = 'owner_gustav') = 'data_owner',
             'problem with user creation';
-        select ntk.user_create('owner_hannah', 'data_owner', '{}'::json) into _ans;
+        select ntk.user_create('owner_hannah', 'data_owner', '{"institution":"A"}'::json) into _ans;
         assert (select _user_type from ntk.registered_users where _user_name = 'owner_hannah') = 'data_owner',
             'problem with user creation';
-        select ntk.user_create('owner_faye', 'data_owner', '{}'::json) into _ans;
+        select ntk.user_create('owner_faye', 'data_owner', '{"institution":"B"}'::json) into _ans;
         assert (select _user_type from ntk.registered_users where _user_name = 'owner_faye') = 'data_owner',
             'problem with user creation';
         set role authenticator;
         set role anon;
         -- make sure the public method also works
-        select user_register('user_project_user', 'data_user', '{}'::json) into _ans;
+        select user_register('user_project_user', 'data_user', '{"institution":"A"}'::json) into _ans;
         set role authenticator;
         set role admin_user;
         assert (select _user_type from ntk.registered_users where _user_name = 'user_project_user') = 'data_user',
@@ -238,10 +238,17 @@ create or replace function test_group_add_members()
         set role admin_user;
         select group_add_members('project_group', '{"memberships":
                 ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
-        assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 1,
-            'group creation accounting is broken';
         assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
             'adding members to groups is broken';
+        revoke project_group from owner_gustav;
+        revoke project_group from owner_hannah;
+        revoke project_group from user_project_user;
+        select group_add_members('project_group', null, '{"key": "institution", "value": "A"}', null) into _ans;
+        assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
+            'adding members to groups is broken';
+        -- test adding all, then remove
+        --select group_add_members('project_group', null, null, true) into _ans;
+        -- then add again using the named method - need state in the other tests
         return true;
     end;
 $$ language plpgsql;
