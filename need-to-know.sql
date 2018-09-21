@@ -79,8 +79,8 @@ revoke all privileges on function ntk.update_request_log(text, text) from public
 alter function ntk.update_request_log owner to admin_user;
 
 
-drop table if exists ntk.event_log_access_control;
-create table if not exists ntk.event_log_access_control(
+drop table if exists event_log_access_control cascade;
+create table if not exists event_log_access_control(
     event_time timestamptz default current_timestamp,
     event_type text not null check
         (event_type in ('create', 'delete', 'member_add', 'member_remove',
@@ -88,18 +88,16 @@ create table if not exists ntk.event_log_access_control(
     group_name text not null,
     event_metadata json
 );
-grant insert on ntk.event_log_access_control to admin_user;
-create or replace view event_log_access_control as
-    select * from ntk.event_log_access_control;
-alter view event_log_access_control owner to admin_user;
+alter table event_log_access_control owner to admin_user;
+revoke delete, update on event_log_access_control from admin_user;
 
 
 drop function if exists ntk.update_event_log_access_control(text, text, json);
 create or replace function ntk.update_event_log_access_control(event_type text, group_name text, event_metadata json)
     returns void as $$
     begin
-        execute format('insert into ntk.event_log_access_control
-                       (event_type, group_name, group_metadata)
+        execute format('insert into event_log_access_control
+                       (event_type, group_name, event_metadata)
                        values ($1, $2, $3)')
             using event_type, group_name, event_metadata;
     end;
@@ -374,6 +372,8 @@ create or replace function table_group_access_grant(table_name text, group_name 
         trusted_table_name := quote_ident(table_name);
         trusted_group_name := quote_ident(group_name);
         execute format('grant select on %I to %I', trusted_table_name, trusted_group_name);
+        execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                using 'table_grant_add', trusted_group_name, '{}'::json;
         return 'granted access to table';
     end;
 $$ language plpgsql;
