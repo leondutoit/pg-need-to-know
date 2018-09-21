@@ -79,6 +79,35 @@ revoke all privileges on function ntk.update_request_log(text, text) from public
 alter function ntk.update_request_log owner to admin_user;
 
 
+drop table if exists ntk.event_log_access_control;
+create table if not exists ntk.event_log_access_control(
+    event_time timestamptz default current_timestamp,
+    event_type text not null check
+        (event_type in ('create', 'delete', 'member_add', 'member_remove',
+                        'table_grant_add', 'table_grant_revoke')),
+    group_name text not null,
+    event_metadata json
+);
+grant insert on ntk.event_log_access_control to admin_user;
+create or replace view event_log_access_control as
+    select * from ntk.event_log_access_control;
+grant select on event_log_access_control to admin_user;
+
+
+drop function if exists ntk.update_event_log_access_control(text, text, json);
+create or replace function ntk.update_event_log_access_control(event_type text, group_name text, event_metadata json)
+    returns void as $$
+    begin
+        execute format('insert into ntk.event_log_access_control
+                       (event_type, group_name, group_metadata)
+                       values ($1, $2, $3)')
+            using event_type, group_name, event_metadata;
+    end;
+$$ language plpgsql;
+revoke all privileges on function ntk.update_event_log_access_control(text, text, json) from public;
+grant execute on function ntk.update_event_log_access_control(text, text, json) to admin_user;
+
+
 drop function if exists ntk.roles_have_common_group_and_is_data_user(text, text);
 create or replace function ntk.roles_have_common_group_and_is_data_user(_current_role text, _current_row_owner text)
     returns boolean as $$
