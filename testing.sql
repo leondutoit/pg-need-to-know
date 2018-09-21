@@ -512,19 +512,19 @@ create or replace function test_audit_log()
     returns boolean as $$
     begin
         set role admin_user;
-        assert (select count(1) from audit_logs
+        assert (select count(1) from event_log_data_access
                 where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah')) >= 4,
             'audit logging not working';
         set role authenticator;
         set role owner_gustav;
-        assert 'owner_hannah' not in (select data_owner from audit_logs),
+        assert 'owner_hannah' not in (select data_owner from event_log_data_access),
             'owner_gustav has access to audit logs belonging to owner_hannah';
         set role admin_user;
         begin
-            delete from audit_logs;
+            delete from event_log_data_access;
         exception
             when insufficient_privilege then raise notice
-                'admin_user cannot delete audit_logs - as expected';
+                'admin_user cannot delete event_log_data_access - as expected';
         end;
         return true;
     end;
@@ -611,7 +611,7 @@ create or replace function test_function_privileges()
         set role authenticator;
         for i in select unnest(array['table_overview', 'user_registrations', 'groups',
                   'user_group_removals', 'user_data_deletions',
-                  'audit_logs']) loop
+                  'event_log_data_access']) loop
             begin
                 execute format('select * from %I', i);
             exception
@@ -650,7 +650,7 @@ create or replace function teardown()
         execute 'delete from user_data_deletions';
         execute 'delete from ntk.user_initiated_group_removals';
         set role tsd_backend_utv_user;
-        delete from audit_logs where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah');
+        delete from event_log_data_access where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah');
         set role authenticator;
         return true;
     end;

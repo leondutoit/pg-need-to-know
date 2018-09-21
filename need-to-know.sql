@@ -47,19 +47,19 @@ grant select on pg_authid to tsd_backend_utv_user, admin_user;
 grant select on ntk.group_memberships to tsd_backend_utv_user, admin_user;
 
 
-drop table if exists audit_logs;
-create table audit_logs(
+drop table if exists event_log_data_access;
+create table event_log_data_access(
     request_time timestamptz default current_timestamp,
     data_user text,
     data_owner text
 );
-grant insert, select on audit_logs to public;
-alter table audit_logs enable row level security;
-alter table audit_logs owner to admin_user;
-revoke delete on audit_logs from admin_user;
-grant delete on audit_logs to tsd_backend_utv_user;
-create policy select_for_data_owners on audit_logs for select using (data_owner = current_user);
-create policy insert_policy_for_public on audit_logs for insert with check (true);
+grant insert, select on event_log_data_access to public;
+alter table event_log_data_access enable row level security;
+alter table event_log_data_access owner to admin_user;
+revoke delete on event_log_data_access from admin_user;
+grant delete on event_log_data_access to tsd_backend_utv_user;
+create policy select_for_data_owners on event_log_data_access for select using (data_owner = current_user);
+create policy insert_policy_for_public on event_log_data_access for insert with check (true);
 
 
 drop function if exists ntk.update_request_log(text, text);
@@ -70,7 +70,7 @@ create or replace function ntk.update_request_log(_current_role text, _current_r
     begin
         trusted_current_role := _current_role;
         trusted_current_row_owner := _current_row_owner;
-        execute format('insert into audit_logs (data_user, data_owner) values ($1, $2)')
+        execute format('insert into event_log_data_access (data_user, data_owner) values ($1, $2)')
                 using trusted_current_role, trusted_current_row_owner;
         return true;
     end;
@@ -91,7 +91,7 @@ create table if not exists ntk.event_log_access_control(
 grant insert on ntk.event_log_access_control to admin_user;
 create or replace view event_log_access_control as
     select * from ntk.event_log_access_control;
-grant select on event_log_access_control to admin_user;
+alter view event_log_access_control owner to admin_user;
 
 
 drop function if exists ntk.update_event_log_access_control(text, text, json);
@@ -280,7 +280,7 @@ create or replace function ntk.is_user_defined_table(table_name text)
                         and info.table_type != 'VIEW'
                         and info.table_name not in
                         ('user_registrations', 'groups', 'user_group_removals',
-                         'user_data_deletions', 'audit_logs')), 'access denied to table';
+                         'user_data_deletions', 'event_log_data_access')), 'access denied to table';
         return true;
     end;
 $$ language plpgsql;
@@ -540,7 +540,7 @@ create or replace view table_overview as
         and grantee in (select group_name from ntk.user_defined_groups)
         or grantee = 'data_owners_group'
         and table_name not in ('user_registrations', 'groups', 'user_group_removals',
-                               'user_data_deletions', 'audit_logs')
+                               'user_data_deletions', 'event_log_data_access')
         group by table_name)a
     join
     (select relname, obj_description(oid) table_description
@@ -715,7 +715,7 @@ create or replace function user_delete_data()
     begin
         for trusted_table in select table_name from information_schema.tables
                       where table_schema = 'public' and table_type != 'VIEW' loop
-            if trusted_table = 'audit_logs' then continue; end if;
+            if trusted_table = 'event_log_data_access' then continue; end if;
             begin
                 execute format('delete from %I', trusted_table);
             exception
