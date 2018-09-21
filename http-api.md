@@ -125,13 +125,13 @@ POST /rpc/group_add_members
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-# 1. by naming specific userr
+# 1. by naming specific user
 {"group_name": "analysis1_group",
  "memberships": ["myuser", "some_analyst"]}
 
 # 2. selecting users into the group based on metadata values
 {"group_name": "analysis1_group",
- "meadata": {"key": "some", "value": "info"}}
+ "metadata": {"key": "some", "value": "info"}}
 
 # 3. add all existing users to a group
 {"group_name": "analysis1_group",
@@ -148,13 +148,23 @@ Authorization: Bearer your-jwt
 [{"member": "myuser"}, {"member": "some_analyst"}]
 ```
 
-- Remove members from a group
+- Remove members from a group (choose one of three methods)
 ```bash
 POST /rpc/group_remove_members
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"memberships": [{"user_name":"myuser", "group_name":"analysis1_group"}]}
+# 1. by naming specific user
+{"group_name": "analysis1_group",
+ "memberships": ["myuser", "some_analyst"]}
+
+# 2. selecting users into the group based on metadata values
+{"group_name": "analysis1_group",
+ "metadata": {"key": "some", "value": "info"}}
+
+# 3. add all existing users to a group
+{"group_name": "analysis1_group",
+ "remove_all": true}
 ```
 
 - Delete a group

@@ -7,7 +7,6 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
-- access control event log table
 - make code DRYer - utility functions for common asserts (like user and groups)
 - remove hard-coded non-generic names (e.g. tsd_backend_utv_user), check all todos
 - full review of docs
@@ -16,7 +15,7 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- ability to add (remove) group members based on user metadata vals (and all users), add tests
+- access control event log table
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -63,3 +62,4 @@
 - test audit log table - access rules, content
 - test permissions on informational views
 - delete audit logs from tests in teardown
+- ability to add (remove) group members based on user metadata vals (and all users), add tests
