@@ -627,26 +627,26 @@ revoke all privileges on function user_group_remove(text) from public;
 alter function user_group_remove owner to admin_user;
 
 
-drop function if exists group_remove_members(json, json, boolean);
-create or replace function group_remove_members(members json default null,
+drop function if exists group_remove_members(text, json, json, boolean);
+create or replace function group_remove_members(group_name text,
+                                                members json default null,
                                                 metadata json default null,
                                                 remove_all boolean default null)
     returns text as $$
     declare untrusted_members json;
     declare untrusted_i json;
     declare trusted_user text;
-    declare trusted_group text;
+    declare trusted_group_name text;
     begin
+        trusted_group_name := quote_ident(group_name);
+        assert trusted_group_name in (select udg.group_name from ntk.user_defined_groups udg),
+                'access to group not allowed';
         assert (select count(1) from unnest(array[members::text, metadata::text, remove_all::text]) x where x is not null) = 1,
             'only one parameter is allowed to be used in the function signature - you can only remove group members by one method per call';
         if members is not null then
             untrusted_members := members;
             for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
-                select quote_ident(untrusted_i->>'user_name') into trusted_user;
-                select quote_ident(untrusted_i->>'group_name') into trusted_group;
-                assert trusted_group in (select udg.group_name from ntk.user_defined_groups udg),
-                    'access to group not allowed';
-                execute format('revoke %I from %I', trusted_group, trusted_user);
+                execute format('revoke %I from %s', trusted_group_name, untrusted_i);
             end loop;
             return 'removed members to groups';
         elsif metadata is not null then

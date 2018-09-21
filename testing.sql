@@ -180,10 +180,8 @@ create or replace function test_table_group_access_management()
         select user_delete_data() into _ans;
         set role authenticator;
         set role admin_user;
-        select group_remove_members('{"memberships": [
-            {"user_name":"owner_1", "group_name":"test_group"},
-            {"user_name":"user_1", "group_name":"test_group"}]}'::json)
-                into _ans;
+        select group_remove_members('test_group', '{"memberships":
+            ["owner_1", "user_1"]}'::json, null, null) into _ans;
         select user_delete('owner_1') into _ans;
         select user_delete('user_1') into _ans;
         select group_delete('test_group') into _ans;
@@ -363,9 +361,8 @@ create or replace function test_group_remove_members()
     declare _ans text;
     begin
         set role admin_user;
-        select group_remove_members('{"memberships": [
-            {"user_name":"owner_gustav", "group_name":"project_group"}]}'::json)
-        into _ans;
+        select group_remove_members('project_group', '{"memberships":
+            ["owner_gustav"]}'::json, null, null) into _ans;
         set role authenticator;
         set role user_project_user;
         -- now only data owner in the group is owner_hannah
