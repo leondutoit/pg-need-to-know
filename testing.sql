@@ -146,9 +146,7 @@ create or replace function test_table_group_access_management()
         set role anon;
         select user_register('user_1', 'data_user', '{}'::json) into _ans;
         set role admin_user;
-        select group_add_members('{"memberships": [
-            {"user_name":"owner_1", "group_name":"test_group"},
-            {"user_name":"user_1", "group_name":"test_group"}]}'::json)
+        select group_add_members('test_group', '{"memberships": ["owner_1", "user_1"]}'::json, null, null)
                 into _ans;
         -- ensure group membership does not work before table access is granted
         set role user_1;
@@ -240,11 +238,8 @@ create or replace function test_group_add_members()
     declare _ans text;
     begin
         set role admin_user;
-        select group_add_members('{"memberships": [
-            {"user_name":"owner_gustav", "group_name":"project_group"},
-            {"user_name":"owner_hannah", "group_name":"project_group"},
-            {"user_name":"user_project_user", "group_name":"project_group"}]}'::json)
-        into _ans;
+        select group_add_members('project_group', '{"memberships":
+                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
         assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 1,
             'group creation accounting is broken';
         assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
@@ -348,8 +343,8 @@ create or replace function test_user_group_remove()
     declare _ans text;
     begin
         set role admin_user;
-        select group_add_members('{"memberships": [
-            {"user_name":"owner_faye", "group_name":"project_group"}]}'::json) into _ans;
+        select group_add_members('project_group',
+            '{"memberships": ["owner_faye"]}'::json, null, null) into _ans;
         set role authenticator;
         set role owner_faye;
         select user_group_remove('project_group') into _ans;

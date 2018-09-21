@@ -517,14 +517,20 @@ create or replace view table_overview as
 alter view table_overview owner to admin_user;
 
 
-drop function if exists group_add_members(json, json, boolean);
-create or replace function group_add_members(members json default null,
+
+-- TODO :rewrite signature
+--{group_name:g1,members:[]}
+--{group_name:g1,metadata:{key:k,value:v}}
+--{group_name:g1,add_all:true}
+drop function if exists group_add_members(text, json, json, boolean);
+create or replace function group_add_members(group_name text,
+                                             members json default null,
                                              metadata json default null,
                                              add_all boolean default null)
     returns text as $$
     declare trusted_num_params int;
     declare untrusted_members json;
-    declare untrusted_i json;
+    declare untrusted_i text;
     declare trusted_user text;
     declare trusted_group text;
     declare untrusted_key text;
@@ -532,24 +538,20 @@ create or replace function group_add_members(members json default null,
     declare trusted_user_name text;
     declare trusted_group_name text;
     begin
+        trusted_group_name := quote_ident(group_name);
+        assert trusted_group_name in (select udg.group_name from ntk.user_defined_groups udg),
+                'access to group not allowed';
         assert (select count(1) from unnest(array[members::text, metadata::text, add_all::text]) x where x is not null) = 1,
             'only one parameter is allowed to be used in the function signature - you can only add group members by one method per call';
         if members is not null then
             untrusted_members := members;
             for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
-                select quote_ident(untrusted_i->>'user_name') into trusted_user;
-                select quote_ident(untrusted_i->>'group_name') into trusted_group;
-                assert trusted_group in (select udg.group_name from ntk.user_defined_groups udg),
-                'access to group not allowed';
-                execute format('grant %I to %I', trusted_group, trusted_user);
+                execute format('grant %I to %s', trusted_group_name, untrusted_i);
             end loop;
             return 'added members to groups';
         elsif metadata is not null then
             untrusted_key := quote_literal(metadata->>'key');
             untrusted_val := metadata->>'value';
-            trusted_group_name := quote_ident(metadata->>'group_name');
-            assert trusted_group_name in (select udg.group_name from ntk.user_defined_groups udg),
-                'access to group not allowed';
             create table ntk.usernames(user_name text);
             execute format('insert into ntk.usernames select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
                 using untrusted_val;
@@ -559,7 +561,9 @@ create or replace function group_add_members(members json default null,
             drop table ntk.usernames;
             return 'added members to groups';
         elsif add_all = true then
-            null;
+            for trusted_user_name in select user_name from user_registrations loop
+                execute format('grant %I to %I', trusted_group_name, trusted_user_name);
+            end loop;
             return 'added members to groups';
         else
             return 'members NOT added to groups';
