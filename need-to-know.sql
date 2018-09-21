@@ -201,8 +201,10 @@ create or replace function ntk.parse_mac_table_def(definition json)
             select quote_ident(untrusted_i->>'name') into trusted_colname;
             select quote_nullable(untrusted_i->>'description') into trusted_column_description;
             begin
-                execute format('alter table %I add column %I %s', trusted_table_name, trusted_colname, trusted_dtype);
-                execute format('comment on column %I.%I is %s', trusted_table_name, trusted_colname, trusted_column_description);
+                execute format('alter table %I add column %I %s',
+                    trusted_table_name, trusted_colname, trusted_dtype);
+                execute format('comment on column %I.%I is %s',
+                    trusted_table_name, trusted_colname, trusted_column_description);
             exception
                 when duplicate_column then raise notice 'column % already exists', trusted_colname;
             end;
@@ -287,7 +289,8 @@ create or replace function table_describe_columns(table_name text, column_descri
         for untrusted_i in select * from json_array_elements(column_descriptions) loop
             select quote_ident(untrusted_i->>'name') into trusted_column_name;
             select quote_nullable(untrusted_i->>'description') into trusted_column_description;
-            execute format('comment on column %I.%I is %s', trusted_table_name, trusted_column_name, trusted_column_description);
+            execute format('comment on column %I.%I is %s',
+                trusted_table_name, trusted_column_name, trusted_column_description);
         end loop;
         return 'column description set';
     end;
@@ -517,11 +520,6 @@ create or replace view table_overview as
 alter view table_overview owner to admin_user;
 
 
-
--- TODO :rewrite signature
---{group_name:g1,members:[]}
---{group_name:g1,metadata:{key:k,value:v}}
---{group_name:g1,add_all:true}
 drop function if exists group_add_members(text, json, json, boolean);
 create or replace function group_add_members(group_name text,
                                              members json default null,
@@ -634,6 +632,8 @@ create or replace function group_remove_members(group_name text,
     declare untrusted_i json;
     declare trusted_user text;
     declare trusted_group_name text;
+    declare untrusted_key text;
+    declare untrusted_val text;
     begin
         trusted_group_name := quote_ident(group_name);
         assert trusted_group_name in (select udg.group_name from ntk.user_defined_groups udg),
@@ -647,8 +647,12 @@ create or replace function group_remove_members(group_name text,
             end loop;
             return 'removed members to groups';
         elsif metadata is not null then
-            -- get list of user with matching metadata
-            -- remove them
+            untrusted_key := quote_literal(metadata->>'key');
+            untrusted_val := metadata->>'value';
+            for trusted_user in execute format('select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
+                using untrusted_val loop
+                execute format('revoke %I from %s', trusted_group_name, trusted_user);
+            end loop;
             return 'removed members to groups';
         elsif remove_all = true then
             for trusted_user in execute format('select _role from ntk.group_memberships where _group = $1')
