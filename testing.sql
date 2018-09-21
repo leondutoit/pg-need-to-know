@@ -393,7 +393,13 @@ create or replace function test_group_remove_members()
             'removing group members using metadata values does not work';
         grant project_group to owner_hannah;
         grant project_group to user_project_user;
-        -- now remove all, and re-establish state
+        -- now remove all
+        select group_remove_members('project_group', null, null, true) into _ans;
+        assert (select count(member) from ntk.user_defined_groups_memberships
+                where group_name = 'project_group') = 0,
+            'removing group members using metadata values does not work';
+        grant project_group to owner_hannah;
+        grant project_group to user_project_user;
         return true;
     end;
 $$ language plpgsql;
