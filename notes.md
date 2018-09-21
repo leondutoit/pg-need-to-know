@@ -16,8 +16,7 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- convenience method to remove all members from a user-defined group: group_empty, test
-- ability to add group members based on user metadata vals, add tests
+- ability to add (remove) group members based on user metadata vals (and all users), add tests
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html

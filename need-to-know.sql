@@ -552,13 +552,10 @@ create or replace function group_add_members(group_name text,
         elsif metadata is not null then
             untrusted_key := quote_literal(metadata->>'key');
             untrusted_val := metadata->>'value';
-            create table ntk.usernames(user_name text);
-            execute format('insert into ntk.usernames select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
-                using untrusted_val;
-            for trusted_user_name in select user_name from ntk.usernames loop
+            for trusted_user_name in execute format('select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
+                using untrusted_val loop
                 execute format('grant %I to %I', trusted_group_name, trusted_user_name);
             end loop;
-            drop table ntk.usernames;
             return 'added members to groups';
         elsif add_all = true then
             for trusted_user_name in select user_name from user_registrations loop
@@ -650,10 +647,14 @@ create or replace function group_remove_members(group_name text,
             end loop;
             return 'removed members to groups';
         elsif metadata is not null then
-            null;
+            -- get list of user with matching metadata
+            -- remove them
             return 'removed members to groups';
         elsif remove_all = true then
-            null;
+            for trusted_user in execute format('select _role from ntk.group_memberships where _group = $1')
+                using trusted_group_name loop
+                execute format('revoke %I from %I', trusted_group_name, trusted_user);
+            end loop;
             return 'removed members to groups';
         end if;
     end;
