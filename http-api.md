@@ -119,13 +119,23 @@ Authorization: Bearer your-jwt
 {"group_name": "analysis1_group", "group_metadata": {"consent_reference": 1}}
 ```
 
-- Add members to the group to enable data access
+- Add members to the group to enable data access (choose one of three methods)
 ```bash
 POST /rpc/group_add_members
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"memberships": [{"user_name":"myuser", "group_name":"analysis1_group"}, {"user_name":"some_analyst", "group_name":"analysis1_group"}]}
+# 1. by naming specific userr
+{"group_name": "analysis1_group",
+ "memberships": ["myuser", "some_analyst"]}
+
+# 2. selecting users into the group based on metadata values
+{"group_name": "analysis1_group",
+ "meadata": {"key": "some", "value": "info"}}
+
+# 3. add all existing users to a group
+{"group_name": "analysis1_group",
+ "add_all": true}
 ```
 
 - List all members in a specific group
