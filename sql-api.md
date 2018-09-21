@@ -33,7 +33,8 @@ user_registrations
 groups
 user_group_removals
 user_data_deletions
-audit_logs
+event_log_data_access
+event_log_access_control
 ```
 
 For details of usage see `testing.sql`.

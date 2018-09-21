@@ -15,7 +15,7 @@ Read more about the Mandatory Access Control model in `model.md`.
 ## Features
 
 - Tables, users, and groups can be created with user-defined metadata
-- Administrators can set up access control for data analysis based on group membership, and explicit group-level table access grants
+- Administrators can set up access control for data analysis based on group membership, and explicit group-level table access grants (all access control management is logged)
 - Only registered data owners can insert data (registation is needed to enforce ownership)
 - Data owners are the only ones who can operate on their data by default (select, update, delete)
 - Read-only access can be granted to data users based on common group membership and group level table access grants

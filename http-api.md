@@ -28,7 +28,8 @@ GET             | /user_registrations
 GET             | /groups
 GET             | /user_group_removals
 GET             | /user_data_deletions
-GET             | /audit_logs
+GET             | /event_log_data_access
+GET             | /event_log_access_control
 ```
 
 For data_owners:
@@ -241,11 +242,20 @@ Authorization: Bearer your-jwt
 
 - get audit information about which data users access data about which data owners, when
 ```bash
-GET /audit_logs
+GET /event_log_data_access
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
 # return which data user accessed data from which data owner, when
+```
+
+- get audit information about all group-based access control events
+```bash
+GET /event_log_access_control
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+# returns {event_date,event_type,group_name,event_metadata}
 ```
 
 ### For data owners
@@ -277,7 +287,7 @@ Authorization: Bearer your-jwt
 
 - Get audit logs about who accessed your data, when
 ```bash
-GET /audit_logs
+GET /event_log_data_access
 Content-Type: application/json
 Authorization: Bearer your-jwt
 ```
