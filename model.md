@@ -31,7 +31,7 @@ Assume the following setup:
 
 ```txt
 data owners: A, B, C, D, E, F
-tables: t1, t2, t3, each containing data from a different survey section
+tables: t1, t2, t3, each containing data from all data owners
 data users: X, Y, Z
 ```
 
@@ -49,14 +49,42 @@ group1
     - members: ((X, Y), (A, B, C, D))
     - table access grants: (t1, t2, t3)
 group2
-    - members: (t1, t2, t3)
-    - table access grants: ((Z), (A, B, C, D, E, F))
+    - members: ((Z), (A, B, C, D, E, F))
+    - table access grants: (t1, t2, t3)
 ```
 
-In words, the administrator would simply create two groups containing the data owners which should make their data usable to the respective data users. And since data belonging to everyone is contianed in all three tables, both groups would be granted access to all tables. `pg-need-to-know`'s security policies will ensure that data will be made available based on common group membership, regardless of which table it is stored in.
-
+In words, the administrator would simply create two groups containing the respective data owners and data users. Since data belonging to everyone is contianed in all three tables, both groups would be granted access to all tables. `pg-need-to-know`'s security policies will ensure that data will be made available based on common group membership, regardless of which table it is stored in. Common group membership will ensure that data users can see the data of their group's data owners, but data owners can only ever see their own data.
 
 ## Access based on data subsets
+
+Assume a similar setup than before in terms of owers, data, and users:
+
+```txt
+data owners: A, B, C, D, E, F
+tables: t1, t2, t3, each containing data from all data owners
+data users: X, Y, Z
+```
+
+Now further suppose an administrator wanted to set up the following access control rules, this time based on data subsets, rather then individual owners:
+
+```txt
+data users X, and Y should only have access to data contained in tables t1, and t2
+data user Z should have access to all data - i.e. tables t1, t2, and t3
+```
+
+In contrast to the previous example, data might be categorised into different levels of sensitivity, and stored in different tables. In this case everyone needs access to data from all owners, just not all of their data. It is then firstly up to the administrator to ensure that data is collected and partitioned into different tables based on their categorisation. After that the following `pg-need-to-know` setup will ensure that the requirements are met:
+
+```txt
+group1
+    - members: ((X, Y), (A, B, C, D, E, F))
+    - table access grants: (t1, t2)
+group2
+    - members: ((Z), (A, B, C, D, E, F))
+    - table access grants: (t1, t2, t3)
+```
+
+This time both groups contain all data owners. However, only `group2`, which contains data user `Z`, has been granted access to table `t3`.
+
 
 ## Access based on data owners and subsets
 
