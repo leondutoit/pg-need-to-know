@@ -508,7 +508,7 @@ create or replace function test_group_delete()
 $$ language plpgsql;
 
 
-create or replace function test_audit_log()
+create or replace function test_event_log_data_access()
     returns boolean as $$
     begin
         set role admin_user;
@@ -526,6 +526,25 @@ create or replace function test_audit_log()
             when insufficient_privilege then raise notice
                 'admin_user cannot delete event_log_data_access - as expected';
         end;
+        return true;
+    end;
+$$ language plpgsql;
+
+
+create or replace function test_event_log_access_control()
+    returns boolean as $$
+    declare i text;
+    begin
+        -- use the group used in test_table_group_access_management
+        -- this goes through the whole life-cycle in a simple way
+        set role admin_user;
+        for i in select unnest(array['group_create', 'group_delete',
+                        'group_member_add', 'group_member_remove',
+                        'table_grant_add', 'table_grant_revoke']) loop
+            assert i in (select event_type from event_log_access_control
+                         where group_name = 'test_group'),
+                'event not found in test_event_log_access_control';
+        end loop;
         return true;
     end;
 $$ language plpgsql;
@@ -611,7 +630,7 @@ create or replace function test_function_privileges()
         set role authenticator;
         for i in select unnest(array['table_overview', 'user_registrations', 'groups',
                   'event_log_user_group_removals', 'event_log_user_data_deletions',
-                  'event_log_data_access']) loop
+                  'event_log_data_access', 'event_log_access_control']) loop
             begin
                 execute format('select * from %I', i);
             exception
@@ -678,7 +697,8 @@ create or replace function run_tests()
         assert (select test_user_delete()), 'ERROR: test_user_delete';
         assert (select test_group_delete()), 'ERROR: test_group_delete';
         assert (select test_function_privileges()), 'ERROR: test_function_privileges';
-        assert (select test_audit_log()), 'ERROR: test_audit_log';
+        assert (select test_event_log_data_access()), 'ERROR: test_event_log_data_access';
+        assert (select test_event_log_access_control()), 'ERROR: test_event_log_access_control';
         assert (select teardown()), 'ERROR: teardown';
         raise notice 'GOOD NEWS: All tests pass :)';
         return true;
@@ -708,7 +728,8 @@ drop function test_user_delete_data();
 drop function test_user_delete();
 drop function test_group_delete();
 drop function test_function_privileges();
-drop function test_audit_log();
+drop function test_event_log_data_access();
+drop function test_event_log_access_control();
 drop function teardown();
 \echo
 \echo 'DB state after testing'

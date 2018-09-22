@@ -15,6 +15,7 @@
 - make a presentation, with visual representations of the model
 
 ## IP
+- test event_log_access_control
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
