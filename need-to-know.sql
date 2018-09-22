@@ -816,6 +816,8 @@ create or replace function group_delete(group_name text)
         end if;
         execute format('drop role %I', trusted_group_name);
         execute format('delete from ntk.user_defined_groups where group_name = $1') using group_name;
+        execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                using 'group_delete', trusted_group_name, null;
         return 'group deleted';
     end;
 $$ language plpgsql;
