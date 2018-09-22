@@ -7,7 +7,6 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## TODO
-- make code DRYer - utility functions for common asserts (like user and groups)
 - remove hard-coded non-generic names (e.g. tsd_backend_utv_user), check all todos
 - full review of docs
 - write about the model - on MAC, three use cases - data organisation up to the admin
@@ -15,7 +14,6 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- test event_log_access_control
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -65,3 +63,5 @@
 - ability to add (remove) group members based on user metadata vals (and all users), add tests
 - rename audit_logs -> event_log_data_access
 - event_log_access_control
+- test event_log_access_control
+- make code DRYer - utility functions for common asserts (like user and groups)
