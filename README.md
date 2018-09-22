@@ -47,14 +47,6 @@ Opting for #1 have the advantages that you do not need to write your own REST AP
 If that is too restrictive, then maybe it is better to write your own REST api, which consumes the SQL API directly. This still has the benefit of letting `pg-need-to-know` take care of all authorization, access control and SQL safety. Doing this requires that your app adopts a similar connection and SQL execution strategy than `postgrest`.
 
 
-## Create a REST API using postgrest
-
-- Download and install [postgrest](http://postgrest.org/)
-- Create a [config file](http://postgrest.org/en/v5.0/install.html#configuration)
-- Run `postgrest your-config-file`
-- Using this API pre-supposes that you have an Identity Provider and an Authentication Server which can issue JSON Web Tokens according to the specifications of `pg-need-to-know` (read more about these in `auth-requirements.md`)
-
-
 ## LICENSE
 
 GPL.
