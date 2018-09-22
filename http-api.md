@@ -224,7 +224,7 @@ Authorization: Bearer your-jwt
 
 - As the admin user, see user initiated group removals
 ```bash
-GET /user_group_removals
+GET /event_log_user_group_removals
 Content-Type: application/json
 Authorization: Bearer your-jwt
 

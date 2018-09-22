@@ -278,7 +278,7 @@ create or replace function ntk.is_user_defined_table(table_name text)
                         where info.table_schema = 'public'
                         and info.table_type != 'VIEW'
                         and info.table_name not in
-                        ('user_registrations', 'groups', 'user_group_removals',
+                        ('user_registrations', 'groups', 'event_log_user_group_removals',
                          'user_data_deletions', 'event_log_data_access')), 'access denied to table';
         return true;
     end;
@@ -501,9 +501,9 @@ create table ntk.user_initiated_group_removals(
 );
 alter table ntk.user_initiated_group_removals owner to admin_user;
 grant insert on ntk.user_initiated_group_removals to public;
-create or replace view user_group_removals as
+create or replace view event_log_user_group_removals as
     select * from ntk.user_initiated_group_removals;
-alter view user_group_removals owner to admin_user;
+alter view event_log_user_group_removals owner to admin_user;
 
 
 drop function if exists group_create(text, json);
@@ -544,7 +544,7 @@ create or replace view table_overview as
         and grantee not in ('PUBLIC')
         and grantee in (select group_name from ntk.user_defined_groups)
         or grantee = 'data_owners_group'
-        and table_name not in ('user_registrations', 'groups', 'user_group_removals',
+        and table_name not in ('user_registrations', 'groups', 'event_log_user_group_removals',
                                'user_data_deletions', 'event_log_data_access')
         group by table_name)a
     join

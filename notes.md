@@ -15,7 +15,6 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- event_log_access_control
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -64,3 +63,4 @@
 - delete audit logs from tests in teardown
 - ability to add (remove) group members based on user metadata vals (and all users), add tests
 - rename audit_logs -> event_log_data_access
+- event_log_access_control

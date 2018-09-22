@@ -610,7 +610,7 @@ create or replace function test_function_privileges()
         end;
         set role authenticator;
         for i in select unnest(array['table_overview', 'user_registrations', 'groups',
-                  'user_group_removals', 'user_data_deletions',
+                  'event_log_user_group_removals', 'user_data_deletions',
                   'event_log_data_access']) loop
             begin
                 execute format('select * from %I', i);
