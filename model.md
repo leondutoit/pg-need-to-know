@@ -61,7 +61,7 @@ Assume a similar setup than before in terms of owers, data, and users:
 
 ```txt
 data owners: A, B, C, D, E, F
-tables: t1, t2, t3, each containing data from all data owners
+tables: t1, t2, t3, each containing data from all data owners, but different categories
 data users: X, Y, Z
 ```
 
@@ -85,9 +85,42 @@ group2
 
 This time both groups contain all data owners. However, only `group2`, which contains data user `Z`, has been granted access to table `t3`.
 
-
 ## Access based on data owners and subsets
+
+This is a combination of the previous two cases:
+
+```txt
+data owners: A, B, C, D, E, F
+tables: t1, t2, t3, t4 each containing data from all data owners, with t4 containing data belonging to a different category
+data users: X, Y, Z
+```
+
+Suppose the following access control rules needed to be in place:
+
+```txt
+data users X, and Y should only have access to data contained in tables t1, and t2
+data user Z should have access to all data - i.e. tables t1, t2, t3, and t4
+```
+
+The following groups memberships and table grant will ensure the above access control rules are enforced:
+
+```txt
+group1
+    - members: ((X, Y), (A, B, C, D))
+    - table access grants: (t1, t2, t3)
+group2
+    - members: ((Z), (A, B, C, D, E, F))
+    - table access grants: (t1, t2, t3, t4)
+```
+
+Notice that only data user `Z` has access to table `t4`.
 
 ## Granting all data users access to all data
 
+This is mentioned for the sake of completion, but is should be obvious that this is accomplished by creating one group, with everyone as a member, and granting access to all tables.
+
 ## Summary
+
+The data management and access control requirements placed on administrators by regulatory bodies are becoming increasingly complex and the consequences of not being compliant more severe. This puts pressure on researchers to work with data in a way that ensures only the necessary access is given, and that all access, and the management thereof, is logged for audit purposes. This is a difficult task, especially as it is often not primary to the scientific task.
+
+`pg-need-to-know` gives administrators the tools they need to fulfill these requirements in an easy way. Application developers can interact with the API to create user-friendly interfaces, which also interoperate easily with other data management and storage systems.
