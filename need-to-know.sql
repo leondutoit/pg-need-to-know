@@ -515,6 +515,8 @@ create or replace function group_create(group_name text, group_metadata json)
         execute format('create role %I', trusted_group_name);
         execute format('insert into ntk.user_defined_groups values ($1, $2)')
             using group_name, group_metadata;
+        execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                using 'group_create', trusted_group_name, null;
         return 'group created';
     end;
 $$ language plpgsql;
