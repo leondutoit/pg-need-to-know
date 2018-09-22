@@ -25,14 +25,14 @@ group_remove_members(group_name text, memberships json, metadata json, remove_al
 group_delete(group_name text)
 ```
 
-## Views
+## Views and tables
 
 ```sql
 table_overview
 user_registrations
 groups
-user_group_removals
-user_data_deletions
+event_log_user_group_removals
+event_log_user_data_deletions
 event_log_data_access
 event_log_access_control
 ```

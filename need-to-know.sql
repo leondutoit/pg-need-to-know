@@ -579,6 +579,8 @@ create or replace function group_add_members(group_name text,
             untrusted_members := members;
             for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
                 execute format('grant %I to %s', trusted_group_name, untrusted_i);
+                execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                    using 'group_member_add', trusted_group_name, replace(untrusted_i, '"', '');
             end loop;
             return 'added members to groups';
         elsif metadata is not null then
@@ -587,11 +589,15 @@ create or replace function group_add_members(group_name text,
             for trusted_user_name in execute format('select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
                 using untrusted_val loop
                 execute format('grant %I to %I', trusted_group_name, trusted_user_name);
+                execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                    using 'group_member_add', trusted_group_name, trusted_user_name;
             end loop;
             return 'added members to groups';
         elsif add_all = true then
             for trusted_user_name in select user_name from user_registrations loop
                 execute format('grant %I to %I', trusted_group_name, trusted_user_name);
+                execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                    using 'group_member_add', trusted_group_name, trusted_user_name;
             end loop;
             return 'added members to groups';
         else
