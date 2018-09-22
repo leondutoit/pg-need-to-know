@@ -394,6 +394,8 @@ create or replace function table_group_access_revoke(table_name text, group_name
         trusted_table_name := quote_ident(table_name);
         trusted_group_name := quote_ident(group_name);
         execute format('revoke select on %I from %I', trusted_table_name, trusted_group_name);
+        execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                using 'table_grant_revoke', trusted_group_name, trusted_table_name;
         return 'revoked access to table';
     end;
 $$ language plpgsql;
