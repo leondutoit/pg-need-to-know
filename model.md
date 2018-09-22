@@ -32,14 +32,14 @@ Assume the following setup:
 ```txt
 data owners: A, B, C, D, E, F
 tables: t1, t2, t3, each containing data from a different survey section
-data users: W, X, Y, Z
+data users: X, Y, Z
 ```
 
 Now further suppose an administrator wanted to set up the following access control rules:
 
 ```txt
 data users X, and Y should only have access to data from owners A, B, C, D
-data user Z should only have access to all data - from owners A, B, C, D, E, F
+data user Z should have access to all data - i.e. from owners A, B, C, D, E, F
 ```
 
 This is quite a common requirement: that a subset of analysts have access to a limited set of data, while a smaller group has access to everything. In this example, we suppose that access is based on the identity of the data owners. The owners E, and F might, for example, belong to an institution that did not consent to users X and Y analysing their data. How can the administrator use `pg-need-to-know` to solve this?
