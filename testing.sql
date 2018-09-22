@@ -427,7 +427,7 @@ create or replace function test_user_delete_data()
             'data for owner_gustav not deleted from table people2';
         set role authenticator;
         set role admin_user;
-        assert (select count(1) from user_data_deletions where user_name = 'owner_gustav') >= 1,
+        assert (select count(1) from event_log_user_data_deletions where user_name = 'owner_gustav') >= 1,
             'problem recording the data deletion request from owner_gustav';
         set role authenticator;
         return true;
@@ -610,7 +610,7 @@ create or replace function test_function_privileges()
         end;
         set role authenticator;
         for i in select unnest(array['table_overview', 'user_registrations', 'groups',
-                  'event_log_user_group_removals', 'user_data_deletions',
+                  'event_log_user_group_removals', 'event_log_user_data_deletions',
                   'event_log_data_access']) loop
             begin
                 execute format('select * from %I', i);
@@ -647,7 +647,7 @@ create or replace function teardown()
         set role authenticator;
         -- clear out accounting table
         set role admin_user;
-        execute 'delete from user_data_deletions';
+        execute 'delete from event_log_user_data_deletions';
         execute 'delete from ntk.user_initiated_group_removals';
         set role tsd_backend_utv_user;
         delete from event_log_data_access where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah');

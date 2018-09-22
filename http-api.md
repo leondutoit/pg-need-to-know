@@ -233,7 +233,7 @@ Authorization: Bearer your-jwt
 
 - As the admin user, see user data deletion requests
 ```bash
-GET /user_data_deletions
+GET /event_log_user_data_deletions
 Content-Type: application/json
 Authorization: Bearer your-jwt
 

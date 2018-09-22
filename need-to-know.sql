@@ -279,7 +279,7 @@ create or replace function ntk.is_user_defined_table(table_name text)
                         and info.table_type != 'VIEW'
                         and info.table_name not in
                         ('user_registrations', 'groups', 'event_log_user_group_removals',
-                         'user_data_deletions', 'event_log_data_access')), 'access denied to table';
+                         'event_log_user_data_deletions', 'event_log_data_access')), 'access denied to table';
         return true;
     end;
 $$ language plpgsql;
@@ -545,7 +545,7 @@ create or replace view table_overview as
         and grantee in (select group_name from ntk.user_defined_groups)
         or grantee = 'data_owners_group'
         and table_name not in ('user_registrations', 'groups', 'event_log_user_group_removals',
-                               'user_data_deletions', 'event_log_data_access')
+                               'event_log_user_data_deletions', 'event_log_data_access')
         group by table_name)a
     join
     (select relname, obj_description(oid) table_description
@@ -720,9 +720,9 @@ create table if not exists ntk.user_data_deletion_requests(
 );
 alter table ntk.user_data_deletion_requests owner to admin_user;
 grant insert on ntk.user_data_deletion_requests to public;
-create or replace view user_data_deletions as
+create or replace view event_log_user_data_deletions as
     select * from ntk.user_data_deletion_requests;
-alter view user_data_deletions owner to admin_user;
+alter view event_log_user_data_deletions owner to admin_user;
 
 
 drop function if exists user_delete_data();
