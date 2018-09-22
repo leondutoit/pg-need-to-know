@@ -669,7 +669,7 @@ create or replace function group_remove_members(group_name text,
                                                 remove_all boolean default null)
     returns text as $$
     declare untrusted_members json;
-    declare untrusted_i json;
+    declare untrusted_i text;
     declare trusted_user text;
     declare trusted_group_name text;
     declare untrusted_key text;
@@ -684,6 +684,8 @@ create or replace function group_remove_members(group_name text,
             untrusted_members := members;
             for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
                 execute format('revoke %I from %s', trusted_group_name, untrusted_i);
+                execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                    using 'group_member_remove', trusted_group_name, replace(untrusted_i, '"', '');
             end loop;
             return 'removed members to groups';
         elsif metadata is not null then
@@ -692,12 +694,16 @@ create or replace function group_remove_members(group_name text,
             for trusted_user in execute format('select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
                 using untrusted_val loop
                 execute format('revoke %I from %s', trusted_group_name, trusted_user);
+                execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                    using 'group_member_remove', trusted_group_name, trusted_user;
             end loop;
             return 'removed members to groups';
         elsif remove_all = true then
             for trusted_user in execute format('select _role from ntk.group_memberships where _group = $1')
                 using trusted_group_name loop
                 execute format('revoke %I from %I', trusted_group_name, trusted_user);
+                execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                    using 'group_member_remove', trusted_group_name, trusted_user;
             end loop;
             return 'removed members to groups';
         end if;
