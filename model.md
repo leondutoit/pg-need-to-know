@@ -46,11 +46,11 @@ This is quite a common requirement: that a subset of analysts have access to a l
 
 ```txt
 group1
-    - members: (X, (Y, A, B, C, D))
+    - members: ((X, Y), (A, B, C, D))
     - table access grants: (t1, t2, t3)
 group2
     - members: (t1, t2, t3)
-    - table access grants: (Z, (A, B, C, D, E, F))
+    - table access grants: ((Z), (A, B, C, D, E, F))
 ```
 
 In words, the administrator would simply create two groups containing the data owners which should make their data usable to the respective data users. And since data belonging to everyone is contianed in all three tables, both groups would be granted access to all tables. `pg-need-to-know`'s security policies will ensure that data will be made available based on common group membership, regardless of which table it is stored in.
