@@ -145,7 +145,7 @@ Authorization: JWT-for-admin-user
 # 2. for members: ((Z), (A, B, C, D, E, F))
 # 2.1 data owners
 {
-    "group_name": "group1",
+    "group_name": "group2",
     "metadata": {
         "key": "institution",
         "value": "1"
@@ -154,7 +154,7 @@ Authorization: JWT-for-admin-user
 
 # and:
 {
-    "group_name": "group1",
+    "group_name": "group2",
     "metadata": {
         "key": "institution",
         "value": "2"
@@ -163,7 +163,7 @@ Authorization: JWT-for-admin-user
 
 # 2.2 data users
 {
-    "group_name": "group1",
+    "group_name": "group2",
     "members": ["user_Z"]
 }
 ```
@@ -171,6 +171,20 @@ Authorization: JWT-for-admin-user
 Note that one can add members based on metadata values, naming them directly, or as documented in the api refernce, by adding everyone to a group.
 
 ## Analyse data
+
+Data users `X, Y` can now select data from tables `t1, t2, t3` and the administrator will know that they can only retrieve data from owners `A, B, C, D`, e.g.:
+
+```bash
+GET /t1
+Authorization: JWT-for-data-user
+```
+
+Data user `Z` can select data from all tables, and get data from all owners, e.g.:
+
+```bash
+GET /t1
+Authorization: JWT-for-data-user
+```
 
 ## Data owner actions
 
