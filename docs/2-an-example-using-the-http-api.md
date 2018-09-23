@@ -45,13 +45,13 @@ Authorization: JWT-for-anon-user
     "user_type": "data_owner",
     "user_metadata": {
         "institution": 1,
-        "consent_reference": 7689
+        "consent_reference": 6789
     }
 }
 
 # for data users
 {
-    "user_name": "user_A",
+    "user_name": "user_X",
     "user_type": "data_user",
     "user_metadata": {
         "institution_consent": 1
@@ -89,6 +89,86 @@ Authorization: JWT-for-data-owner
 ```
 
 ## Implement access control rules
+
+Now the groups can be created, filled with members, and granted access to tables.
+
+```bash
+POST /rpc/group_create
+Content-Type: application/json
+Authorization: JWT-for-admin-user
+
+# for institution 1
+{
+    "group_name": "group1",
+    "group_metadata": {
+        "consent_reference": 6789
+        "institution": "1"
+    }
+}
+
+# for institution 2
+{
+    "group_name": "group2",
+    "group_metadata": {
+        "consent_reference": 1009
+        "institution": "2"
+    }
+}
+```
+
+Now the groups can get members:
+
+```bash
+POST /rpc/group_add_memebers
+Content-Type: application/json
+Authorization: JWT-for-admin-user
+
+# 1. for members: ((X, Y), (A, B, C, D))
+# 1.1 data owners
+{
+    "group_name": "group1",
+    "metadata": {
+        "key": "institution",
+        "value": "1"
+    }
+}
+
+# 1.2 data users
+{
+    "group_name": "group1",
+    "metadata": {
+        "key": "institution_consent",
+        "value": "1"
+    }
+}
+
+# 2. for members: ((Z), (A, B, C, D, E, F))
+# 2.1 data owners
+{
+    "group_name": "group1",
+    "metadata": {
+        "key": "institution",
+        "value": "1"
+    }
+}
+
+# and:
+{
+    "group_name": "group1",
+    "metadata": {
+        "key": "institution",
+        "value": "2"
+    }
+}
+
+# 2.2 data users
+{
+    "group_name": "group1",
+    "members": ["user_Z"]
+}
+```
+
+Note that one can add members based on metadata values, naming them directly, or as documented in the api refernce, by adding everyone to a group.
 
 ## Analyse data
 
