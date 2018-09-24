@@ -7,16 +7,15 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## Maybes
-- expiry dates on groups
+- optional expiry dates on groups - to coincide with consent constraints
 
 ## TODO
-- group_add,remove: add_all -> all_owners, and all_users
-- full review of docs, clean up rest api usage docs (move to own file)
-- write about auth requriements
+- for group_add, also provide: all_owners, and all_users
 - HTTP client tests (correctness, and configurable scalability tests)
 - make a presentation, with visual representations of the model
 
 ## IP
+- write about auth requirements
 - remove hard-coded non-generic names (e.g. tsd_backend_utv_user), check all todos
 
 ## Done

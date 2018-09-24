@@ -11,21 +11,6 @@ Given these assumptions, `pg-need-to-know` does not provide any authentication m
 
 It is also possible for applications to implement token issuing themselves, instead of using `pg-need-to-know`'s endpoint.
 
-## Tokens, roles and postgrest
-
-`pg-need-to-know` was designed to be used with `postgrest` - an application server which creates a REST API from a PostgreSQL database. `postgrest` uses JWT to integrate with authentication systems. The following claims _must_ be present in the JWT:
-
-```json
-{
-    "role": "some_role",
-    "exp": 210849818
-}
-```
-
-The `exp` field is the time when the token should expire. In practice, tokens should be short-lived. `pg-need-to-know` issues tokens which are valid for 30 minutes.
-
-The `role` claim plays a very specific role in `postgrest`: before the SQL query implied by the HTTP request is executed, `postgrest` switches into the role provided in the claim. In `pg-need-to-know`, `postgrest` is intended to connect to the DB with a role called the `authenticator`. This is a special role which has not other rights in the DB, other than the ability to connect to it, and to switch to other roles. By switching to the role provided in the JWT claim before executing the SQL query implied by the HTTP request, postgrest ensures that the DB system enforces security policies associated with that role.
-
 ## Integration
 
 The process can be represented as follows:
@@ -50,10 +35,30 @@ Secondly, the app can then POST this ID to `/rpc/token` provided by `pg-need-to-
 
 Lastly, the app can then include the JWT in the Authorization header in the following HTTP request. `postgrest` will then switch into the provided role, executing the implied SQL in the role's security context, thereby enforcing authorization. An authorized dataset will be returned in the HTTP response.
 
+## Tokens, roles and postgrest
+
+`pg-need-to-know` was designed to be used with `postgrest` - an application server which creates a REST API from a PostgreSQL database. `postgrest` uses JWT to integrate with authentication systems. The following claims _must_ be present in the JWT:
+
+```json
+{
+    "role": "some_role",
+    "exp": 210849818
+}
+```
+
+The `exp` field is the time when the token should expire. In practice, tokens should be short-lived. `pg-need-to-know` issues tokens which are valid for 30 minutes.
+
+The `role` claim plays a very specific role in `postgrest`: before the SQL query implied by the HTTP request is executed, `postgrest` switches into the role provided in the claim. In `pg-need-to-know`, `postgrest` is intended to connect to the DB with a role called the `authenticator`. This is a special role which has not other rights in the DB, other than the ability to connect to it, and to switch to other roles. By switching to the role provided in the JWT claim before executing the SQL query implied by the HTTP request, postgrest ensures that the DB system enforces security policies associated with that role.
+
 ## Establishing trust with apps
 
+To ensure that only trusted applications integrate with your instance of `pg-need-to-know` one can do two simple things:
 
+1. Run postgrest behing an nginx proxy and limit direct API requests to a specific IP or IP range
+2. Additionally, have a shared secret between the app and `pg-need-to-know`, which can be sent in a request header, and validated in a `postgrest` pre-request handler
 
-## Own implementation
+`pg-need-to-know` does not make any design decision about this either way, so it is up to the developer to decide and implement a solution.
+
+## Own REST API implementations and authentication
 
 If you wanted to implement your own token generation endpoint, you must therefore conform to the above requirements. And if you wanted to implement your own REST API, consuming `pg-need-to-know`'s SQL API, then you need to also perform DB connection and SQL queries in a similar way to `postgrest`.
