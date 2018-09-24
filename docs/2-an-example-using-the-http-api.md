@@ -217,10 +217,34 @@ Both the user-initiated group removal and data deletion will be recorded in even
 
 ## Audit information for administrators
 
-Event logs:
-- data access
-- access control
-- group removals
-- data deletions
+Administrators can get an overview of all important events that occur in the DB. They can see all data access that has taken place - which data user accessed data from which data owner, when:
+
+```bash
+GET /event_log_data_access
+Authorization: JWT-for-admin-user
+```
+
+An overview of all access control events (group creation, deletion, membership changes):
+
+```bash
+GET /event_log_access_control
+Authorization: JWT-for-admin-user
+```
+
+Which users removed themselves from groups, and when:
+
+```bash
+GET /event_log_user_group_removals
+Authorization: JWT-for-admin-user
+```
+
+Which user deleted their data, when:
+
+```bash
+GET /event_log_user_group_removals
+Authorization: JWT-for-admin-user
+```
+
+The group removal and data deletion event logs are useful to help administrators follow up by deleting downstream data artefacts which may still contain the identity of the person who deleted their data.
 
 ## Change access control
