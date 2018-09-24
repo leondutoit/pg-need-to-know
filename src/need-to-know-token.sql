@@ -76,3 +76,49 @@ $$;
 
 -- Now follows the /rpc/token endpoint for pg-need-to-know
 -- using the temaple: http://postgrest.org/en/v5.1/auth.html#jwt-from-sql
+
+create table if not exists jwt.secret_store(secret text);
+grant select on jwt.secret_store to anon;
+
+create or replace function token(id text, token_type text)
+    returns text as $$
+    declare _secret text;
+    declare _token text;
+    declare _role text;
+    declare _exp int;
+    declare _claims text;
+    declare _user_name text;
+    declare _exists_count int;
+    begin
+        assert token_type in ('owner', 'user', 'admin'),
+            'token type not recognised';
+        if token_type = 'admin' then
+            _role := 'admin_user';
+        elsif token_type in ('owner', 'user') then
+            if token_type = 'owner' then
+                _user_name := 'owner_' || id;
+            elsif token_type = 'user' then
+                _user_name := 'user_' || id;
+            end if;
+            set role authenticator;
+            set role admin_user;
+            execute format('select count(1) from user_registrations
+                            where user_name = $1') using _user_name
+                    into _exists_count;
+            set role authenticator;
+            set role anon;
+            assert (_exists_count = 1), 'user not registered';
+            if token_type = 'owner' then
+                _role := 'owner_' || id;
+            elsif token_type = 'user' then
+                _role := 'user_' || id;
+            end if;
+        end if;
+        select extract(epoch from now())::integer + 300 into _exp;
+        select secret from jwt.secret_store into _secret;
+        select '{"exp": "' || _exp || '", "role": "' || _role || '"}' into _claims;
+        select jwt.sign(_claims::json, _secret) into _token;
+        return _token;
+    end;
+$$ language plpgsql;
+grant execute on function token(text, text) to anon;

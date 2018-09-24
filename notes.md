@@ -8,6 +8,8 @@
 
 ## Maybes
 - optional expiry dates on groups - to coincide with consent constraints
+    - if compulsory, then need the ability to change the end date too
+    - and update the RLS function to check the end date
 
 ## TODO
 - for group_add, also provide: all_owners, and all_users
@@ -15,6 +17,7 @@
 - make a presentation, with visual representations of the model
 
 ## IP
+- implement /rpc/token
 - remove hard-coded non-generic names (e.g. tsd_backend_utv_user), check all todos
 
 ## Done
