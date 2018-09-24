@@ -5,7 +5,7 @@ The last example in  `1-access-control-model.md` showed how an administrator can
 
 ## Create tables
 
-Firstly the admin created tables `t1, t2, t3, t4`.
+Firstly the admin creates tables `t1, t2, t3, t4`.
 
 ```bash
 POST /rpc/table_create
