@@ -32,7 +32,7 @@ The process can be represented as follows:
 
 ```txt
 # 1. Generic user authentication
-User (credentials) -> app -> IdP + Auth Server
+User (credentials) -> app -> IdP + Auth Server (rights management)
                           <- ID
                       app -> POST /rpc/token {ID}
                           <- JWT {exp:exp, role:role}
@@ -47,4 +47,4 @@ The app will then receive a JWT with an expiry, and a role which is compatible w
 
 ## Own implementation
 
-If, you wanted to implement your own token generation endpoint, you must therefore conform to the above requirements. And if you wanted to implement your own REST API, consuming `pg-need-to-know`'s SQL API, then you need to also perform DB connection and SQL queries in a similar way to `postgrest`.
+If you wanted to implement your own token generation endpoint, you must therefore conform to the above requirements. And if you wanted to implement your own REST API, consuming `pg-need-to-know`'s SQL API, then you need to also perform DB connection and SQL queries in a similar way to `postgrest`.
