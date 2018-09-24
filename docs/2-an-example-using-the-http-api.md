@@ -188,6 +188,16 @@ Authorization: JWT-for-data-user
 
 ## Data owner actions
 
-## View audit information
+- see who is using their data
+- revoke data access
+- delete data
+
+## Audit information for administrators
+
+Event logs:
+- data access
+- access control
+- group removals
+- data deletions
 
 ## Change access control
