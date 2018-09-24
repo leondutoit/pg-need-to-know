@@ -248,3 +248,41 @@ Authorization: JWT-for-admin-user
 The group removal and data deletion event logs are useful to help administrators follow up by deleting downstream data artefacts which may still contain the identity of the person who deleted their data.
 
 ## Change access control
+
+Suppose data owner `E` deleted their data, and the consent for `group1` has expired. The administrator can now manage the access control setup by deleting data owner `E`, and `group1`.
+
+```bash
+POST /rpc/user_delete
+Authorization: JWT-for-admin-user
+
+{
+    "user_name": "E"
+}
+```
+
+First, all members should be removed from the group:
+
+```bash
+POST /rpc/group_remove_members
+Authorization: JWT-for-admin-user
+
+{
+    "group_name": "group1",
+    "remove_all": true
+}
+```
+
+Then it can be deleted:
+
+```bash
+POST /rpc/group_delete
+Authorization: JWT-for-admin-user
+
+{
+    "group_name": "group1",
+}
+```
+
+## Further reading
+
+Please refer to the references in `/api`, after reading through the rest of the docs.
