@@ -50,6 +50,10 @@ Secondly, the app can then POST this ID to `/rpc/token` provided by `pg-need-to-
 
 Lastly, the app can then include the JWT in the Authorization header in the following HTTP request. `postgrest` will then switch into the provided role, executing the implied SQL in the role's security context, thereby enforcing authorization. An authorized dataset will be returned in the HTTP response.
 
+## Establishing trust with apps
+
+
+
 ## Own implementation
 
 If you wanted to implement your own token generation endpoint, you must therefore conform to the above requirements. And if you wanted to implement your own REST API, consuming `pg-need-to-know`'s SQL API, then you need to also perform DB connection and SQL queries in a similar way to `postgrest`.

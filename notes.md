@@ -6,6 +6,9 @@
 ## Helpful
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
+## Maybes
+- expiry dates on groups
+
 ## TODO
 - group_add,remove: add_all -> all_owners, and all_users
 - full review of docs, clean up rest api usage docs (move to own file)

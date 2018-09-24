@@ -188,9 +188,32 @@ Authorization: JWT-for-data-user
 
 ## Data owner actions
 
-- see who is using their data
-- revoke data access
-- delete data
+Data owners can see who is using their data by checking event logs:
+
+```bash
+GET /event_log_data_access
+Authorization: JWT-for-data-owner
+```
+
+They can also decide to revoke access to their data from a specific group, by removing themselves from the group:
+
+```bash
+POST /rpc/user_group_remove
+Authorization: JWT-for-data-owner
+
+{
+    "group_name": "group1"
+}
+```
+
+Lastly, they can delete their data:
+
+```bash
+POST /rpc/user_delete_data
+Authorization: JWT-for-data-owner
+```
+
+Both the user-initiated group removal and data deletion will be recorded in event log tables.
 
 ## Audit information for administrators
 
