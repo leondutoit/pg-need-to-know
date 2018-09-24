@@ -2,6 +2,9 @@
 ## Function overview
 
 ```sql
+-- tokens
+token(id text, token_type text)
+
 -- table operations
 table_create(definition json, type text)
 table_describe(table_name text, table_description text)

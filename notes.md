@@ -17,7 +17,6 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- implement /rpc/token
 - remove hard-coded non-generic names (e.g. tsd_backend_utv_user), check all todos
 
 ## Done
@@ -72,3 +71,4 @@
 - make code DRYer - utility functions for common asserts (like user and groups)
 - write about the model - on MAC, three use cases - data organisation up to the admin
 - write about auth requirements
+- implement /rpc/token, document

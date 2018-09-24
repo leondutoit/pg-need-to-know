@@ -21,7 +21,7 @@ User (credentials) -> app -> IdP + Auth Server (rights management)
                           <- ID
 
 # 2. Getting an access token with an authenticated and authorized ID
-                      app -> POST /rpc/token {ID}
+                      app -> GET /rpc/token?id=id&token_type=<admin,owner,user>
                           <- JWT {exp:exp, role:role}
 
 # 3. An authenticated request

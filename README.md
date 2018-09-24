@@ -25,7 +25,7 @@ Mandatory Access Control for PostgreSQL - designed to be used as a REST API in c
 ```bash
 # run this as the DB superuser
 psql -d yourdb -1 -f src/need-to-know.sql
-
+psql -d yourdb -1 -f src/need-to-know-token.sql
 # run sql tests
 psql -d yourdb -1 -f src/testing.sql
 ```

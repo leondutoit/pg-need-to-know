@@ -6,6 +6,7 @@ For the anon role:
 HTTP Method     | URL
 ----------------|-------------------
 POST            | /rpc/user_register
+GET             | /rpc/token?id=id&token_type=<admin,owner,user>
 ```
 
 For admin_user role:
@@ -55,6 +56,11 @@ Authorization: Bearer your-jwt
 {"user_id": "12345", "type": "data_owner", "user_metadata": {"some": "info"}}
 # or
 {"user_id": "some_analyst", "type": "data_user", "user_metadata": {"some": "info"}}
+```
+
+- _After authenticating a user and authorizing their role_, get a token
+```bash
+GET /rpc/token?id=id&token_type=<admin,owner,user>
 ```
 
 ### For admins
