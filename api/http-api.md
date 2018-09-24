@@ -52,9 +52,9 @@ POST /rpc/user_register
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"user_name": "owner_12345", "type": "data_owner", "user_metadata": {"some": "info"}}
+{"user_id": "12345", "type": "data_owner", "user_metadata": {"some": "info"}}
 # or
-{"user_name": "user_some_analyst", "type": "data_user", "user_metadata": {"some": "info"}}
+{"user_id": "some_analyst", "type": "data_user", "user_metadata": {"some": "info"}}
 ```
 
 ### For admins

@@ -60,7 +60,7 @@ create or replace function test_user_create()
         set role authenticator;
         set role anon;
         -- make sure the public method also works
-        select user_register('user_project_user', 'data_user', '{"institution":"A"}'::json) into _ans;
+        select user_register('project_user', 'data_user', '{"institution":"A"}'::json) into _ans;
         set role authenticator;
         set role admin_user;
         assert (select _user_type from ntk.registered_users where _user_name = 'user_project_user') = 'data_user',
@@ -80,17 +80,12 @@ create or replace function test_user_create()
         -- check that the constraints on the public method are correctly enforced
         set role anon;
         begin
-            select user_register('jhbewf903rnk', 'data_owner', '{}'::json) into _ans;
-        exception when assert_failure then raise notice
-            'user name pattern check works - as expected';
-        end;
-        begin
             select user_register('owner_kwqfhbjhegr2478yptg3nrb093409yin42oib32409n12n03281e79821rh21or9812yr', 'data_owner', '{}'::json) into _ans;
         exception when assert_failure then raise notice
             'user length restriction check works - as expected';
         end;
         begin
-            select user_register('owner_1234', 'data_person', '{}'::json) into _ans;
+            select user_register('1234', 'data_person', '{}'::json) into _ans;
         exception when assert_failure then raise notice
             'user type check works - as expected';
         end;
@@ -135,7 +130,7 @@ create or replace function test_table_group_access_management()
                             'mac') into _ans;
         select group_create('test_group', '{"description": "my test group"}'::json) into _ans;
         set role anon;
-        select user_register('owner_1', 'data_owner', '{}'::json) into _ans;
+        select user_register('1', 'data_owner', '{}'::json) into _ans;
         set role authenticator;
         set role owner_1;
         insert into people3 (name,age) values ('niel', 9);
@@ -144,7 +139,7 @@ create or replace function test_table_group_access_management()
             'default select does not work for owner_1 on people3 - data_owners_group permission is not working';
         set role authenticator;
         set role anon;
-        select user_register('user_1', 'data_user', '{}'::json) into _ans;
+        select user_register('1', 'data_user', '{}'::json) into _ans;
         set role admin_user;
         select group_add_members('test_group', '{"memberships": ["owner_1", "user_1"]}'::json, null, null)
                 into _ans;
@@ -239,19 +234,19 @@ create or replace function test_group_add_members()
         select group_add_members('project_group', '{"memberships":
                 ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
         assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
-            'adding members to groups is broken';
+            'adding members to groups individually is broken';
         revoke project_group from owner_gustav;
         revoke project_group from owner_hannah;
         revoke project_group from user_project_user;
         select group_add_members('project_group', null, '{"key": "institution", "value": "A"}', null) into _ans;
         assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
-            'adding members to groups is broken';
+            'adding members to groups using metadata is broken';
         revoke project_group from owner_gustav;
         revoke project_group from owner_hannah;
         revoke project_group from user_project_user;
         select group_add_members('project_group', null, null, true) into _ans;
         assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 4,
-            'adding members to groups is broken';
+            'adding members to groups using all = true, is broken';
         revoke project_group from owner_faye; -- we need this in a later test
         return true;
     end;

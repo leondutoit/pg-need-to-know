@@ -426,25 +426,23 @@ grant insert on ntk.data_owners to public;
 
 
 drop function if exists user_register(text, text, json);
-create or replace function user_register(user_name text, user_type text, user_metadata json)
+create or replace function user_register(user_id text, user_type text, user_metadata json)
     returns text as $$
     declare _ans text;
+    declare trusted_user_name text;
     begin
-        assert (select bool_or(user_name like arr_element||'%')
-                from unnest(ARRAY['owner_','user_']) x(arr_element)),
-            'user name must start with either "owner_" to indicate that a data owner is being registered or "user_" to indicate that a data user is being registered';
-        assert (select length(user_name) <= 63),
-            'the maximum allowed user name length is 63 characters';
+        assert (select length(user_id) <= 57),
+            'the maximum allowed user name length is 57 characters';
         assert (select bool_or(user_type ilike arr_element||'%')
                 from unnest(ARRAY['data_owner','data_user']) x(arr_element)),
             'user_type must be either "data_owner" or "data_user"';
-        if user_name like 'owner_%' then
-            assert (user_type = 'data_owner'), 'inconsistency between user name and type';
-        elsif user_name like 'user_%' then
-            assert (user_type = 'data_user'), 'inconsistency between user name and type';
+        if user_type = 'data_owner' then
+            trusted_user_name := 'owner_' || user_id;
+        elsif user_type = 'data_user' then
+            trusted_user_name := 'user_' || user_id;
         end if;
         set role admin_user;
-        select ntk.user_create(user_name, user_type, user_metadata) into _ans;
+        select ntk.user_create(trusted_user_name, user_type, user_metadata) into _ans;
         set role authenticator;
         set role anon;
         return 'user created';
@@ -460,6 +458,9 @@ create or replace function ntk.user_create(user_name text, user_type text, user_
     declare trusted_user_name text;
     declare trusted_user_type text;
     begin
+        assert (select bool_or(user_name like arr_element||'%')
+                from unnest(ARRAY['owner_','user_']) x(arr_element)),
+            'user name must start with either "owner_" or "user_"';
         trusted_user_name := quote_ident(user_name);
         trusted_user_type := quote_literal(user_type);
         execute format('create role %I', trusted_user_name);
@@ -598,6 +599,7 @@ create or replace function group_add_members(group_name text,
                 execute format('grant %I to %I', trusted_group_name, trusted_user_name);
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, trusted_user_name;
+                raise notice 'added %', trusted_user_name;
             end loop;
             return 'added members to groups';
         else

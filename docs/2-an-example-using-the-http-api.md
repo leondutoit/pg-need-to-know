@@ -41,7 +41,7 @@ Authorization: JWT-for-anon-user
 
 # for data owners
 {
-    "user_name": "owner_A",
+    "user_id": "A",
     "user_type": "data_owner",
     "user_metadata": {
         "institution": 1,
@@ -51,7 +51,7 @@ Authorization: JWT-for-anon-user
 
 # for data users
 {
-    "user_name": "user_X",
+    "user_id": "X",
     "user_type": "data_user",
     "user_metadata": {
         "institution_consent": 1
@@ -59,7 +59,7 @@ Authorization: JWT-for-anon-user
 }
 ```
 
-Notice that data owners' user names _must_ be prefixed with `owner_` and data users' user names _must_ be prefixed with `user_`. This is to allow two things: 1) that the same person, with some external ID, might be able to register as both an owner and a user, and 2) to ensure that the names are consistent with PostgreSQL's requirements for internal role names.
+Internally, the `user_id` is appened to either `owner_` or `user_` and then a PostgreSQL role is created using that name. This means that even though registering a user with an ID of `A`, listing users by doing `GET /user_registrations`, the user name that will be returned will be `owner_A`.
 
 Now recall that we need to set up the following groups:
 
