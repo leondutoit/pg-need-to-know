@@ -26,8 +26,8 @@ POST            | /rpc/user_delete
 GET             | /table_overview
 GET             | /user_registrations
 GET             | /groups
-GET             | /user_group_removals
-GET             | /user_data_deletions
+GET             | /event_log_user_group_removals
+GET             | /event_log_user_data_deletions
 GET             | /event_log_data_access
 GET             | /event_log_access_control
 ```

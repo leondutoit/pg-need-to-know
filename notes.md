@@ -15,7 +15,6 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-
 - remove hard-coded non-generic names (e.g. tsd_backend_utv_user), check all todos
 
 ## Done
