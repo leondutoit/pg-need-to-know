@@ -2,6 +2,6 @@
 ## Create a REST API using postgrest
 
 - Download and install [postgrest](http://postgrest.org/)
-- Create a [config file](http://postgrest.org/en/v5.0/install.html#configuration)
+- Create a [config file](http://postgrest.org/en/v5.0/install.html#configuration); you should connect to the DB as the `authenticator` and set `db-anon-role` to `anon`
 - Run `postgrest your-config-file`
-- Using this API pre-supposes that you have an Identity Provider and an Authentication Server which can issue JSON Web Tokens according to the specifications of `pg-need-to-know` (read more about these in `auth-requirements.md`)
+- Set up nginx or apache for TLS, IP-level access control, URL rewriting, rate limiting and other needs
