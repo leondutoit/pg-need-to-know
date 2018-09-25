@@ -24,10 +24,8 @@ Mandatory Access Control for PostgreSQL - designed to be used as a REST API in c
 
 ```bash
 ./ntk.sh --guide
-# create the DB schema
 ./ntk.sh --setup
-# run sql tests
-./ntk --sqltest
+./ntk.sh --sqltest
 ```
 
 ## Docs

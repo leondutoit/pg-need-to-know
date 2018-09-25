@@ -12,11 +12,10 @@
     - and update the RLS function to check the end date
 
 ## TODO
-- HTTP client tests (correctness, and configurable scalability tests)
 - make a presentation, with visual representations of the model
 
 ## IP
-- remove hard-coded non-generic names (e.g. tsd_backend_utv_user), check all todos
+- HTTP client tests (correctness, and configurable scalability tests)
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -72,3 +71,4 @@
 - write about auth requirements
 - implement /rpc/token, document
 - for group_add, also provide: all_owners, and all_users
+- remove hard-coded non-generic names check all todos

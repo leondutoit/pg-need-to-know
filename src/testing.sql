@@ -1,4 +1,7 @@
-set role tsd_backend_utv_user;
+
+\set db_owner `echo "$DBOWNER"`
+
+set role :db_owner;
 
 create or replace function test_table_create()
     returns boolean as $$
@@ -104,7 +107,7 @@ create or replace function test_group_create()
             'problem recording user defined group creation in accounting table';
         -- check role exists
         set role authenticator;
-        set role tsd_backend_utv_user; -- db owner, get from variable
+        --set role :db_owner; -- db owner, get from variable
         set role project_group; -- look up in system catalogues instead (when authenticator is no longer a member of db owner, which it should not be)
         set role authenticator;
         return true;
@@ -673,8 +676,6 @@ create or replace function teardown()
         set role admin_user;
         execute 'delete from event_log_user_data_deletions';
         execute 'delete from ntk.user_initiated_group_removals';
-        set role tsd_backend_utv_user;
-        delete from event_log_data_access where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah');
         set role authenticator;
         return true;
     end;
@@ -715,7 +716,8 @@ $$ language plpgsql;
 \d
 \du
 select run_tests();
-set role tsd_backend_utv_user;
+set role :db_owner;
+delete from event_log_data_access where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah');
 drop function test_table_create();
 drop function test_table_metadata_features();
 drop function test_user_create();

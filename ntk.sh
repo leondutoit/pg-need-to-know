@@ -17,6 +17,8 @@ _guide="\
     export DBOWNER=db-owner-user-name
     export DBNAME=db-name
 
+    Create a .pgpass file so you can connect to the DB.
+
     ./ntk.sh OPTIONS
 
     Options

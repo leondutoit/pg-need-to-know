@@ -19,10 +19,10 @@ For plpgsql functions the following conventions for code are adopted
 
 */
 
--- as the superuser
+\set db_owner `echo "$DBOWNER"`
 
 create role authenticator noinherit login password 'replaceme';
-grant authenticator to tsd_backend_utv_user; -- TODO remove
+grant authenticator to :db_owner;
 create role admin_user createrole;
 grant admin_user to authenticator;
 create role anon;
@@ -30,7 +30,6 @@ grant anon to authenticator;
 create role data_owners_group;
 
 
--- internal schema
 create schema if not exists ntk;
 grant usage on schema ntk to public;
 grant create on schema ntk to admin_user; -- so execute can be granted/revoked when users are created/deleted
@@ -43,8 +42,8 @@ select _group, _role from
         (select roleid, member from pg_auth_members)b on a.oid = b.member)c
     join (select rolname as _group, oid from pg_authid)d on c.roleid = d.oid;
 alter view ntk.group_memberships owner to admin_user;
-grant select on pg_authid to tsd_backend_utv_user, admin_user;
-grant select on ntk.group_memberships to tsd_backend_utv_user, admin_user;
+grant select on pg_authid to :db_owner, admin_user;
+grant select on ntk.group_memberships to :db_owner, admin_user;
 
 
 drop table if exists event_log_data_access;
@@ -57,7 +56,7 @@ grant insert, select on event_log_data_access to public;
 alter table event_log_data_access enable row level security;
 alter table event_log_data_access owner to admin_user;
 revoke delete on event_log_data_access from admin_user;
-grant delete on event_log_data_access to tsd_backend_utv_user;
+grant delete on event_log_data_access to :db_owner;
 create policy select_for_data_owners on event_log_data_access for select using (data_owner = current_user);
 create policy insert_policy_for_public on event_log_data_access for insert with check (true);
 
