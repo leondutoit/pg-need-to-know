@@ -82,7 +82,7 @@ grant select on jwt.secret_store to anon;
 
 
 drop function if exists token(text, text);
-create or replace function token(id text, token_type text)
+create or replace function token(id text default null, token_type text default null)
     returns json as $$
     declare _secret text;
     declare _token text;

@@ -22,6 +22,28 @@ class NtkClient(object):
         self.url = 'http://localhost:3000'
 
 
+    def _http_get(endpoint, headers=None):
+        url = self.url + endpoint
+        if not headers:
+            headers = None
+        response = requests.get(url, headers=headers)
+        return response
+
+
+    def _http_post(endpoint, headers, data=None):
+        url = self.url + endpoint
+        response = requests.post(url, headers=headers, data=data)
+        return response
+
+
+    def _token_for(user_id=None, token_type=None):
+        if user_id:
+            endpoint = '/rpc/token?id=' + user_id + '&token_type=' + token_type
+        elif admin:
+            endpoint = '/rpc/token?token_type=' + token_type
+        return _http_get(endpoint)
+
+
     def admin_table_create(self, table_def):
         pass
 
