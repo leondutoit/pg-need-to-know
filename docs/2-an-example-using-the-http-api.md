@@ -158,6 +158,20 @@ Authorization: JWT-for-admin-user
 
 Note the different methods for adding group members. A complete reference can be found in the api docs.
 
+Finally, to ensure access the groups must be granted access to the tables:
+
+```bash
+POST /rpc/table_group_access_grant
+Authorization: JWT-for-admin-user
+
+{
+    "table_name": "t1",
+    "group_name": "group1"
+}
+```
+
+And similar for the rest of the tables and groups.
+
 ## Analyse data
 
 Data users `X, Y` can now select data from tables `t1, t2, t3` and the administrator will know that they can only retrieve data from owners `A, B, C, D`, e.g.:
