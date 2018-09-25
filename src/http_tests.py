@@ -44,6 +44,15 @@ class PgNeedToKnowClient(object):
 
     # helper functions
 
+    def _assert_keys_present(self, required_keys, existing_keys):
+        try:
+            for rk in required_keys:
+                assert rk in existing_keys
+        except AssertionError:
+            # make own exception
+            raise Exception('Missing required key in data')
+
+
     def _http_get(self, endpoint, headers=None):
         url = self.url + endpoint
         if not headers:
@@ -96,6 +105,8 @@ class PgNeedToKnowClient(object):
     # user functions
 
     def user_register(self, endpoint, data):
+        self._assert_keys_present(['user_id', 'user_type', 'user_metadata'], data.keys())
+        assert data['user_type'] in ['data_owner', 'data_user']
         headers = {'Content-Type': 'application/json'}
         return self._http_post(endpoint, headers, payload=data)
 
