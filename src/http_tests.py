@@ -74,17 +74,12 @@ class PgNeedToKnowClient(object):
 
     # user functions
 
-    def user_register(self, user_id, user_metadata=None, owner=False, user=False):
+    def user_register(self, user_id, user_type, user_metadata):
         endpoint = '/rpc/user_register'
         headers = {'Content-Type': 'application/json'}
-        if owner:
-            data = {'user_id': user_id, 'user_type': 'data_owner'}
-        elif user:
-            data = {'user_id': user_id, 'user_type': 'data_user'}
-        if user_metadata:
-            data['user_metadata'] = user_metadata
-        else:
-            data['user_metadata'] = {}
+        data = {'user_id': user_id,
+                'user_type': user_type,
+                'user_metadata': user_metadata}
         return self._http_post(endpoint, headers, payload=data)
 
 
@@ -206,9 +201,9 @@ class TestNtkHttpApi(unittest.TestCase):
 
 
     def test_A_user_register(self):
-        resp1 = self.ntkc.user_register('1', user_metadata={'institution': 'A'}, owner=True)
+        resp1 = self.ntkc.user_register('1', 'data_owner', {'institution': 'A'})
         self.assertEqual(resp1.status_code, 200)
-        resp2 = self.ntkc.user_register('1', user_metadata={'institution': 'A'}, user=True)
+        resp2 = self.ntkc.user_register('1', 'data_user', {'institution': 'A'})
         self.assertEqual(resp2.status_code, 200)
 
 
