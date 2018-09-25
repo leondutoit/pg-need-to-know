@@ -8,7 +8,7 @@ token(id text, token_type text)
 -- table operations
 table_create(definition json, type text)
 table_describe(table_name text, table_description text)
-table_describe_columns(table_name text, columns_descriptions json)
+table_describe_columns(table_name text, column_descriptions json)
 table_metadata(table_name text)
 table_group_access_grant(table_name text, group_name text)
 table_group_access_revoke(table_name text, group_name text)
@@ -23,7 +23,7 @@ user_delete(user_name text)
 -- group operations
 group_create(group_name text, group_metadata json)
 group_add_members(group_name text, memberships json, metadata json, add_all boolean, add_all_owners boolean, add_all_users boolean)
-group_list_members(user_name text)
+group_list_members(group_name text)
 group_remove_members(group_name text, memberships json, metadata json, remove_all boolean)
 group_delete(group_name text)
 ```
