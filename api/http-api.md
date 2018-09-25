@@ -143,6 +143,14 @@ Authorization: Bearer your-jwt
 # 3. add all existing users to a group
 {"group_name": "analysis1_group",
  "add_all": true}
+
+# 4. add all existing data owners to a group
+{"group_name": "analysis1_group",
+ "add_all_owners": true}
+
+# 5. add all existing data users to a group
+{"group_name": "analysis1_group",
+ "add_all_users": true}
 ```
 
 - List all members in a specific group
