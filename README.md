@@ -20,14 +20,14 @@ Mandatory Access Control for PostgreSQL - designed to be used as a REST API in c
 - Data owners can delete all their data at any time - these deletions are logged
 - All data access by data users is logged: which data user successfully requested data about which data owner, and when - data owners can request these logs about themselves, while administrators can see all data access logs
 
-## Creating the DB schema
+## Setup
 
 ```bash
-# run this as the DB superuser
-psql -d yourdb -1 -f src/need-to-know.sql
-psql -d yourdb -1 -f src/need-to-know-token.sql
+./ntk.sh --guide
+# create the DB schema
+./ntk.sh --setup
 # run sql tests
-psql -d yourdb -1 -f src/testing.sql
+./ntk --sqltest
 ```
 
 ## Docs
