@@ -7,16 +7,16 @@
 - https://www.postgresql.org/docs/9.6/static/errcodes-appendix.html
 
 ## Maybes
-- optional expiry dates on groups - to coincide with consent constraints
+- expiry dates on groups - to coincide with consent constraints
     - if compulsory, then need the ability to change the end date too
     - and update the RLS function to check the end date
 
 ## TODO
-- for group_add, also provide: all_owners, and all_users
 - HTTP client tests (correctness, and configurable scalability tests)
 - make a presentation, with visual representations of the model
 
 ## IP
+- for group_add, also provide: all_owners, and all_users
 - remove hard-coded non-generic names (e.g. tsd_backend_utv_user), check all todos
 
 ## Done

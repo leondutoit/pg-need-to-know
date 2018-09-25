@@ -555,11 +555,13 @@ create or replace view table_overview as
 alter view table_overview owner to admin_user;
 
 
-drop function if exists group_add_members(text, json, json, boolean);
+drop function if exists group_add_members(text, json, json, boolean, boolean, boolean);
 create or replace function group_add_members(group_name text,
                                              members json default null,
                                              metadata json default null,
-                                             add_all boolean default null)
+                                             add_all boolean default null,
+                                             add_all_owners boolean default null,
+                                             add_all_users boolean default null)
     returns text as $$
     declare trusted_num_params int;
     declare untrusted_members json;
@@ -596,6 +598,24 @@ create or replace function group_add_members(group_name text,
             return 'added members to groups';
         elsif add_all = true then
             for trusted_user_name in select user_name from user_registrations loop
+                execute format('grant %I to %I', trusted_group_name, trusted_user_name);
+                execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                    using 'group_member_add', trusted_group_name, trusted_user_name;
+                raise notice 'added %', trusted_user_name;
+            end loop;
+            return 'added members to groups';
+        elsif add_all_owners = true then
+            for trusted_user_name in select user_name from user_registrations
+                                     where user_type = 'data_owner' loop
+                execute format('grant %I to %I', trusted_group_name, trusted_user_name);
+                execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                    using 'group_member_add', trusted_group_name, trusted_user_name;
+                raise notice 'added %', trusted_user_name;
+            end loop;
+            return 'added members to groups';
+        elsif add_all_users = true then
+            for trusted_user_name in select user_name from user_registrations
+                                     where user_type = 'data_user' loop
                 execute format('grant %I to %I', trusted_group_name, trusted_user_name);
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, trusted_user_name;
