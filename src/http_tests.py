@@ -60,6 +60,16 @@ class PgNeedToKnowClient(object):
         return requests.get(url, headers=headers)
 
 
+    def _http_post_unauthenticated(self, endpoint, payload=None):
+        return self._http_post(endpoint, {'Content-Type': 'application/json'},
+                               payload)
+
+
+    def _http_post_authenticated(self, endpoint, payload=None, token=None):
+        headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token}
+        return self._http_post(endpoint, headers, payload)
+
+
     def _http_post(self, endpoint, headers, payload=None):
         url = self.url + endpoint
         if payload:
@@ -107,8 +117,7 @@ class PgNeedToKnowClient(object):
     def user_register(self, endpoint, data):
         self._assert_keys_present(['user_id', 'user_type', 'user_metadata'], data.keys())
         assert data['user_type'] in ['data_owner', 'data_user']
-        headers = {'Content-Type': 'application/json'}
-        return self._http_post(endpoint, headers, payload=data)
+        return self._http_post_unauthenticated(endpoint, payload=data)
 
 
     def user_group_remove(self, group_name):
@@ -125,10 +134,7 @@ class PgNeedToKnowClient(object):
 
     def user_delete(self, endpoint, data):
         token = self.token(token_type='admin')
-        return self._http_post(endpoint,
-                               headers={'Content-Type': 'application/json',
-                                        'Authorization': 'Bearer ' + token},
-                               payload=data)
+        return self._http_post_authenticated(endpoint, payload=data, token=token)
 
     # group functions
 
