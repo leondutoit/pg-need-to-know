@@ -156,7 +156,7 @@ Authorization: JWT-for-admin-user
 }
 ```
 
-Note that one can add members based on metadata values, naming them directly, or as documented in the api refernce, by adding everyone to a group.
+Note the different methods for adding group members. A complete reference can be found in the api docs.
 
 ## Analyse data
 
