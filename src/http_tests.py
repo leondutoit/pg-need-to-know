@@ -20,8 +20,29 @@ class PgNeedToKnowClient(object):
 
 
     def __init__(self):
+        # TODO: move these out
+        # then the client user can configure the endpoints
+        # however they want, pass in the spec, and call ahead
+        # TODO: decide if want to pass dicts or json
+        # dict will require deserialising and serialising data
+        # _might_ be useful to deserialise if we want data
+        # validation in this client
         self.url = 'http://localhost:3000'
+        self.api_endpoints = {
+            'user_register': '/rpc/user_register',
+            'user_delete': '/rpc/user_delete'
+        }
 
+
+    def call_api(self, api_endpoint, data):
+        funcs = {
+            self.api_endpoints['user_register']: self.user_register,
+            self.api_endpoints['user_delete']: self.user_delete
+        }
+        func = funcs[api_endpoint]
+        return func(api_endpoint, data)
+
+    # helper functions
 
     def _http_get(self, endpoint, headers=None):
         url = self.url + endpoint
@@ -74,12 +95,8 @@ class PgNeedToKnowClient(object):
 
     # user functions
 
-    def user_register(self, user_id, user_type, user_metadata):
-        endpoint = '/rpc/user_register'
+    def user_register(self, endpoint, data):
         headers = {'Content-Type': 'application/json'}
-        data = {'user_id': user_id,
-                'user_type': user_type,
-                'user_metadata': user_metadata}
         return self._http_post(endpoint, headers, payload=data)
 
 
@@ -201,9 +218,11 @@ class TestNtkHttpApi(unittest.TestCase):
 
 
     def test_A_user_register(self):
-        resp1 = self.ntkc.user_register('1', 'data_owner', {'institution': 'A'})
+        owner_data = {'user_id': '1', 'user_type': 'data_owner', 'user_metadata': {}}
+        resp1 = self.ntkc.call_api('/rpc/user_register', owner_data)
         self.assertEqual(resp1.status_code, 200)
-        resp2 = self.ntkc.user_register('1', 'data_user', {'institution': 'A'})
+        user_data = {'user_id': '1', 'user_type': 'data_user', 'user_metadata': {}}
+        resp2 = self.ntkc.call_api('/rpc/user_register', user_data)
         self.assertEqual(resp2.status_code, 200)
 
 
