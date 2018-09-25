@@ -123,12 +123,12 @@ class PgNeedToKnowClient(object):
         pass
 
 
-    def user_delete(self, user_name):
+    def user_delete(self, endpoint, data):
         token = self.token(token_type='admin')
-        return self._http_post('/rpc/user_delete',
+        return self._http_post(endpoint,
                                headers={'Content-Type': 'application/json',
                                         'Authorization': 'Bearer ' + token},
-                               payload={'user_name': user_name})
+                               payload=data)
 
     # group functions
 
@@ -238,9 +238,9 @@ class TestNtkHttpApi(unittest.TestCase):
 
 
     def test_Z_user_delete(self):
-        resp1 = self.ntkc.user_delete('owner_1')
+        resp1 = self.ntkc.call_api('/rpc/user_delete', {'user_name': 'owner_1'})
         self.assertEqual(resp1.status_code, 200)
-        resp2 = self.ntkc.user_delete('user_1')
+        resp2 = self.ntkc.call_api('/rpc/user_delete', {'user_name': 'user_1'})
         self.assertEqual(resp2.status_code, 200)
 
 
