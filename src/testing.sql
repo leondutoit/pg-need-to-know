@@ -247,17 +247,17 @@ create or replace function test_group_add_members()
         select group_add_members('project_group', null, null, true) into _ans;
         assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 4,
             'adding members to groups using all = true, is broken';
-        -- clean out group
         revoke project_group from owner_faye;
         revoke project_group from owner_gustav;
         revoke project_group from owner_hannah;
         revoke project_group from user_project_user;
-        -- set up for next round of tests
         select group_add_members('project_group', null, null, null, true, null) into _ans;
         assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
             'adding members to groups using add_all_owners = true, is broken';
+        select group_add_members('project_group', null, null, null, null, true) into _ans;
+        assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 4,
+            'adding members to groups using add_all_users = true, is broken';
         revoke project_group from owner_faye;
-        grant project_group to user_project_user;
         return true;
     end;
 $$ language plpgsql;
