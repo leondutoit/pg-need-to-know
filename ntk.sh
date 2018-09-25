@@ -2,7 +2,7 @@
 
 if [ $# -lt 1 ]; then
     echo "Missing arguments, exiting"
-    echo "For help do: ./ntk.sh --guide for help"
+    echo "For help do: ./ntk.sh --guide"
     exit 1
 fi
 
@@ -34,7 +34,7 @@ setup() {
 }
 
 sqltest() {
-    psql -U $SUPERUSER -d $DBNAME -f ./src/testing.sql
+    psql -U $SUPERUSER -d $DBNAME -1 -f ./src/testing.sql
 }
 
 while (( "$#" )); do
