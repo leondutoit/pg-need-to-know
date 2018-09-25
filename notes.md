@@ -72,3 +72,4 @@
 - implement /rpc/token, document
 - for group_add, also provide: all_owners, and all_users
 - remove hard-coded non-generic names check all todos
+- fix return type in /rpc/token

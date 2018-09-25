@@ -80,8 +80,10 @@ $$;
 create table if not exists jwt.secret_store(secret text);
 grant select on jwt.secret_store to anon;
 
+
+drop function if exists token(text, text);
 create or replace function token(id text, token_type text)
-    returns text as $$
+    returns json as $$
     declare _secret text;
     declare _token text;
     declare _role text;
@@ -89,6 +91,7 @@ create or replace function token(id text, token_type text)
     declare _claims text;
     declare _user_name text;
     declare _exists_count int;
+    declare _out json;
     begin
         assert token_type in ('owner', 'user', 'admin'),
             'token type not recognised';
@@ -118,7 +121,8 @@ create or replace function token(id text, token_type text)
         select secret from jwt.secret_store into _secret;
         select '{"exp": "' || _exp || '", "role": "' || _role || '"}' into _claims;
         select jwt.sign(_claims::json, _secret) into _token;
-        return _token;
+        select '{"token": "'|| _token || '"}' into _out;
+        return _out;
     end;
 $$ language plpgsql;
 grant execute on function token(text, text) to anon;
