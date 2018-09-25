@@ -119,7 +119,7 @@ create or replace function token(id text default null, token_type text default n
         end if;
         select extract(epoch from now())::integer + 1800 into _exp;
         select secret from jwt.secret_store into _secret;
-        select '{"exp": "' || _exp || '", "role": "' || _role || '"}' into _claims;
+        select '{"exp": ' || _exp || ', "role": "' || _role || '"}' into _claims;
         select jwt.sign(_claims::json, _secret) into _token;
         select '{"token": "'|| _token || '"}' into _out;
         return _out;

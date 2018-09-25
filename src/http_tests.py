@@ -41,9 +41,10 @@ class NtkClient(object):
     def _token_for(self, user_id=None, token_type=None):
         if user_id:
             endpoint = '/rpc/token?id=' + user_id + '&token_type=' + token_type
-        elif admin:
+        else:
             endpoint = '/rpc/token?token_type=' + token_type
-        return self._http_get(endpoint)
+        resp = self._http_get(endpoint)
+        return json.loads(resp.text)['token']
 
 
     def admin_table_create(self, table_def):
@@ -125,7 +126,11 @@ class NtkClient(object):
 
 
     def admin_user_delete(self, user_name):
-        pass
+        token = self._token_for(token_type='admin')
+        return self._http_post('/rpc/user_delete',
+                               headers={'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + token},
+                               payload={'user_name': user_name})
 
 
     def admin_check_access_control_logs(self):
@@ -154,11 +159,22 @@ class TestNtkHttpApi(unittest.TestCase):
         pass
 
 
+    def register_many(n, owner=False, user=False):
+        pass
+
+
     def test_A_user_register(self):
         resp1 = self.ntkc.anon_register('1', user_metadata={'institution': 'A'}, owner=True)
-        self.assertTrue(resp1.status_code, 200)
+        self.assertEqual(resp1.status_code, 200)
         resp2 = self.ntkc.anon_register('1', user_metadata={'institution': 'A'}, user=True)
-        self.assertTrue(resp2.status_code, 200)
+        self.assertEqual(resp2.status_code, 200)
+
+
+    def test_Z_user_delete(self):
+        resp1 = self.ntkc.admin_user_delete('owner_1')
+        self.assertEqual(resp1.status_code, 200)
+        resp2 = self.ntkc.admin_user_delete('user_1')
+        self.assertEqual(resp2.status_code, 200)
 
 
 def main():
@@ -168,7 +184,7 @@ def main():
         return
     runner = unittest.TextTestRunner()
     suite = []
-    correctness_tests = ['test_A_user_register']
+    correctness_tests = ['test_A_user_register', 'test_Z_user_delete']
     scalability_tests = []
     correctness_tests.sort()
     if argv[1] == '--correctness':
