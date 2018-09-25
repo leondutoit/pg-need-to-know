@@ -34,13 +34,23 @@ class PgNeedToKnowClient(object):
         }
 
 
-    def call_api(self, api_endpoint, data):
+    def call_api(self, api_endpoint=None, data=None, identity=None, user_type=None):
         funcs = {
             self.api_endpoints['user_register']: self.user_register,
             self.api_endpoints['user_delete']: self.user_delete
         }
+        if user_type == 'anon':
+            token = None
+        elif user_type == 'admin':
+            token = self.token(token_type='admin')
+        elif user_type == 'owner':
+            token = self.token(user_id=identity, token_type='owner')
+        elif user_type == 'user':
+            token = self.token(user_id=identity, token_type='user')
+        else:
+            raise Exception('Unknown user type, cannot proceed')
         func = funcs[api_endpoint]
-        return func(api_endpoint, data)
+        return func(api_endpoint, data, token)
 
     # helper functions
 
@@ -114,7 +124,7 @@ class PgNeedToKnowClient(object):
 
     # user functions
 
-    def user_register(self, endpoint, data):
+    def user_register(self, endpoint, data, token):
         self._assert_keys_present(['user_id', 'user_type', 'user_metadata'], data.keys())
         assert data['user_type'] in ['data_owner', 'data_user']
         return self._http_post_unauthenticated(endpoint, payload=data)
@@ -132,8 +142,7 @@ class PgNeedToKnowClient(object):
         pass
 
 
-    def user_delete(self, endpoint, data):
-        token = self.token(token_type='admin')
+    def user_delete(self, endpoint, data, token):
         return self._http_post_authenticated(endpoint, payload=data, token=token)
 
     # group functions
@@ -236,17 +245,25 @@ class TestNtkHttpApi(unittest.TestCase):
 
     def test_A_user_register(self):
         owner_data = {'user_id': '1', 'user_type': 'data_owner', 'user_metadata': {}}
-        resp1 = self.ntkc.call_api('/rpc/user_register', owner_data)
+        resp1 = self.ntkc.call_api(api_endpoint='/rpc/user_register',
+                                   data=owner_data,
+                                   user_type='anon')
         self.assertEqual(resp1.status_code, 200)
         user_data = {'user_id': '1', 'user_type': 'data_user', 'user_metadata': {}}
-        resp2 = self.ntkc.call_api('/rpc/user_register', user_data)
+        resp2 = self.ntkc.call_api(api_endpoint='/rpc/user_register',
+                                   data=user_data,
+                                   user_type='anon')
         self.assertEqual(resp2.status_code, 200)
 
 
     def test_Z_user_delete(self):
-        resp1 = self.ntkc.call_api('/rpc/user_delete', {'user_name': 'owner_1'})
+        resp1 = self.ntkc.call_api(api_endpoint='/rpc/user_delete',
+                                   data={'user_name': 'owner_1'},
+                                   user_type='admin')
         self.assertEqual(resp1.status_code, 200)
-        resp2 = self.ntkc.call_api('/rpc/user_delete', {'user_name': 'user_1'})
+        resp2 = self.ntkc.call_api(api_endpoint='/rpc/user_delete',
+                                   data={'user_name': 'user_1'},
+                                   user_type='admin')
         self.assertEqual(resp2.status_code, 200)
 
 
