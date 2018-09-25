@@ -2,6 +2,7 @@
 """Testing pg-need-to-know via postgrest."""
 
 from sys import argv
+import json
 import unittest
 
 import requests
@@ -22,34 +23,45 @@ class NtkClient(object):
         self.url = 'http://localhost:3000'
 
 
-    def _http_get(endpoint, headers=None):
+    def _http_get(self, endpoint, headers=None):
         url = self.url + endpoint
         if not headers:
             headers = None
-        response = requests.get(url, headers=headers)
-        return response
+        return requests.get(url, headers=headers)
 
 
-    def _http_post(endpoint, headers, data=None):
+    def _http_post(self, endpoint, headers, payload=None):
         url = self.url + endpoint
-        response = requests.post(url, headers=headers, data=data)
-        return response
+        if payload:
+            return requests.post(url, headers=headers, data=json.dumps(payload))
+        else:
+            return requests.post(url, headers=headers)
 
 
-    def _token_for(user_id=None, token_type=None):
+    def _token_for(self, user_id=None, token_type=None):
         if user_id:
             endpoint = '/rpc/token?id=' + user_id + '&token_type=' + token_type
         elif admin:
             endpoint = '/rpc/token?token_type=' + token_type
-        return _http_get(endpoint)
+        return self._http_get(endpoint)
 
 
     def admin_table_create(self, table_def):
         pass
 
 
-    def anon_register(self, user_id, owner=False, user=False):
-        pass
+    def anon_register(self, user_id, user_metadata=None, owner=False, user=False):
+        endpoint = '/rpc/user_register'
+        headers = {'Content-Type': 'application/json'}
+        if owner:
+            data = {'user_id': user_id, 'user_type': 'data_owner'}
+        elif user:
+            data = {'user_id': user_id, 'user_type': 'data_user'}
+        if user_metadata:
+            data['user_metadata'] = user_metadata
+        else:
+            data['user_metadata'] = {}
+        return self._http_post(endpoint, headers, payload=data)
 
 
     def owner_submit_data(self, table, data):
@@ -76,55 +88,55 @@ class NtkClient(object):
         pass
 
 
-    def admin_table_group_access_grant(table, group_name):
+    def admin_table_group_access_grant(self, table, group_name):
         pass
 
 
-    def user_get_data(table):
+    def user_get_data(self, table):
         pass
 
 
-    def admin_table_group_access_revoke(table, group_name):
+    def admin_table_group_access_revoke(self, table, group_name):
         pass
 
 
-    def owner_check_group_memberships():
+    def owner_check_group_memberships(self):
         pass
 
 
-    def owner_group_remove(group_name):
+    def owner_group_remove(self, group_name):
         pass
 
 
-    def admin_group_remove_members_all(group_name):
+    def admin_group_remove_members_all(self, group_name):
         pass
 
 
-    def admin_group_delete(group_name):
+    def admin_group_delete(self, group_name):
         pass
 
 
-    def check_access_logs(owner=False, admin=False):
+    def check_access_logs(self, owner=False, admin=False):
         pass
 
 
-    def owner_delete_own_data():
+    def owner_delete_own_data(self):
         pass
 
 
-    def admin_user_delete(user_name):
+    def admin_user_delete(self, user_name):
         pass
 
 
-    def admin_check_access_control_logs():
+    def admin_check_access_control_logs(self):
         pass
 
 
-    def admin_check_user_group_removal_logs():
+    def admin_check_user_group_removal_logs(self):
         pass
 
 
-    def admin_check_user_initiated_data_deletion_logs():
+    def admin_check_user_initiated_data_deletion_logs(self):
         pass
 
 
@@ -138,11 +150,15 @@ class TestNtkHttpApi(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # clean up all DB state
         pass
 
 
-    def test1(self):
-        assert True
+    def test_A_user_register(self):
+        resp1 = self.ntkc.anon_register('1', user_metadata={'institution': 'A'}, owner=True)
+        self.assertTrue(resp1.status_code, 200)
+        resp2 = self.ntkc.anon_register('1', user_metadata={'institution': 'A'}, user=True)
+        self.assertTrue(resp2.status_code, 200)
 
 
 def main():
@@ -152,7 +168,7 @@ def main():
         return
     runner = unittest.TextTestRunner()
     suite = []
-    correctness_tests = ['test1']
+    correctness_tests = ['test_A_user_register']
     scalability_tests = []
     correctness_tests.sort()
     if argv[1] == '--correctness':
