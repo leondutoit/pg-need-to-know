@@ -146,19 +146,7 @@ Authorization: JWT-for-admin-user
 # 2.1 data owners
 {
     "group_name": "group2",
-    "metadata": {
-        "key": "institution",
-        "value": "1"
-    }
-}
-
-# and:
-{
-    "group_name": "group2",
-    "metadata": {
-        "key": "institution",
-        "value": "2"
-    }
+    "add_all_owners": true
 }
 
 # 2.2 data users

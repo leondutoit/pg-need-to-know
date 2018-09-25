@@ -16,7 +16,6 @@
 - make a presentation, with visual representations of the model
 
 ## IP
-- for group_add, also provide: all_owners, and all_users
 - remove hard-coded non-generic names (e.g. tsd_backend_utv_user), check all todos
 
 ## Done
@@ -72,3 +71,4 @@
 - write about the model - on MAC, three use cases - data organisation up to the admin
 - write about auth requirements
 - implement /rpc/token, document
+- for group_add, also provide: all_owners, and all_users
