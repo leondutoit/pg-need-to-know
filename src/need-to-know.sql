@@ -576,7 +576,11 @@ create or replace function group_add_members(group_name text,
         trusted_group_name := quote_ident(group_name);
         assert trusted_group_name in (select udg.group_name from ntk.user_defined_groups udg),
                 'access to group not allowed';
-        assert (select count(1) from unnest(array[members::text, metadata::text, add_all::text]) x where x is not null) = 1,
+        assert (select count(1) from unnest(array[members::text,
+                                                  metadata::text,
+                                                  add_all::text,
+                                                  add_all_owners::text,
+                                                  add_all_users::text]) x where x is not null) = 1,
             'only one parameter is allowed to be used in the function signature - you can only add group members by one method per call';
         if members is not null then
             untrusted_members := members;
