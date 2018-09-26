@@ -78,6 +78,7 @@ create or replace function ntk.update_request_log(_current_role text, _current_r
 $$ language plpgsql;
 revoke all privileges on function ntk.update_request_log(text, text) from public;
 alter function ntk.update_request_log owner to admin_user;
+grant execute on function ntk.update_request_log(text, text) to data_owners_group, data_users_group;
 
 
 drop table if exists event_log_access_control cascade;
@@ -467,7 +468,6 @@ create or replace function ntk.user_create(user_name text, user_type text, user_
         execute format('create role %I', trusted_user_name);
         execute format('grant %I to authenticator', trusted_user_name);
         execute format('grant execute on function ntk.roles_have_common_group_and_is_data_user(text, text) to %I', trusted_user_name);
-        execute format('grant execute on function ntk.update_request_log(text, text) to %I', trusted_user_name);
         execute format('grant execute on function user_groups(text) to %I', trusted_user_name);
         execute format('grant execute on function user_group_remove(text) to %I', trusted_user_name);
         execute format('insert into ntk.registered_users (_user_name, _user_type, user_metadata) values ($1, $2, $3)')
@@ -820,7 +820,6 @@ create or replace function user_delete(user_name text)
         end loop;
         set role authenticator;
         set role admin_user;
-        execute format('revoke execute on function ntk.update_request_log(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function ntk.roles_have_common_group_and_is_data_user(text, text) from %I', trusted_user_name);
         execute format('revoke execute on function user_groups(text) from %I', trusted_user_name);
         execute format('revoke execute on function user_group_remove(text) from %I', trusted_user_name);
