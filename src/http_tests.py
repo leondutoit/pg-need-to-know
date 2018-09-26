@@ -243,6 +243,8 @@ class TestNtkHttpApi(unittest.TestCase):
         # clean up all DB state
         pass
 
+    # Scalability scenario
+    # eventually into own class
 
     def register_many(self, n, owner=False, user=False):
         for i in range(n):
@@ -283,6 +285,7 @@ class TestNtkHttpApi(unittest.TestCase):
         resp1 = self.ntkc.call_api(endpoint='/rpc/user_delete',
                                    data={'user_name': 'owner_1'},
                                    user_type='admin')
+        print resp1.text
         self.assertEqual(resp1.status_code, 200)
         resp2 = self.ntkc.call_api(endpoint='/rpc/user_delete',
                                    data={'user_name': 'user_1'},
@@ -291,10 +294,11 @@ class TestNtkHttpApi(unittest.TestCase):
 
 
     def test_ZA_create_many(self):
-        self.register_many(1000, owner=True)
+        self.register_many(10000, owner=True)
+
 
     def test_ZB_delete_many(self):
-        self.delete_many(1000, owner=True)
+        self.delete_many(10000, owner=True)
 
 
 def main():
