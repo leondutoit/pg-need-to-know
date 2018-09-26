@@ -468,7 +468,6 @@ create or replace function ntk.user_create(user_name text, user_type text, user_
         trusted_user_type := quote_literal(user_type);
         execute format('create role %I', trusted_user_name);
         execute format('grant %I to authenticator', trusted_user_name);
-        execute format('grant execute on function user_groups(text) to %I', trusted_user_name);
         execute format('grant execute on function user_group_remove(text) to %I', trusted_user_name);
         execute format('insert into ntk.registered_users (_user_name, _user_type, user_metadata) values ($1, $2, $3)')
             using user_name, user_type, user_metadata;
@@ -663,6 +662,7 @@ create or replace function user_groups(user_name text default current_user::text
 $$ language plpgsql;
 revoke all privileges on function user_groups(text) from public;
 alter function user_groups owner to admin_user;
+grant execute on function user_groups(text) to data_owners_group;
 
 
 drop function if exists user_group_remove(text);
@@ -820,7 +820,6 @@ create or replace function user_delete(user_name text)
         end loop;
         set role authenticator;
         set role admin_user;
-        execute format('revoke execute on function user_groups(text) from %I', trusted_user_name);
         execute format('revoke execute on function user_group_remove(text) from %I', trusted_user_name);
         execute format('delete from ntk.registered_users where _user_name = $1') using user_name;
         execute format('delete from ntk.data_owners where user_name = $1') using user_name;
