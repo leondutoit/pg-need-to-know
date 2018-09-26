@@ -18,20 +18,22 @@ TABLES = {
 
 class PgNeedToKnowClient(object):
 
+    """
+    API client for pg-need-to-know as exposed via postgrest's HTTP interface.
+    """
 
-    def __init__(self):
-        # TODO: move these out
-        # then the client user can configure the endpoints
-        # however they want, pass in the spec, and call ahead
-        # TODO: decide if want to pass dicts or json
-        # dict will require deserialising and serialising data
-        # _might_ be useful to deserialise if we want data
-        # validation in this client
-        self.url = 'http://localhost:3000'
-        self.api_endpoints = {
-            'user_register': '/rpc/user_register',
-            'user_delete': '/rpc/user_delete'
-        }
+    def __init__(self, url=None, api_endpoints=None):
+        if not url:
+            self.url = 'http://localhost:3000'
+        else:
+            self.url = url
+        if not api_endpoints:
+            self.api_endpoints = {
+                'user_register': '/rpc/user_register',
+                'user_delete': '/rpc/user_delete'
+            }
+        else:
+            self.api_endpoints = api_endpoints
 
 
     def call_api(self, endpoint=None, data=None, identity=None, user_type=None):
@@ -242,8 +244,26 @@ class TestNtkHttpApi(unittest.TestCase):
         pass
 
 
-    def register_many(n, owner=False, user=False):
-        pass
+    def register_many(self, n, owner=False, user=False):
+        for i in range(n):
+            if owner:
+                user_type = 'data_owner'
+            elif user:
+                user_type = 'data_user'
+            self.ntkc.call_api(endpoint='/rpc/user_register',
+                               data={'user_id': str(i), 'user_type': user_type, 'user_metadata': {}},
+                               user_type='anon')
+
+
+    def delete_many(self, n, owner=False, user=False):
+        for i in range(n):
+            if owner:
+                user_name = 'owner_' + str(i)
+            elif user:
+                user_name = 'user_' + str(i)
+            self.ntkc.call_api(endpoint='/rpc/user_delete',
+                               data={'user_name': user_name},
+                               user_type='admin')
 
 
     def test_A_user_register(self):
@@ -270,6 +290,13 @@ class TestNtkHttpApi(unittest.TestCase):
         self.assertEqual(resp2.status_code, 200)
 
 
+    def test_ZA_create_many(self):
+        self.register_many(1000, owner=True)
+
+    def test_ZB_delete_many(self):
+        self.delete_many(1000, owner=True)
+
+
 def main():
     if len(argv) < 2:
         print 'not enough arguments'
@@ -278,7 +305,7 @@ def main():
     runner = unittest.TextTestRunner()
     suite = []
     correctness_tests = ['test_A_user_register', 'test_Z_user_delete']
-    scalability_tests = []
+    scalability_tests = ['test_ZA_create_many', 'test_ZB_delete_many']
     correctness_tests.sort()
     if argv[1] == '--correctness':
         suite.append(unittest.TestSuite(map(TestNtkHttpApi, correctness_tests)))
