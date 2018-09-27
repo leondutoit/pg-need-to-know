@@ -506,7 +506,7 @@ create or replace function group_create(group_name text, group_metadata json)
     declare trusted_group_name text;
     begin
         trusted_group_name := quote_ident(group_name);
-        execute format('create role %I', trusted_group_name);
+        execute format('groups.create($1)'), using trusted_group_name;
         execute format('insert into ntk.user_defined_groups values ($1, $2)')
             using group_name, group_metadata;
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
@@ -832,7 +832,7 @@ create or replace function group_delete(group_name text)
     begin
         assert group_name in (select udg.group_name from ntk.user_defined_groups udg), 'permission denied to delete group';
         trusted_group_name := quote_ident(group_name);
-        execute format('select count(1) from ntk.user_defined_groups_memberships u where u.group_name = $1')
+        execute format('select count(1) from groups.groups_memberships u where u.group_name = $1')
                 using group_name into trusted_num_members;
         if trusted_num_members > 0 then
             raise exception 'Cannot delete group %, it has % members', group_name, trusted_num_members;
@@ -842,7 +842,7 @@ create or replace function group_delete(group_name text)
         if trusted_num_table_select_grants > 0 then
             raise exception 'Cannot delete group - still has select grants on existing tables: please check table_overview to see which tables and remove the grants';
         end if;
-        execute format('drop role %I', trusted_group_name);
+        execute format('groups.drop($1)'), using trusted_group_name;
         execute format('delete from ntk.user_defined_groups where group_name = $1') using group_name;
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                 using 'group_delete', trusted_group_name, null;

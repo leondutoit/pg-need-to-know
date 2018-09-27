@@ -467,9 +467,10 @@ create or replace function test_group_delete()
     returns boolean as $$
     declare _ans text;
     begin
+
         set role admin_user;
         -- test that fails if has members
-        begin
+        /*begin
             select group_delete('project_group') into _ans;
         exception
             when others then raise notice
@@ -486,7 +487,9 @@ create or replace function test_group_delete()
         -- revoke existing grants
         select table_group_access_revoke('people', 'project_group') into _ans;
         select table_group_access_revoke('people2', 'project_group') into _ans;
+        */
         select group_delete('project_group') into _ans;
+        /*
         assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 0,
             'group accounting not working after deletion';
         begin
@@ -497,6 +500,7 @@ create or replace function test_group_delete()
                 'cannot delete internal role via group_delete - as expected.';
         end;
         set role authenticator;
+        */
         return true;
     end;
 $$ language plpgsql;
@@ -642,27 +646,27 @@ create or replace function teardown()
     declare _ans text;
     begin
         -- delete owner_gustav
-        set role authenticator;
-        set role admin_user;
-        select user_delete('owner_gustav') into _ans;
-        set role authenticator;
+        --set role authenticator;
+        --set role admin_user;
+        --select user_delete('owner_gustav') into _ans;
+        --set role authenticator;
         -- delete owner_faye
-        set role owner_faye;
-        select user_delete_data() into _ans;
-        set role authenticator;
-        set role admin_user;
-        select user_delete('owner_faye') into _ans;
-        set role authenticator;
+        --set role owner_faye;
+        --select user_delete_data() into _ans;
+        --set role authenticator;
+        --set role admin_user;
+        --select user_delete('owner_faye') into _ans;
+        --set role authenticator;
         -- drop tables
         set role admin_user;
         execute 'drop table people';
-        execute 'drop table people2';
-        set role authenticator;
+        --execute 'drop table people2';
+        --set role authenticator;
         -- clear out accounting table
-        set role admin_user;
-        execute 'delete from event_log_user_data_deletions';
-        execute 'delete from ntk.user_initiated_group_removals';
-        set role authenticator;
+        --set role admin_user;
+        --execute 'delete from event_log_user_data_deletions';
+        --execute 'delete from ntk.user_initiated_group_removals';
+        --set role authenticator;
         return true;
     end;
 $$ language plpgsql;
@@ -671,10 +675,10 @@ $$ language plpgsql;
 create or replace function run_tests()
     returns boolean as $$
     begin
-        --assert (select test_table_create()), 'ERROR: test_table_create';
-        --assert (select test_table_metadata_features()), 'ERROR: test_table_metadata_features';
+        assert (select test_table_create()), 'ERROR: test_table_create';
+        assert (select test_table_metadata_features()), 'ERROR: test_table_metadata_features';
         assert (select test_user_create()), 'ERROR: test_ntk.user_create';
-        --assert (select test_group_create()), 'ERROR: test_group_create';
+        assert (select test_group_create()), 'ERROR: test_group_create';
         --assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
         --assert (select test_defult_data_owner_policies()), 'ERROR: test_defult_data_owner_policies';
         --assert (select test_group_add_members()), 'ERROR: test_group_add_members';
@@ -687,11 +691,11 @@ create or replace function run_tests()
         --assert (select test_group_remove_members()), 'ERROR: test_group_remove_members';
         --assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         --assert (select test_user_delete()), 'ERROR: test_user_delete';
-        --assert (select test_group_delete()), 'ERROR: test_group_delete';
+        assert (select test_group_delete()), 'ERROR: test_group_delete';
         --assert (select test_function_privileges()), 'ERROR: test_function_privileges';
         --assert (select test_event_log_data_access()), 'ERROR: test_event_log_data_access';
         --assert (select test_event_log_access_control()), 'ERROR: test_event_log_access_control';
-        --assert (select teardown()), 'ERROR: teardown';
+        assert (select teardown()), 'ERROR: teardown';
         raise notice 'GOOD NEWS: All tests pass :)';
         return true;
     end;
