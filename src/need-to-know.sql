@@ -125,7 +125,6 @@ create or replace function ntk.roles_have_common_group_and_is_data_user(_current
     declare _res boolean;
     begin
         trusted_current_role := current_setting('request.jwt.claim.user');
-        raise info 'user claim set to %', trusted_current_role;
         trusted_current_row_owner := _current_row_owner;
         execute format('select _user_type from ntk.registered_users where _user_name = $1')
             into _type using trusted_current_role;
@@ -154,7 +153,6 @@ create or replace function ntk.is_row_owner(_current_row_owner text)
     declare _type text;
     begin
         trusted_current_role := current_setting('request.jwt.claim.user');
-        raise info 'user claim set to %', trusted_current_role;
         trusted_current_row_owner := _current_row_owner;
         if trusted_current_role = trusted_current_row_owner then
             return true;
@@ -290,7 +288,6 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute format('alter table %I force row level security', trusted_table_name);
         execute format('grant select on %I to data_owners_group', trusted_table_name);
         execute format('grant insert, update, delete on %I to public', trusted_table_name);
-        -- create a wrapper to determine if current setting user is = row_owner
         execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
         execute format('create policy row_ownership_select_policy on %I for select using (ntk.is_row_owner(row_owner))', trusted_table_name);
         execute format('create policy row_ownership_delete_policy on %I for delete using (ntk.is_row_owner(row_owner))', trusted_table_name);
@@ -845,7 +842,6 @@ create or replace function user_delete(user_name text)
         set role admin_user;
         execute format('delete from ntk.registered_users where _user_name = $1') using user_name;
         execute format('delete from ntk.data_owners where user_name = $1') using user_name;
-       -- execute format('drop role %I', trusted_user_name);
         return 'user deleted';
     end;
 $$ language plpgsql;

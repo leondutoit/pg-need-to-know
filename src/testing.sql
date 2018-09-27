@@ -93,7 +93,6 @@ create or replace function test_group_create()
             'problem recording user defined group creation in accounting table';
         -- check role exists
         set role authenticator;
-        --set role :db_owner; -- db owner, get from variable
         set role project_group; -- look up in system catalogues instead (when authenticator is no longer a member of db owner, which it should not be)
         set role authenticator;
         return true;
@@ -440,7 +439,8 @@ create or replace function test_user_delete()
         set role authenticator;
         -- if the above worked, wrongly so, then the next part will fail
         -- because it will be impossible to set the role to owner_hannah
-        set role owner_hannah;
+        set role data_owner;
+        set session "request.jwt.claim.user" = 'owner_hannah';
         select user_delete_data() into _ans;
         set role authenticator;
         set role admin_user;
@@ -650,9 +650,9 @@ create or replace function teardown()
         set session "request.jwt.claim.user" = 'owner_faye';
         select user_delete_data() into _ans;
         select user_delete('owner_faye') into _ans;
-        set session "request.jwt.claim.user" = 'owner_hannah';
-        select user_delete_data() into _ans;
-        select user_delete('owner_hannah') into _ans;
+        --set session "request.jwt.claim.user" = 'owner_hannah';
+        --select user_delete_data() into _ans;
+        --select user_delete('owner_hannah') into _ans;
         select user_delete('user_project_user') into _ans;
         -- drop tables
         set role admin_user;
@@ -687,7 +687,7 @@ create or replace function run_tests()
         --assert (select test_user_group_remove()), 'ERROR: test_user_group_remove';
         --assert (select test_group_remove_members()), 'ERROR: test_group_remove_members';
         --assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
-        --assert (select test_user_delete()), 'ERROR: test_user_delete';
+        assert (select test_user_delete()), 'ERROR: test_user_delete';
         assert (select test_group_delete()), 'ERROR: test_group_delete';
         --assert (select test_function_privileges()), 'ERROR: test_function_privileges';
         --assert (select test_event_log_data_access()), 'ERROR: test_event_log_data_access';
