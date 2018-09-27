@@ -174,7 +174,7 @@ create or replace function test_table_group_access_management()
 $$ language plpgsql;
 
 
-create or replace function test_defult_data_owner_policies()
+create or replace function test_default_data_owner_policies()
     returns boolean as $$
     declare _num int;
     begin
@@ -405,10 +405,10 @@ create or replace function test_user_delete_data()
         set role admin_user;
         select table_create('{"table_name": "people2", "columns": [ {"name": "name", "type": "text"}, {"name": "age", "type": "int"} ]}'::json, 'mac') into _ans;
         -- issue group access grant
-        select table_group_access_grant('people2', 'project_group') into _ans;
         set role authenticator;
         -- insert some data
-        set role owner_gustav;
+        set role data_owner;
+        set session "request.jwt.claim.user" = 'owner_gustav';
         insert into people2 (name, age) values ('owner_Gustav de la Croix', 10);
         -- delete the data
         select user_delete_data() into _ans;
@@ -643,11 +643,7 @@ create or replace function teardown()
     returns boolean as $$
     declare _ans text;
     begin
-        -- delete data and users
-        set role data_owner;
         set session "request.jwt.claim.user" = 'owner_gustav';
-        select user_delete_data() into _ans;
-        set role authenticator;
         set role admin_user;
         select user_delete('owner_gustav') into _ans;
         set role authenticator;
@@ -660,7 +656,7 @@ create or replace function teardown()
         select user_delete('user_project_user') into _ans;
         -- drop tables
         execute 'drop table people';
-        --execute 'drop table people2';
+        execute 'drop table people2';
         --set role authenticator;
         -- clear out accounting table
         --set role admin_user;
@@ -680,7 +676,7 @@ create or replace function run_tests()
         assert (select test_user_create()), 'ERROR: test_ntk.user_create';
         assert (select test_group_create()), 'ERROR: test_group_create';
         --assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
-        assert (select test_defult_data_owner_policies()), 'ERROR: test_defult_data_owner_policies';
+        assert (select test_default_data_owner_policies()), 'ERROR: test_default_data_owner_policies';
         --assert (select test_group_add_members()), 'ERROR: test_group_add_members';
         --assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
         --assert (select test_group_list()), 'ERROR: test_group_list';
@@ -689,7 +685,7 @@ create or replace function run_tests()
         --assert (select test_user_list()), 'ERROR: test_user_list';
         --assert (select test_user_group_remove()), 'ERROR: test_user_group_remove';
         --assert (select test_group_remove_members()), 'ERROR: test_group_remove_members';
-        --assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
+        assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         assert (select test_user_delete()), 'ERROR: test_user_delete';
         assert (select test_group_delete()), 'ERROR: test_group_delete';
         assert (select test_function_privileges()), 'ERROR: test_function_privileges';
@@ -714,7 +710,7 @@ drop function test_table_metadata_features();
 drop function test_user_create();
 drop function test_group_create();
 drop function test_table_group_access_management();
-drop function test_defult_data_owner_policies();
+drop function test_default_data_owner_policies();
 drop function test_group_add_members();
 drop function test_group_membership_data_access_policies();
 drop function test_group_list();
