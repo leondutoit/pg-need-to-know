@@ -179,24 +179,22 @@ create or replace function test_defult_data_owner_policies()
     returns boolean as $$
     declare _num int;
     begin
-        set role owner_gustav;
+        set role data_owner;
+        set session "request.jwt.claim.user" = 'owner_gustav';
         insert into people (name, age) values ('owner_Gustav de la Croix', 1);
-        set role authenticator;
-        set role owner_hannah;
+        set session "request.jwt.claim.user" = 'owner_hannah';
         insert into people (name, age) values ('owner_Hannah le Roux', 29);
-        set role authenticator;
-        set role owner_faye;
+        set session "request.jwt.claim.user" = 'owner_faye';
         insert into people (name, age) values ('owner_Faye Thompson', 58);
-        set role authenticator;
-        set role owner_gustav;
+        set session "request.jwt.claim.user" = 'owner_gustav';
         assert (select count(1) from people) = 1, 'owner_gustav has unauthorized data access';
-        set role authenticator;
-        set role owner_hannah;
+        set session "request.jwt.claim.user" = 'owner_hannah';
         assert (select count(1) from people) = 1, 'owner_hannah has unauthorized data access';
+        set session "request.jwt.claim.user" = '';
         set role authenticator;
         set role admin_user; -- make sure RLS is forced on table owner too
         assert (select count(1) from people) = 0, 'admin_user has unauthorized data access';
-        set role user_project_user;
+        set role data_user;
         begin
             select count(1) from people into _num;
         exception
@@ -645,21 +643,20 @@ create or replace function teardown()
     returns boolean as $$
     declare _ans text;
     begin
-        -- delete owner_gustav
-        --set role authenticator;
-        --set role admin_user;
-        --select user_delete('owner_gustav') into _ans;
-        --set role authenticator;
-        -- delete owner_faye
-        --set role owner_faye;
-        --select user_delete_data() into _ans;
-        --set role authenticator;
-        --set role admin_user;
-        --select user_delete('owner_faye') into _ans;
-        --set role authenticator;
+        -- delete data and users
+        set session "request.jwt.claim.user" = 'owner_gustav';
+        select user_delete_data() into _ans;
+        select user_delete('owner_gustav') into _ans;
+        set session "request.jwt.claim.user" = 'owner_faye';
+        select user_delete_data() into _ans;
+        select user_delete('owner_faye') into _ans;
+        set session "request.jwt.claim.user" = 'owner_hannah';
+        select user_delete_data() into _ans;
+        select user_delete('owner_hannah') into _ans;
+        select user_delete('user_project_user') into _ans;
         -- drop tables
         set role admin_user;
-        --execute 'drop table people';
+        execute 'drop table people';
         --execute 'drop table people2';
         --set role authenticator;
         -- clear out accounting table
@@ -680,7 +677,7 @@ create or replace function run_tests()
         assert (select test_user_create()), 'ERROR: test_ntk.user_create';
         assert (select test_group_create()), 'ERROR: test_group_create';
         --assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
-        --assert (select test_defult_data_owner_policies()), 'ERROR: test_defult_data_owner_policies';
+        assert (select test_defult_data_owner_policies()), 'ERROR: test_defult_data_owner_policies';
         --assert (select test_group_add_members()), 'ERROR: test_group_add_members';
         --assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
         --assert (select test_group_list()), 'ERROR: test_group_list';

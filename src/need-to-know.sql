@@ -125,7 +125,7 @@ create or replace function ntk.roles_have_common_group_and_is_data_user(_current
     declare _res boolean;
     begin
         trusted_current_role := current_setting('request.jwt.claim.user');
-        raise info '%', trusted_current_role;
+        raise info 'user claim set to %', trusted_current_role;
         trusted_current_row_owner := _current_row_owner;
         execute format('select _user_type from ntk.registered_users where _user_name = $1')
             into _type using trusted_current_role;
@@ -144,6 +144,29 @@ $$ language plpgsql;
 revoke all privileges on function ntk.roles_have_common_group_and_is_data_user(text) from public;
 alter function ntk.roles_have_common_group_and_is_data_user owner to admin_user;
 grant execute on function ntk.roles_have_common_group_and_is_data_user(text) to data_owners_group, data_users_group;
+
+
+drop function if exists ntk.is_row_owner(text);
+create or replace function ntk.is_row_owner(_current_row_owner text)
+    returns boolean as $$
+    declare trusted_current_role text;
+    declare trusted_current_row_owner text;
+    declare _type text;
+    begin
+        trusted_current_role := current_setting('request.jwt.claim.user');
+        raise info 'user claim set to %', trusted_current_role;
+        trusted_current_row_owner := _current_row_owner;
+        if trusted_current_role = trusted_current_row_owner then
+            return true;
+        else
+            return false;
+        end if;
+    end;
+$$ language plpgsql;
+revoke all privileges on function ntk.is_row_owner(text) from public;
+alter function ntk.is_row_owner owner to admin_user;
+grant execute on function ntk.is_row_owner(text) to data_owners_group, data_users_group;
+
 
 
 drop function if exists ntk.sql_type_from_generic_type(text);
@@ -267,11 +290,12 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute format('alter table %I force row level security', trusted_table_name);
         execute format('grant select on %I to data_owners_group', trusted_table_name);
         execute format('grant insert, update, delete on %I to public', trusted_table_name);
+        -- create a wrapper to determine if current setting user is = row_owner
         execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
-        execute format('create policy row_ownership_select_policy on %I for select using (row_owner = current_user)', trusted_table_name);
-        execute format('create policy row_ownership_delete_policy on %I for delete using (row_owner = current_user)', trusted_table_name);
+        execute format('create policy row_ownership_select_policy on %I for select using (ntk.is_row_owner(row_owner))', trusted_table_name);
+        execute format('create policy row_ownership_delete_policy on %I for delete using (ntk.is_row_owner(row_owner))', trusted_table_name);
         execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(row_owner))', trusted_table_name);
-        execute format('create policy row_ownership_update_policy on %I for update using (row_owner = current_user) with check (row_owner = current_user)', trusted_table_name);
+        execute format('create policy row_ownership_update_policy on %I for update using (ntk.is_row_owner(row_owner)) with check (row_owner = current_user)', trusted_table_name);
         execute format('comment on table %I is %s', trusted_table_name, trusted_comment);
         return 'Success';
     end;
@@ -756,9 +780,12 @@ create or replace function user_delete_data()
     returns text as $$
     declare trusted_table text;
     begin
+
         for trusted_table in select table_name from information_schema.tables
                       where table_schema = 'public' and table_type != 'VIEW' loop
-            if trusted_table = 'event_log_data_access' then continue; end if;
+            if trusted_table in ('event_log_data_access', 'event_log_access_control')
+                then continue;
+            end if;
             begin
                 execute format('delete from %I', trusted_table);
             exception
@@ -767,7 +794,7 @@ create or replace function user_delete_data()
             end;
         end loop;
         insert into ntk.user_data_deletion_requests (user_name, request_date)
-            values (current_user, current_timestamp);
+            values (current_setting('request.jwt.claim.user'), current_timestamp);
         return 'all data deleted';
     end;
 $$ language plpgsql;
@@ -789,14 +816,13 @@ create or replace function user_delete(user_name text)
                     using user_name into trusted_user_type;
         if trusted_user_type = 'data_owner' then
             -- data users never have data, so we do not need this check for them
+            execute 'set session "request.jwt.claim.user" =  ' || quote_literal(user_name);
             for trusted_table in select table_name from information_schema.tables
                                   where table_schema = 'public' and table_type != 'VIEW' loop
                 begin
-                    set role authenticator;
-                    execute format('set role %I', trusted_user_name);
+                    set role data_owner;
                     execute format('select count(1) from %I where row_owner = $1', trusted_table)
                             using user_name into trusted_numrows;
-                    set role authenticator;
                     set role admin_user;
                     if trusted_numrows > 0 then
                         raise exception 'Cannot delete user, DB has data belonging to % in table %', user_name, trusted_table;
@@ -807,7 +833,6 @@ create or replace function user_delete(user_name text)
             end loop;
         end if;
         for trusted_group in select _group from ntk.group_memberships where _role = user_name loop
-            -- this removes data_owners from the data_owners_group
             execute format('revoke %I from %I',  trusted_group, trusted_user_name);
         end loop;
         for trusted_table in select table_name from information_schema.role_table_grants
@@ -820,7 +845,7 @@ create or replace function user_delete(user_name text)
         set role admin_user;
         execute format('delete from ntk.registered_users where _user_name = $1') using user_name;
         execute format('delete from ntk.data_owners where user_name = $1') using user_name;
-        execute format('drop role %I', trusted_user_name);
+       -- execute format('drop role %I', trusted_user_name);
         return 'user deleted';
     end;
 $$ language plpgsql;
