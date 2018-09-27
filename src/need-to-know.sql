@@ -28,7 +28,13 @@ grant admin_user to authenticator;
 create role anon;
 grant anon to authenticator;
 create role data_owners_group;
+create role data_owner;
+grant data_owners_group to data_owner;
+grant data_owner to authenticator;
 create role data_users_group;
+create role data_user;
+grant data_users_group to data_user;
+grant data_user to authenticator;
 
 
 create schema if not exists ntk;
@@ -434,11 +440,6 @@ create or replace function user_register(user_id text, user_type text, user_meta
     declare _ans text;
     declare trusted_user_name text;
     begin
-        assert (select length(user_id) <= 57),
-            'the maximum allowed user name length is 57 characters';
-        assert (select bool_or(user_type ilike arr_element||'%')
-                from unnest(ARRAY['data_owner','data_user']) x(arr_element)),
-            'user_type must be either "data_owner" or "data_user"';
         if user_type = 'data_owner' then
             trusted_user_name := 'owner_' || user_id;
         elsif user_type = 'data_user' then
@@ -466,16 +467,8 @@ create or replace function ntk.user_create(user_name text, user_type text, user_
             'user name must start with either "owner_" or "user_"';
         trusted_user_name := quote_ident(user_name);
         trusted_user_type := quote_literal(user_type);
-        execute format('create role %I', trusted_user_name);
-        execute format('grant %I to authenticator', trusted_user_name);
         execute format('insert into ntk.registered_users (_user_name, _user_type, user_metadata) values ($1, $2, $3)')
             using user_name, user_type, user_metadata;
-        if user_type = 'data_owner' then
-            execute format('insert into ntk.data_owners values ($1)') using user_name;
-            execute format('grant data_owners_group to %I', trusted_user_name);
-        elsif user_type = 'data_user' then
-            execute format('grant data_users_group to %I', trusted_user_name);
-        end if;
         return 'user created';
     end;
 $$ language plpgsql;
