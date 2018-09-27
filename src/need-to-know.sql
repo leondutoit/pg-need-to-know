@@ -115,40 +115,35 @@ revoke all privileges on function ntk.update_event_log_access_control(text, text
 grant execute on function ntk.update_event_log_access_control(text, text, json) to admin_user;
 
 
-drop function if exists ntk.roles_have_common_group_and_is_data_user(text, text);
-create or replace function ntk.roles_have_common_group_and_is_data_user(_current_role text, _current_row_owner text)
+drop function if exists ntk.roles_have_common_group_and_is_data_user(text);
+create or replace function ntk.roles_have_common_group_and_is_data_user(_current_row_owner text)
     returns boolean as $$
-    -- param vars
     declare trusted_current_role text;
     declare trusted_current_row_owner text;
-    -- func vars
     declare _type text;
     declare _log boolean;
     declare _res boolean;
     begin
-        trusted_current_role := _current_role;
+        trusted_current_role := current_setting('request.jwt.claims.user');
+        raise info '%', trusted_current_role;
         trusted_current_row_owner := _current_row_owner;
         execute format('select _user_type from ntk.registered_users where _user_name = $1')
             into _type using trusted_current_role;
         if _type != 'data_user'
             then return false;
         end if;
-        execute format('select (
-            select count(_group) from (
-                select _group from ntk.group_memberships where _role = $1
-                intersect
-                select _group from ntk.group_memberships where _role = $2)a
-            where _group != $3)
-        != 0') into _res using trusted_current_role, trusted_current_row_owner, 'authenticator';
+        execute format('select groups.have_common_group($1, $2)')
+            into _res
+            using trusted_current_role, trusted_current_row_owner;
         if _res = true then
             select ntk.update_request_log(trusted_current_role, trusted_current_row_owner) into _log;
         end if;
         return _res;
     end;
 $$ language plpgsql;
-revoke all privileges on function ntk.roles_have_common_group_and_is_data_user(text, text) from public;
+revoke all privileges on function ntk.roles_have_common_group_and_is_data_user(text) from public;
 alter function ntk.roles_have_common_group_and_is_data_user owner to admin_user;
-grant execute on function ntk.roles_have_common_group_and_is_data_user(text, text) to data_owners_group, data_users_group;
+grant execute on function ntk.roles_have_common_group_and_is_data_user(text) to data_owners_group, data_users_group;
 
 
 drop function if exists ntk.sql_type_from_generic_type(text);
@@ -269,7 +264,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
         execute format('create policy row_ownership_select_policy on %I for select using (row_owner = current_user)', trusted_table_name);
         execute format('create policy row_ownership_delete_policy on %I for delete using (row_owner = current_user)', trusted_table_name);
-        execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(current_user::text, row_owner))', trusted_table_name);
+        execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(row_owner))', trusted_table_name);
         execute format('create policy row_ownership_update_policy on %I for update using (row_owner = current_user) with check (row_owner = current_user)', trusted_table_name);
         execute format('comment on table %I is %s', trusted_table_name, trusted_comment);
         return 'Success';
@@ -504,9 +499,10 @@ drop function if exists group_create(text, json);
 create or replace function group_create(group_name text, group_metadata json)
     returns text as $$
     declare trusted_group_name text;
+    declare _res boolean;
     begin
         trusted_group_name := quote_ident(group_name);
-        execute format('groups.create($1)'), using trusted_group_name;
+        execute format('select groups.create($1)') using trusted_group_name into _res;
         execute format('insert into ntk.user_defined_groups values ($1, $2)')
             using group_name, group_metadata;
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
@@ -829,10 +825,11 @@ create or replace function group_delete(group_name text)
     declare trusted_group_name text;
     declare trusted_num_members int;
     declare trusted_num_table_select_grants int;
+    declare _res boolean;
     begin
         assert group_name in (select udg.group_name from ntk.user_defined_groups udg), 'permission denied to delete group';
         trusted_group_name := quote_ident(group_name);
-        execute format('select count(1) from groups.groups_memberships u where u.group_name = $1')
+        execute format('select count(1) from groups.group_memberships u where u.group_name = $1')
                 using group_name into trusted_num_members;
         if trusted_num_members > 0 then
             raise exception 'Cannot delete group %, it has % members', group_name, trusted_num_members;
@@ -842,7 +839,7 @@ create or replace function group_delete(group_name text)
         if trusted_num_table_select_grants > 0 then
             raise exception 'Cannot delete group - still has select grants on existing tables: please check table_overview to see which tables and remove the grants';
         end if;
-        execute format('groups.drop($1)'), using trusted_group_name;
+        execute format('select groups.drop($1)') using trusted_group_name into _res;
         execute format('delete from ntk.user_defined_groups where group_name = $1') using group_name;
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                 using 'group_delete', trusted_group_name, null;

@@ -18,7 +18,7 @@ select * from testing;
 -- low level group operations
 
 create schema groups;
-grant usage on schema groups to admin_user;
+grant usage, select on schema groups to admin_user;
 
 
 drop table if exists groups.group_memberships;
@@ -27,6 +27,7 @@ create table if not exists groups.group_memberships(
     user_name text not null, -- fk to registered users
     unique (group_name, user_name)
 );
+grant insert, select on groups.group_memberships to admin_user;
 
 
 create or replace function groups.create(group_name text)
