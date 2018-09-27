@@ -124,7 +124,7 @@ create or replace function ntk.roles_have_common_group_and_is_data_user(_current
     declare _log boolean;
     declare _res boolean;
     begin
-        trusted_current_role := current_setting('request.jwt.claims.user');
+        trusted_current_role := current_setting('request.jwt.claim.user');
         raise info '%', trusted_current_role;
         trusted_current_row_owner := _current_row_owner;
         execute format('select _user_type from ntk.registered_users where _user_name = $1')
@@ -222,12 +222,18 @@ create or replace function ntk.parse_mac_table_def(definition json)
     declare untrusted_nn boolean;
     declare trusted_comment text;
     declare trusted_column_description text;
+    declare _curr_setting text;
     begin
         untrusted_definition := definition;
         untrusted_columns := untrusted_definition->'columns';
         trusted_table_name := quote_ident(untrusted_definition->>'table_name');
         trusted_comment := quote_nullable(untrusted_definition->>'description');
-        execute format('create table if not exists %I (row_owner text default current_user references ntk.data_owners (user_name))', trusted_table_name);
+        _curr_setting := 'request.jwt.claim.user';
+        raise notice '%', _curr_setting;
+        execute format('create table if not exists %I()', trusted_table_name);
+        execute 'alter table ' || trusted_table_name ||
+                ' add column row_owner text default current_setting(' || quote_literal(_curr_setting) ||
+                ') references ntk.data_owners (user_name)';
         for untrusted_i in select * from json_array_elements(untrusted_columns) loop
             select ntk.sql_type_from_generic_type(untrusted_i->>'type') into trusted_dtype;
             select quote_ident(untrusted_i->>'name') into trusted_colname;
@@ -464,6 +470,9 @@ create or replace function ntk.user_create(user_name text, user_type text, user_
         trusted_user_type := quote_literal(user_type);
         execute format('insert into ntk.registered_users (_user_name, _user_type, user_metadata) values ($1, $2, $3)')
             using user_name, user_type, user_metadata;
+        if user_type = 'data_owner' then
+            execute format('insert into ntk.data_owners values ($1)') using user_name;
+        end if;
         return 'user created';
     end;
 $$ language plpgsql;

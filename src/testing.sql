@@ -659,7 +659,7 @@ create or replace function teardown()
         --set role authenticator;
         -- drop tables
         set role admin_user;
-        execute 'drop table people';
+        --execute 'drop table people';
         --execute 'drop table people2';
         --set role authenticator;
         -- clear out accounting table
