@@ -644,18 +644,21 @@ create or replace function teardown()
     declare _ans text;
     begin
         -- delete data and users
+        set role data_owner;
         set session "request.jwt.claim.user" = 'owner_gustav';
         select user_delete_data() into _ans;
+        set role authenticator;
+        set role admin_user;
         select user_delete('owner_gustav') into _ans;
+        set role authenticator;
+        set role data_owner;
         set session "request.jwt.claim.user" = 'owner_faye';
         select user_delete_data() into _ans;
+        set role authenticator;
+        set role admin_user;
         select user_delete('owner_faye') into _ans;
-        --set session "request.jwt.claim.user" = 'owner_hannah';
-        --select user_delete_data() into _ans;
-        --select user_delete('owner_hannah') into _ans;
         select user_delete('user_project_user') into _ans;
         -- drop tables
-        set role admin_user;
         execute 'drop table people';
         --execute 'drop table people2';
         --set role authenticator;
@@ -689,7 +692,7 @@ create or replace function run_tests()
         --assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         assert (select test_user_delete()), 'ERROR: test_user_delete';
         assert (select test_group_delete()), 'ERROR: test_group_delete';
-        --assert (select test_function_privileges()), 'ERROR: test_function_privileges';
+        assert (select test_function_privileges()), 'ERROR: test_function_privileges';
         --assert (select test_event_log_data_access()), 'ERROR: test_event_log_data_access';
         --assert (select test_event_log_access_control()), 'ERROR: test_event_log_access_control';
         assert (select teardown()), 'ERROR: teardown';
