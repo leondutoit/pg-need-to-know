@@ -624,10 +624,10 @@ create or replace function group_add_members(group_name text,
             return 'added members to groups';
         elsif add_all = true then
             for trusted_user_name in select user_name from user_registrations loop
-                execute format('grant %I to %I', trusted_group_name, trusted_user_name);
+                raise info 'going to add %', trusted_user_name;
+                execute format('select groups.grant($1, $2)') using trusted_group_name, trusted_user_name;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, trusted_user_name;
-                raise notice 'added %', trusted_user_name;
             end loop;
             return 'added members to groups';
         elsif add_all_owners = true then
@@ -751,9 +751,9 @@ create or replace function group_remove_members(group_name text,
             end loop;
             return 'removed members to groups';
         elsif remove_all = true then
-            for trusted_user in execute format('select _role from ntk.group_memberships where _group = $1')
+            for trusted_user in execute format('select user_name from groups.group_memberships where group_name = $1')
                 using trusted_group_name loop
-                execute format('revoke %I from %I', trusted_group_name, trusted_user);
+                execute format('select groups.revoke($1, $2)') using trusted_group_name, trusted_user;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_remove', trusted_group_name, trusted_user;
             end loop;

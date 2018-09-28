@@ -229,15 +229,13 @@ create or replace function test_group_add_members()
                 where group_name = 'project_group') = 3,
             'adding members to groups using metadata is broken';
         select group_remove_members('project_group', null, '{"key": "institution", "value": "A"}', null) into _ans;
-        /*
+        raise notice 'trying group add all';
         select group_add_members('project_group', null, null, true) into _ans;
-        assert (select count(member) from ntk.user_defined_groups_memberships
+        assert (select count(user_name) from groups.group_memberships
                 where group_name = 'project_group') = 4,
             'adding members to groups using all = true, is broken';
-        revoke project_group from owner_faye;
-        revoke project_group from owner_gustav;
-        revoke project_group from owner_hannah;
-        revoke project_group from user_project_user;
+        select group_remove_members('project_group', null, null, true) into _ans;
+        /*
         select group_add_members('project_group', null, null, null, true, null) into _ans;
         assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
             'adding members to groups using add_all_owners = true, is broken';
