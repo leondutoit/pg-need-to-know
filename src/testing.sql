@@ -695,7 +695,7 @@ create or replace function run_tests()
         assert (select test_group_list()), 'ERROR: test_group_list';
         assert (select test_group_list_members()), 'ERROR: test_group_list_members';
         assert (select test_user_groups()), 'ERROR: test_user_groups';
-        --assert (select test_user_list()), 'ERROR: test_user_list';
+        assert (select test_user_list()), 'ERROR: test_user_list';
 
         --assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
         --assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
