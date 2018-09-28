@@ -633,16 +633,15 @@ create or replace function group_add_members(group_name text,
         elsif add_all_owners = true then
             for trusted_user_name in select user_name from user_registrations
                                      where user_type = 'data_owner' loop
-                execute format('grant %I to %I', trusted_group_name, trusted_user_name);
+                execute format('select groups.grant($1, $2)') using trusted_group_name, trusted_user_name;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, trusted_user_name;
-                raise notice 'added %', trusted_user_name;
             end loop;
             return 'added members to groups';
         elsif add_all_users = true then
             for trusted_user_name in select user_name from user_registrations
                                      where user_type = 'data_user' loop
-                execute format('grant %I to %I', trusted_group_name, trusted_user_name);
+                execute format('select groups.grant($1, $2)') using trusted_group_name, trusted_user_name;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, trusted_user_name;
                 raise notice 'added %', trusted_user_name;
