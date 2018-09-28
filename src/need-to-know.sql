@@ -54,6 +54,27 @@ grant select on ntk.group_memberships to :db_owner, admin_user;
 grant select on ntk.group_memberships to data_owners_group, data_users_group;
 
 
+drop function if exists ntk.is_row_owner(text);
+create or replace function ntk.is_row_owner(_current_row_owner text)
+    returns boolean as $$
+    declare trusted_current_role text;
+    declare trusted_current_row_owner text;
+    declare _type text;
+    begin
+        trusted_current_role := current_setting('request.jwt.claim.user');
+        trusted_current_row_owner := _current_row_owner;
+        if trusted_current_role = trusted_current_row_owner then
+            return true;
+        else
+            return false;
+        end if;
+    end;
+$$ language plpgsql;
+revoke all privileges on function ntk.is_row_owner(text) from public;
+alter function ntk.is_row_owner owner to admin_user;
+grant execute on function ntk.is_row_owner(text) to data_owners_group, data_users_group;
+
+
 drop table if exists event_log_data_access;
 create table event_log_data_access(
     request_time timestamptz default current_timestamp,
@@ -143,28 +164,6 @@ $$ language plpgsql;
 revoke all privileges on function ntk.roles_have_common_group_and_is_data_user(text) from public;
 alter function ntk.roles_have_common_group_and_is_data_user owner to admin_user;
 grant execute on function ntk.roles_have_common_group_and_is_data_user(text) to data_owners_group, data_users_group;
-
-
-drop function if exists ntk.is_row_owner(text);
-create or replace function ntk.is_row_owner(_current_row_owner text)
-    returns boolean as $$
-    declare trusted_current_role text;
-    declare trusted_current_row_owner text;
-    declare _type text;
-    begin
-        trusted_current_role := current_setting('request.jwt.claim.user');
-        trusted_current_row_owner := _current_row_owner;
-        if trusted_current_role = trusted_current_row_owner then
-            return true;
-        else
-            return false;
-        end if;
-    end;
-$$ language plpgsql;
-revoke all privileges on function ntk.is_row_owner(text) from public;
-alter function ntk.is_row_owner owner to admin_user;
-grant execute on function ntk.is_row_owner(text) to data_owners_group, data_users_group;
-
 
 
 drop function if exists ntk.sql_type_from_generic_type(text);
