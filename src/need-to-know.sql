@@ -604,7 +604,8 @@ create or replace function group_add_members(group_name text,
         if members is not null then
             untrusted_members := members;
             for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
-                execute format('grant %I to %s', trusted_group_name, untrusted_i);
+                execute format('select groups.grant($1, $2)')
+                    using trusted_group_name, replace(untrusted_i, '"', '');
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, replace(untrusted_i, '"', '');
             end loop;

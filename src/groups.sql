@@ -1,33 +1,18 @@
 
--- testing session variable approach
-
-drop table if exists testing;
-create table if not exists testing(
-    row_owner text not null default current_setting('request.jwt.claim.user'),
-    x int
-);
-
-set session "request.jwt.claim.user" = 'leon';
-insert into testing (x) values (1);
-select * from testing;
-
-set session "request.jwt.claim.user" = 'gustav';
-insert into testing (x) values (2);
-select * from testing;
-
 -- low level group operations
+-- run after need-to-know.sql
 
 create schema groups;
-grant usage, select on schema groups to admin_user;
+grant usage on schema groups to admin_user;
 
 
 drop table if exists groups.group_memberships;
 create table if not exists groups.group_memberships(
-    group_name text not null,
-    user_name text not null, -- fk to registered users
+    group_name text not null references ntk.user_defined_groups (group_name),
+    user_name text not null references ntk.registered_users (_user_name),
     unique (group_name, user_name)
 );
-grant insert, select on groups.group_memberships to admin_user;
+grant insert, select, delete on groups.group_memberships to admin_user;
 
 
 create or replace function groups.create(group_name text)
@@ -93,24 +78,31 @@ $$ language plpgsql;
 
 
 -- testing
-
-select groups.create('g1');
-select groups.create('g2');
-select groups.create('g3');
-select groups.grant('g1', 'r1');
-select groups.grant('g2', 'r1');
-select groups.grant('g1', 'r2');
-select groups.grant('g3', 'r3');
+set role anon;
+select user_register('r1', 'data_owner', '{}'::json);
+select user_register('r2', 'data_owner', '{}'::json);
+select user_register('r3', 'data_owner', '{}'::json);
+set role admin_user;
+select group_create('g1', '{}'::json);
+select group_create('g2', '{}'::json);
+select group_create('g3', '{}'::json);
+select groups.grant('g1', 'owner_r1');
+select groups.grant('g2', 'owner_r1');
+select groups.grant('g1', 'owner_r2');
+select groups.grant('g3', 'owner_r3');
 table groups.group_memberships;
 \du
-select groups.have_common_group('r1', 'r2'); -- expect true
-select groups.have_common_group('r1', 'r3'); -- expect false
-select groups.revoke('g1', 'r1');
-select groups.revoke('g1', 'r2');
-select groups.revoke('g2', 'r1');
-select groups.revoke('g3', 'r3');
+select groups.have_common_group('r1', 'owner_r2'); -- expect true
+select groups.have_common_group('r1', 'owner_r3'); -- expect false
+select groups.revoke('g1', 'owner_r1');
+select groups.revoke('g1', 'owner_r2');
+select groups.revoke('g2', 'owner_r1');
+select groups.revoke('g3', 'owner_r3');
 table groups.group_memberships;
-select groups.drop('g1');
-select groups.drop('g2');
-select groups.drop('g3');
+select group_delete('g1');
+select group_delete('g2');
+select group_delete('g3');
+select user_delete('owner_r1');
+select user_delete('owner_r2');
+select user_delete('owner_r3');
 \du
