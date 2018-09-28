@@ -261,21 +261,33 @@ create or replace function test_group_membership_data_access_policies()
     returns boolean as $$
     declare _ans text;
     begin
-        set role owner_gustav;
+        set role admin_user;
+        select group_add_members('project_group', '{"memberships":
+                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
+        set role authenticator;
+        set role data_owner;
+        set session "request.jwt.claim.user" = 'owner_gustav';
         assert (select count(1) from people) = 1,
             'data owner, owner_gustav, has unauthorized data access';
         set role authenticator;
-        set role owner_hannah;
+        set role data_owner;
+        set session "request.jwt.claim.user" = 'owner_hannah';
         assert (select count(1) from people) = 1,
             'data owner, owner_hannah, has unauthorized data access';
         set role authenticator;
         set role admin_user;
+        set session "request.jwt.claim.user" = 'owner_hannah';
         -- the two data owners above are in the same group as the data user below
         select table_group_access_grant('people', 'project_group') into _ans;
-        set role user_project_user;
+        set role data_user;
+        set session "request.jwt.claim.user" = 'user_project_user';
         assert (select count(1) from people) = 2,
             'RLS policy for data user, user_project_user, is broken';
         set role authenticator;
+        set role admin_user;
+        select group_remove_members('project_group', '{"memberships":
+                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
+        select table_group_access_revoke('people', 'project_group') into _ans;
         return true;
     end;
 $$ language plpgsql;
@@ -704,7 +716,7 @@ create or replace function run_tests()
         assert (select test_user_groups()), 'ERROR: test_user_groups';
         assert (select test_user_list()), 'ERROR: test_user_list';
         assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
-        --assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
+        assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
         assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         assert (select test_user_delete()), 'ERROR: test_user_delete';
         assert (select test_group_delete()), 'ERROR: test_group_delete';
