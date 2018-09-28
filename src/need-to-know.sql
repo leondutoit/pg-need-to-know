@@ -726,12 +726,13 @@ create or replace function group_remove_members(group_name text,
         trusted_group_name := quote_ident(group_name);
         assert trusted_group_name in (select udg.group_name from ntk.user_defined_groups udg),
                 'access to group not allowed';
-        assert (select count(1) from unnest(array[members::text, metadata::text, remove_all::text]) x where x is not null) = 1,
-            'only one parameter is allowed to be used in the function signature - you can only remove group members by one method per call';
+        assert (select count(1) from unnest(array[members::text,
+                metadata::text, remove_all::text]) x where x is not null) = 1,
+            'you can only remove group members by one method per call';
         if members is not null then
             untrusted_members := members;
             for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
-                execute format('revoke %I from %s', trusted_group_name, untrusted_i);
+                execute format('select groups.revoke($1, $2)') using trusted_group_name, replace(untrusted_i, '"', '');
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_remove', trusted_group_name, replace(untrusted_i, '"', '');
             end loop;

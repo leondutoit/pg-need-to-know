@@ -219,8 +219,12 @@ create or replace function test_group_add_members()
         set role admin_user;
         select group_add_members('project_group', '{"memberships":
                 ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
-        assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
+        assert (select count(user_name) from groups.group_memberships
+                where group_name = 'project_group') = 3,
             'adding members to groups individually is broken';
+        select group_remove_members('project_group', '{"memberships":
+                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
+        /*
         revoke project_group from owner_gustav;
         revoke project_group from owner_hannah;
         revoke project_group from user_project_user;
@@ -244,6 +248,7 @@ create or replace function test_group_add_members()
         assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 4,
             'adding members to groups using add_all_users = true, is broken';
         revoke project_group from owner_faye;
+        */
         return true;
     end;
 $$ language plpgsql;
@@ -677,7 +682,7 @@ create or replace function run_tests()
         assert (select test_group_create()), 'ERROR: test_group_create';
         --assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
         assert (select test_default_data_owner_policies()), 'ERROR: test_default_data_owner_policies';
-        --assert (select test_group_add_members()), 'ERROR: test_group_add_members';
+        assert (select test_group_add_members()), 'ERROR: test_group_add_members';
         --assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
         --assert (select test_group_list()), 'ERROR: test_group_list';
         --assert (select test_group_list_members()), 'ERROR: test_group_list_members';
