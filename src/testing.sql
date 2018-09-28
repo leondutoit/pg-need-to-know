@@ -212,7 +212,7 @@ create or replace function test_default_data_owner_policies()
 $$ language plpgsql;
 
 
-create or replace function test_group_add_members()
+create or replace function test_group_add_and_remove_members()
     returns boolean as $$
     declare _ans text;
     begin
@@ -347,12 +347,14 @@ create or replace function test_user_group_remove()
         select group_add_members('project_group',
             '{"memberships": ["owner_faye"]}'::json, null, null) into _ans;
         set role authenticator;
-        set role owner_faye;
+        set role data_owner;
+        set session "request.jwt.claim.user" = 'owner_faye';
         select user_group_remove('project_group') into _ans;
+        set session "request.jwt.claim.user" = '';
         set role authenticator;
         set role admin_user;
-        assert (select group_name from ntk.user_initiated_group_removals
-                where user_name = 'owner_faye') = 'project_group',
+        assert 'project_group' in (select group_name from ntk.user_initiated_group_removals
+                where user_name = 'owner_faye'),
             'group removal accounting does not work';
         return true;
     end;
@@ -676,16 +678,17 @@ create or replace function run_tests()
         assert (select test_table_metadata_features()), 'ERROR: test_table_metadata_features';
         assert (select test_user_create()), 'ERROR: test_ntk.user_create';
         assert (select test_group_create()), 'ERROR: test_group_create';
-        --assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
         assert (select test_default_data_owner_policies()), 'ERROR: test_default_data_owner_policies';
-        assert (select test_group_add_members()), 'ERROR: test_group_add_members';
-        --assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
+        assert (select test_group_add_and_remove_members()), 'ERROR: test_group_add_and_remove_members';
+        assert (select test_user_group_remove()), 'ERROR: test_user_group_remove';
         --assert (select test_group_list()), 'ERROR: test_group_list';
         --assert (select test_group_list_members()), 'ERROR: test_group_list_members';
+
+        --assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
+        --assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
         --assert (select test_user_groups()), 'ERROR: test_user_groups';
         --assert (select test_user_list()), 'ERROR: test_user_list';
-        --assert (select test_user_group_remove()), 'ERROR: test_user_group_remove';
-        --assert (select test_group_remove_members()), 'ERROR: test_group_remove_members';
+
         assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         assert (select test_user_delete()), 'ERROR: test_user_delete';
         assert (select test_group_delete()), 'ERROR: test_group_delete';
@@ -712,7 +715,7 @@ drop function test_user_create();
 drop function test_group_create();
 drop function test_table_group_access_management();
 drop function test_default_data_owner_policies();
-drop function test_group_add_members();
+drop function test_group_add_and_remove_members();
 drop function test_group_membership_data_access_policies();
 drop function test_group_list();
 drop function test_group_list_members();

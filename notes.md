@@ -12,6 +12,7 @@
     - and update the RLS function to check the end date
 
 ## TODO
+- table grant types: read, write
 - make a presentation, with visual representations of the model
 
 ## IP

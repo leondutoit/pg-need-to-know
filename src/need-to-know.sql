@@ -624,7 +624,6 @@ create or replace function group_add_members(group_name text,
             return 'added members to groups';
         elsif add_all = true then
             for trusted_user_name in select user_name from user_registrations loop
-                raise info 'going to add %', trusted_user_name;
                 execute format('select groups.grant($1, $2)') using trusted_group_name, trusted_user_name;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, trusted_user_name;
@@ -660,8 +659,9 @@ drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
     returns table (member text) as $$
     begin
-        return query execute format('select u.member::text from ntk.user_defined_groups_memberships u
-                     where u.group_name = $1') using group_name;
+        return query execute
+            format('select user_name from groups.group_memberships where group_name = $1')
+            using group_name;
     end;
 $$ language plpgsql;
 revoke all privileges on function group_list_members(text) from public;
@@ -691,15 +691,15 @@ create or replace function user_group_remove(group_name text)
     declare trusted_current_role text;
     declare trusted_group text;
     begin
-        assert current_user::text in (select _user_name from ntk.registered_users),
+        trusted_current_role := current_setting('request.jwt.claim.user');
+        assert trusted_current_role in (select _user_name from ntk.registered_users),
             'access to role not allowed';
         assert group_name in (select udg.group_name from ntk.user_defined_groups udg),
             'access to group not allowed';
-        trusted_current_role := current_user::text;
         trusted_group := quote_ident(group_name);
         set role authenticator;
         set role admin_user;
-        execute format('revoke %I from %I', trusted_group, trusted_current_role);
+        execute format('select groups.revoke($1, $2)') using trusted_group, trusted_current_role;
         execute format('insert into ntk.user_initiated_group_removals (user_name, group_name) values ($1, $2)')
                 using trusted_current_role, group_name;
         set role authenticator;
