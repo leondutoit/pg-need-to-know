@@ -830,12 +830,17 @@ create or replace function user_delete(user_name text)
                 end;
             end loop;
         end if;
-        for trusted_group in select _group from ntk.group_memberships where _role = user_name loop
-            execute format('revoke %I from %I',  trusted_group, trusted_user_name);
+        for trusted_group in execute
+            format('select group_name from groups.group_memberships where user_name = $1')
+            using user_name loop
+            execute format('select groups.revoke($1, $2)') using trusted_group, trusted_user_name;
         end loop;
+        -- this might not be necessary anymore - since the grants are now based on
+        -- data_owners_group, and data_owner role, and since users do not exist as roles anymore
         for trusted_table in select table_name from information_schema.role_table_grants
                               where grantee = quote_literal(user_name) loop
             begin
+                raise info 'revoking access for % on table %', user_name, trusted_table;
                 execute format('revoke all privileges on %I from %I', trusted_table, user_name);
             end;
         end loop;
