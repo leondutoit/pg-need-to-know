@@ -97,6 +97,7 @@ create or replace function token(id text default null, token_type text default n
             'token type not recognised';
         if token_type = 'admin' then
             _role := 'admin_user';
+            _user_name := ''; -- external to pg-need-to-know
         elsif token_type in ('owner', 'user') then
             if token_type = 'owner' then
                 _user_name := 'owner_' || id;

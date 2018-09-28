@@ -285,7 +285,6 @@ class TestNtkHttpApi(unittest.TestCase):
         resp1 = self.ntkc.call_api(endpoint='/rpc/user_delete',
                                    data={'user_name': 'owner_1'},
                                    user_type='admin')
-        print resp1.text
         self.assertEqual(resp1.status_code, 200)
         resp2 = self.ntkc.call_api(endpoint='/rpc/user_delete',
                                    data={'user_name': 'user_1'},
