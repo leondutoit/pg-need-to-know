@@ -112,15 +112,15 @@ create or replace function token(id text default null, token_type text default n
             set role anon;
             assert (_exists_count = 1), 'user not registered';
             if token_type = 'owner' then
-                _role := 'owner_' || id;
+                _role := 'data_owner';
             elsif token_type = 'user' then
-                _role := 'user_' || id;
+                _role := 'data_user';
             end if;
         end if;
         select extract(epoch from now())::integer + 1800 into _exp;
         select secret from jwt.secret_store into _secret;
         -- add id to token as user claim
-        select '{"exp": ' || _exp || ', "role": "' || _role || '"}' into _claims;
+        select '{"exp": ' || _exp || ', "role": "' || _role || '", "user": "'|| _user_name ||'"}' into _claims;
         select jwt.sign(_claims::json, _secret) into _token;
         select '{"token": "'|| _token || '"}' into _out;
         return _out;
