@@ -42,18 +42,6 @@ grant usage on schema ntk to public;
 grant create on schema ntk to admin_user; -- so execute can be granted/revoked when users are created/deleted
 
 
-create or replace view ntk.group_memberships as
-select _group, _role from
-    (select * from
-        (select rolname as _role, oid from pg_authid)a join
-        (select roleid, member from pg_auth_members)b on a.oid = b.member)c
-    join (select rolname as _group, oid from pg_authid)d on c.roleid = d.oid;
-alter view ntk.group_memberships owner to admin_user;
-grant select on pg_authid to :db_owner, admin_user;
-grant select on ntk.group_memberships to :db_owner, admin_user;
-grant select on ntk.group_memberships to data_owners_group, data_users_group;
-
-
 drop function if exists ntk.is_row_owner(text);
 create or replace function ntk.is_row_owner(_current_row_owner text)
     returns boolean as $$
