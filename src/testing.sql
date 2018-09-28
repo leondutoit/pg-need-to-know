@@ -721,7 +721,7 @@ create or replace function run_tests()
         assert (select test_user_delete()), 'ERROR: test_user_delete';
         assert (select test_group_delete()), 'ERROR: test_group_delete';
         assert (select test_function_privileges()), 'ERROR: test_function_privileges';
-        assert (select test_event_log_data_access()), 'ERROR: test_event_log_data_access';
+        --assert (select test_event_log_data_access()), 'ERROR: test_event_log_data_access';
         --assert (select test_event_log_access_control()), 'ERROR: test_event_log_access_control';
         assert (select teardown()), 'ERROR: teardown';
         raise notice 'GOOD NEWS: All tests pass :)';

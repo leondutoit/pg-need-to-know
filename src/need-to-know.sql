@@ -545,17 +545,6 @@ revoke all privileges on function group_create(text, json) from public;
 grant execute on function group_create(text, json) to admin_user;
 
 
-drop view if exists ntk.user_defined_groups_memberships cascade;
-create or replace view ntk.user_defined_groups_memberships as
-    select group_name, _role member from
-        (select group_name from ntk.user_defined_groups)a
-        join
-        (select _group, _role from ntk.group_memberships)b
-        on a.group_name = b._group;
-alter view ntk.user_defined_groups_memberships owner to admin_user;
-grant select on ntk.user_defined_groups_memberships to public;
-
-
 create or replace view table_overview as
     select a.table_name, b.table_description, a.groups_with_access from
     (select table_name, array_agg(grantee::text) groups_with_access
