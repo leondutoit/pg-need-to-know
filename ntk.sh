@@ -32,6 +32,7 @@ _guide="\
 
 setup() {
     psql -U $SUPERUSER -d $DBNAME -f ./src/need-to-know.sql
+    psql -U $SUPERUSER -d $DBNAME -f ./src/groups.sql
     psql -U $SUPERUSER -d $DBNAME -f ./src/need-to-know-token.sql
 }
 
