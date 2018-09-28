@@ -613,9 +613,11 @@ create or replace function group_add_members(group_name text,
         elsif metadata is not null then
             untrusted_key := quote_literal(metadata->>'key');
             untrusted_val := metadata->>'value';
-            for trusted_user_name in execute format('select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
-                using untrusted_val loop
-                execute format('grant %I to %I', trusted_group_name, trusted_user_name);
+            for trusted_user_name in execute
+                format('select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
+                    using untrusted_val loop
+                execute format('select groups.grant($1, $2)')
+                    using trusted_group_name, trusted_user_name;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, trusted_user_name;
             end loop;
@@ -740,9 +742,10 @@ create or replace function group_remove_members(group_name text,
         elsif metadata is not null then
             untrusted_key := quote_literal(metadata->>'key');
             untrusted_val := metadata->>'value';
-            for trusted_user in execute format('select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
+            for trusted_user in execute
+                format('select user_name from user_registrations where user_metadata->>%s = $1', untrusted_key)
                 using untrusted_val loop
-                execute format('revoke %I from %s', trusted_group_name, trusted_user);
+                execute format('select groups.revoke($1, $2)') using trusted_group_name, trusted_user;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_remove', trusted_group_name, trusted_user;
             end loop;

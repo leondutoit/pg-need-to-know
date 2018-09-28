@@ -224,18 +224,15 @@ create or replace function test_group_add_members()
             'adding members to groups individually is broken';
         select group_remove_members('project_group', '{"memberships":
                 ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
-        /*
-        revoke project_group from owner_gustav;
-        revoke project_group from owner_hannah;
-        revoke project_group from user_project_user;
         select group_add_members('project_group', null, '{"key": "institution", "value": "A"}', null) into _ans;
-        assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 3,
+        assert (select count(user_name) from groups.group_memberships
+                where group_name = 'project_group') = 3,
             'adding members to groups using metadata is broken';
-        revoke project_group from owner_gustav;
-        revoke project_group from owner_hannah;
-        revoke project_group from user_project_user;
+        select group_remove_members('project_group', null, '{"key": "institution", "value": "A"}', null) into _ans;
+        /*
         select group_add_members('project_group', null, null, true) into _ans;
-        assert (select count(member) from ntk.user_defined_groups_memberships where group_name = 'project_group') = 4,
+        assert (select count(member) from ntk.user_defined_groups_memberships
+                where group_name = 'project_group') = 4,
             'adding members to groups using all = true, is broken';
         revoke project_group from owner_faye;
         revoke project_group from owner_gustav;
