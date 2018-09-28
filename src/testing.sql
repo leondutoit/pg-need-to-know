@@ -120,7 +120,8 @@ create or replace function test_table_group_access_management()
         set role anon;
         select user_register('1', 'data_owner', '{}'::json) into _ans;
         set role authenticator;
-        set role owner_1;
+        set role data_owner;
+        set session "request.jwt.claim.user" = 'owner_1';
         insert into people3 (name,age) values ('niel', 9);
         -- ensure default group access works for data owners
         assert (select count(1) from people3) = 1,
@@ -132,7 +133,8 @@ create or replace function test_table_group_access_management()
         select group_add_members('test_group', '{"memberships": ["owner_1", "user_1"]}'::json, null, null)
                 into _ans;
         -- ensure group membership does not work before table access is granted
-        set role user_1;
+        set role data_user;
+        set session "request.jwt.claim.user" = 'user_1';
         begin
             select count(1) from people3 into _num;
         exception
@@ -141,16 +143,20 @@ create or replace function test_table_group_access_management()
         end;
         set role authenticator;
         set role admin_user;
+        set session "request.jwt.claim.user" = '';
         -- ensure access grant works
         select table_group_access_grant('people3', 'test_group') into _ans;
-        set role user_1;
+        set role data_user;
+        set session "request.jwt.claim.user" = 'user_1';
         assert (select count(1) from people3) = 1,
             'group table grant is not working';
         set role authenticator;
         set role admin_user;
+        set session "request.jwt.claim.user" = '';
         select table_group_access_revoke('people3', 'test_group') into _ans;
         -- ensure revoking table access works
-        set role user_1;
+        set role data_user;
+        set session "request.jwt.claim.user" = 'user_1';
         begin
             select count(1) from people3 into _num;
         exception
@@ -159,12 +165,13 @@ create or replace function test_table_group_access_management()
         end;
         -- cleanup state
         set role authenticator;
-        set role owner_1;
+        set role data_owner;
+        set session "request.jwt.claim.user" = 'owner_1';
         select user_delete_data() into _ans;
         set role authenticator;
         set role admin_user;
         select group_remove_members('test_group', '{"memberships":
-            ["owner_1", "user_1"]}'::json, null, null) into _ans;
+            ["owner_1", "user_1"]}'::json) into _ans;
         select user_delete('owner_1') into _ans;
         select user_delete('user_1') into _ans;
         select group_delete('test_group') into _ans;
@@ -696,7 +703,7 @@ create or replace function run_tests()
         assert (select test_group_list_members()), 'ERROR: test_group_list_members';
         assert (select test_user_groups()), 'ERROR: test_user_groups';
         assert (select test_user_list()), 'ERROR: test_user_list';
-        --assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
+        assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
         --assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
         assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         assert (select test_user_delete()), 'ERROR: test_user_delete';

@@ -3,7 +3,7 @@
 -- run after need-to-know.sql
 
 create schema groups;
-grant usage on schema groups to admin_user, data_owners_group;
+grant usage on schema groups to admin_user, data_owners_group, data_users_group;
 
 
 drop table if exists groups.group_memberships;
@@ -13,7 +13,7 @@ create table if not exists groups.group_memberships(
     unique (group_name, user_name)
 );
 grant insert, select, delete on groups.group_memberships to admin_user;
-grant select on groups.group_memberships to data_owners_group;
+grant select on groups.group_memberships to data_owners_group, data_users_group;
 
 
 create or replace function groups.create(group_name text)
@@ -86,34 +86,3 @@ create or replace function groups.drop(group_name text)
 $$ language plpgsql;
 revoke all privileges on function groups.drop(text) from public;
 grant execute on function groups.drop(text) to admin_user;
-
-
--- testing
-set role anon;
-select user_register('r1', 'data_owner', '{}'::json);
-select user_register('r2', 'data_owner', '{}'::json);
-select user_register('r3', 'data_owner', '{}'::json);
-set role admin_user;
-select group_create('g1', '{}'::json);
-select group_create('g2', '{}'::json);
-select group_create('g3', '{}'::json);
-select groups.grant('g1', 'owner_r1');
-select groups.grant('g2', 'owner_r1');
-select groups.grant('g1', 'owner_r2');
-select groups.grant('g3', 'owner_r3');
-table groups.group_memberships;
-\du
-select groups.have_common_group('r1', 'owner_r2'); -- expect true
-select groups.have_common_group('r1', 'owner_r3'); -- expect false
-select groups.revoke('g1', 'owner_r1');
-select groups.revoke('g1', 'owner_r2');
-select groups.revoke('g2', 'owner_r1');
-select groups.revoke('g3', 'owner_r3');
-table groups.group_memberships;
-select group_delete('g1');
-select group_delete('g2');
-select group_delete('g3');
-select user_delete('owner_r1');
-select user_delete('owner_r2');
-select user_delete('owner_r3');
-\du

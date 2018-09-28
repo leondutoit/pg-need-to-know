@@ -534,6 +534,7 @@ create or replace function group_create(group_name text, group_metadata json)
     begin
         trusted_group_name := quote_ident(group_name);
         execute format('select groups.create($1)') using trusted_group_name into _res;
+        execute format('grant %I to data_user', trusted_group_name);
         execute format('insert into ntk.user_defined_groups values ($1, $2)')
             using group_name, group_metadata;
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
@@ -873,7 +874,8 @@ create or replace function group_delete(group_name text)
     declare trusted_num_table_select_grants int;
     declare _res boolean;
     begin
-        assert group_name in (select udg.group_name from ntk.user_defined_groups udg), 'permission denied to delete group';
+        assert group_name in (select udg.group_name from ntk.user_defined_groups udg),
+            'permission denied to delete group';
         trusted_group_name := quote_ident(group_name);
         execute format('select count(1) from groups.group_memberships u where u.group_name = $1')
                 using group_name into trusted_num_members;
