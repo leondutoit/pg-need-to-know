@@ -312,7 +312,7 @@ create or replace function test_user_groups()
     declare _ans text;
     begin
         set role admin_user;
-        select user_groups('owner_gustav')::text into _ans;
+        select group_add_members('project_group', '{"memberships": ["owner_gustav"]}'::json) into _ans;
         assert '(project_group,"{""consent_reference"": 1234}")' in (select user_groups('owner_gustav')::text),
             'user_groups function does not list all groups';
         begin
@@ -322,10 +322,14 @@ create or replace function test_user_groups()
                 'cannot access internal role groups - as expected';
         end;
         set role authenticator;
-        set role owner_gustav;
+        set role data_owner;
+        set session "request.jwt.claim.user" = 'owner_gustav';
         assert '(project_group,"{""consent_reference"": 1234}")' in (select user_groups()::text),
             'user_groups function does not list all groups';
+        set session "request.jwt.claim.user" = '';
         set role authenticator;
+        set role admin_user;
+        select group_remove_members('project_group', '{"memberships": ["owner_gustav"]}'::json) into _ans;
         return true;
     end;
 $$ language plpgsql;
@@ -690,7 +694,7 @@ create or replace function run_tests()
         assert (select test_user_group_remove()), 'ERROR: test_user_group_remove';
         assert (select test_group_list()), 'ERROR: test_group_list';
         assert (select test_group_list_members()), 'ERROR: test_group_list_members';
-        --assert (select test_user_groups()), 'ERROR: test_user_groups';
+        assert (select test_user_groups()), 'ERROR: test_user_groups';
         --assert (select test_user_list()), 'ERROR: test_user_list';
 
         --assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';

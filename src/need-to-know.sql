@@ -510,6 +510,7 @@ alter table ntk.user_defined_groups owner to admin_user;
 grant select on ntk.user_defined_groups to public;
 create view groups as select * from ntk.user_defined_groups;
 alter view groups owner to admin_user;
+grant select on groups to data_owners_group;
 
 
 drop table if exists ntk.user_initiated_group_removals cascade;
@@ -669,15 +670,21 @@ grant execute on function group_list_members(text) to admin_user;
 
 
 drop function if exists user_groups(text);
-create or replace function user_groups(user_name text default current_user::text)
+create or replace function user_groups(user_name text default null)
     returns table (group_name text, group_metadata json) as $$
     begin
-        assert user_name in (select _user_name from ntk.registered_users), 'access to role not allowed';
-        return query execute format('select a.group_name, b.group_metadata from
-                                        (select _group::text group_name from ntk.group_memberships where _role = $1)a
-                                         join
-                                        (select udg.group_name, udg.group_metadata from ntk.user_defined_groups udg)b
-                                    on a.group_name = b.group_name') using user_name;
+        if user_name is null then
+            user_name := current_setting('request.jwt.claim.user');
+        end if;
+        raise notice 'going to list groups for %', user_name;
+        assert user_name in (select _user_name from ntk.registered_users),
+            'access to role not allowed';
+        return query execute format('select a.group_name as group_name, a.group_metadata as group_metadata
+                                    from (select group_name, group_metadata from groups)a
+                                    join
+                                    (select distinct group_name from groups.group_memberships
+                                     where user_name = $1)b
+                                     on a.group_name = b.group_name') using user_name;
     end;
 $$ language plpgsql;
 revoke all privileges on function user_groups(text) from public;

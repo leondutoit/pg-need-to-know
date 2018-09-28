@@ -3,7 +3,7 @@
 -- run after need-to-know.sql
 
 create schema groups;
-grant usage on schema groups to admin_user;
+grant usage on schema groups to admin_user, data_owners_group;
 
 
 drop table if exists groups.group_memberships;
@@ -13,6 +13,7 @@ create table if not exists groups.group_memberships(
     unique (group_name, user_name)
 );
 grant insert, select, delete on groups.group_memberships to admin_user;
+grant select on groups.group_memberships to data_owners_group;
 
 
 create or replace function groups.create(group_name text)
