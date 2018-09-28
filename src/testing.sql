@@ -724,7 +724,7 @@ create or replace function run_tests()
         assert (select test_group_delete()), 'ERROR: test_group_delete';
         assert (select test_function_privileges()), 'ERROR: test_function_privileges';
         assert (select test_event_log_data_access()), 'ERROR: test_event_log_data_access';
-        --assert (select test_event_log_access_control()), 'ERROR: test_event_log_access_control';
+        assert (select test_event_log_access_control()), 'ERROR: test_event_log_access_control';
         assert (select teardown()), 'ERROR: teardown';
         raise notice 'GOOD NEWS: All tests pass :)';
         return true;
@@ -736,9 +736,9 @@ $$ language plpgsql;
 \d
 \du
 select run_tests();
-/*
+
 set role :db_owner;
-delete from event_log_data_access where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah');
+--delete from event_log_data_access where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah');
 drop function test_table_create();
 drop function test_table_metadata_features();
 drop function test_user_create();
@@ -759,7 +759,7 @@ drop function test_function_privileges();
 drop function test_event_log_data_access();
 drop function test_event_log_access_control();
 drop function teardown();
-*/
+
 \echo
 \echo 'DB state after testing'
 \d
