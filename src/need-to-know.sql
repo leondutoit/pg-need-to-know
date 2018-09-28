@@ -74,7 +74,7 @@ alter table event_log_data_access enable row level security;
 alter table event_log_data_access owner to admin_user;
 revoke delete on event_log_data_access from admin_user;
 grant delete on event_log_data_access to :db_owner;
-create policy select_for_data_owners on event_log_data_access for select using (data_owner = current_user);
+create policy select_for_data_owners on event_log_data_access for select using (ntk.is_row_owner(data_owner));
 create policy insert_policy_for_public on event_log_data_access for insert with check (true);
 
 

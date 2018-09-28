@@ -541,12 +541,14 @@ create or replace function test_event_log_data_access()
     begin
         set role admin_user;
         assert (select count(1) from event_log_data_access
-                where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah')) >= 4,
+                where data_owner in ('owner_1', 'owner_gustav', 'owner_hannah')) >= 3,
             'audit logging not working';
         set role authenticator;
-        set role owner_gustav;
+        set role data_owner;
+        set session "request.jwt.claim.user" = 'owner_gustav';
         assert 'owner_hannah' not in (select data_owner from event_log_data_access),
             'owner_gustav has access to audit logs belonging to owner_hannah';
+        set session "request.jwt.claim.user" = '';
         set role admin_user;
         begin
             delete from event_log_data_access;
@@ -691,9 +693,9 @@ create or replace function teardown()
         execute 'drop table people2';
         --set role authenticator;
         -- clear out accounting table
-        --set role admin_user;
-        --execute 'delete from event_log_user_data_deletions';
-        --execute 'delete from ntk.user_initiated_group_removals';
+        set role admin_user;
+        execute 'delete from event_log_user_data_deletions';
+        execute 'delete from ntk.user_initiated_group_removals';
         --set role authenticator;
         return true;
     end;
@@ -721,7 +723,7 @@ create or replace function run_tests()
         assert (select test_user_delete()), 'ERROR: test_user_delete';
         assert (select test_group_delete()), 'ERROR: test_group_delete';
         assert (select test_function_privileges()), 'ERROR: test_function_privileges';
-        --assert (select test_event_log_data_access()), 'ERROR: test_event_log_data_access';
+        assert (select test_event_log_data_access()), 'ERROR: test_event_log_data_access';
         --assert (select test_event_log_access_control()), 'ERROR: test_event_log_access_control';
         assert (select teardown()), 'ERROR: teardown';
         raise notice 'GOOD NEWS: All tests pass :)';
