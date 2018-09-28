@@ -331,7 +331,8 @@ create or replace function test_user_list()
     declare _ans text;
     begin
         set role admin_user;
-        assert (select count(1) from user_registrations where user_name = 'owner_gustav') = 1,
+        assert (select count(1) from user_registrations
+                where user_name = 'owner_gustav') = 1,
             'registered_users accounting view does not work';
         set role authenticator;
         return true;
@@ -681,13 +682,14 @@ create or replace function run_tests()
         assert (select test_default_data_owner_policies()), 'ERROR: test_default_data_owner_policies';
         assert (select test_group_add_and_remove_members()), 'ERROR: test_group_add_and_remove_members';
         assert (select test_user_group_remove()), 'ERROR: test_user_group_remove';
-        --assert (select test_group_list()), 'ERROR: test_group_list';
+        assert (select test_group_list()), 'ERROR: test_group_list';
         --assert (select test_group_list_members()), 'ERROR: test_group_list_members';
+        --assert (select test_user_groups()), 'ERROR: test_user_groups';
+        --assert (select test_user_list()), 'ERROR: test_user_list';
 
         --assert (select test_table_group_access_management()), 'ERROR: test_table_group_access_management';
         --assert (select test_group_membership_data_access_policies()), 'ERROR: test_group_membership_data_access_policies';
-        --assert (select test_user_groups()), 'ERROR: test_user_groups';
-        --assert (select test_user_list()), 'ERROR: test_user_list';
+
 
         assert (select test_user_delete_data()), 'ERROR: test_user_delete_data';
         assert (select test_user_delete()), 'ERROR: test_user_delete';
