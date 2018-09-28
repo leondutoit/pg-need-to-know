@@ -499,29 +499,22 @@ create or replace function test_group_delete()
     begin
 
         set role admin_user;
-        -- test that fails if has members
-        /*begin
+        select group_add_members('project_group', '{"memberships":
+                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
+        begin
             select group_delete('project_group') into _ans;
         exception
             when others then raise notice
                 'non-empty group deletion prevention works - as expected';
         end;
-        -- now remove members
-        select user_delete('user_project_user') into _ans;
+        select group_remove_members('project_group', '{"memberships":
+                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
         begin
             select group_delete('project_group') into _ans;
         exception
             when others then raise notice
                 'cannot delete a group if it still has select grant on a table - as expected';
         end;
-        -- revoke existing grants
-        select table_group_access_revoke('people', 'project_group') into _ans;
-        select table_group_access_revoke('people2', 'project_group') into _ans;
-        */
-        select group_delete('project_group') into _ans;
-        /*
-        assert (select count(1) from ntk.user_defined_groups where group_name = 'project_group') = 0,
-            'group accounting not working after deletion';
         begin
             -- possible attack vector, since groups are just roles
             select group_delete('authenticator') into _ans;
@@ -530,7 +523,6 @@ create or replace function test_group_delete()
                 'cannot delete internal role via group_delete - as expected.';
         end;
         set role authenticator;
-        */
         return true;
     end;
 $$ language plpgsql;
