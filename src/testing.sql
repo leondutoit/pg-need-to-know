@@ -288,14 +288,19 @@ $$ language plpgsql;
 
 create or replace function test_group_list_members()
     returns boolean as $$
+    declare _ans text;
     begin
         set role admin_user;
+        select group_add_members('project_group', '{"memberships":
+                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
         assert 'owner_gustav' in (select group_list_members('project_group')),
             'listing group members does not work';
         assert 'owner_hannah' in (select group_list_members('project_group')),
             'listing group members does not work';
         assert 'user_project_user' in (select group_list_members('project_group')),
             'listing group members does not work';
+        select group_remove_members('project_group', '{"memberships":
+                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
         set role authenticator;
         return true;
     end;
@@ -675,6 +680,7 @@ $$ language plpgsql;
 create or replace function run_tests()
     returns boolean as $$
     begin
+        -- tables, groups, and users are re-used across tests
         assert (select test_table_create()), 'ERROR: test_table_create';
         assert (select test_table_metadata_features()), 'ERROR: test_table_metadata_features';
         assert (select test_user_create()), 'ERROR: test_ntk.user_create';
@@ -683,7 +689,7 @@ create or replace function run_tests()
         assert (select test_group_add_and_remove_members()), 'ERROR: test_group_add_and_remove_members';
         assert (select test_user_group_remove()), 'ERROR: test_user_group_remove';
         assert (select test_group_list()), 'ERROR: test_group_list';
-        --assert (select test_group_list_members()), 'ERROR: test_group_list_members';
+        assert (select test_group_list_members()), 'ERROR: test_group_list_members';
         --assert (select test_user_groups()), 'ERROR: test_user_groups';
         --assert (select test_user_list()), 'ERROR: test_user_list';
 
