@@ -23,6 +23,8 @@ create or replace function groups.create(group_name text)
         return true;
     end;
 $$ language plpgsql;
+revoke all privileges on function groups.create(text) from public;
+grant execute on function groups.create(text) to admin_user;
 
 
 create or replace function groups.grant(group_name text, user_name text)
@@ -33,6 +35,8 @@ create or replace function groups.grant(group_name text, user_name text)
         return true;
     end;
 $$ language plpgsql;
+revoke all privileges on function groups.grant(text, text) from public;
+grant execute on function groups.grant(text, text) to admin_user;
 
 
 create or replace function groups.have_common_group(user1 text, user2 text)
@@ -56,6 +60,8 @@ create or replace function groups.have_common_group(user1 text, user2 text)
         end if;
     end;
 $$ language plpgsql;
+revoke all privileges on function groups.have_common_group(text, text) from public;
+grant execute on function groups.have_common_group(text, text) to admin_user, data_owners_group, data_users_group;
 
 
 create or replace function groups.revoke(group_name text, user_name text)
@@ -67,6 +73,8 @@ create or replace function groups.revoke(group_name text, user_name text)
         return true;
     end;
 $$ language plpgsql;
+revoke all privileges on function groups.revoke(text, text) from public;
+grant execute on function groups.revoke(text, text) to admin_user, data_owners_group;
 
 
 create or replace function groups.drop(group_name text)
@@ -76,6 +84,8 @@ create or replace function groups.drop(group_name text)
         return true;
     end;
 $$ language plpgsql;
+revoke all privileges on function groups.drop(text) from public;
+grant execute on function groups.drop(text) to admin_user;
 
 
 -- testing
