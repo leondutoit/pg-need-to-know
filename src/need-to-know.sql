@@ -379,6 +379,7 @@ $$ language plpgsql;
 revoke all privileges on function ntk.parse_generic_table_def(json) from public;
 
 
+-- table_name, group_name, grant_type<select,insert,update>, user_type<data_owner,data_user>
 drop function if exists table_group_access_grant(text, text);
 create or replace function table_group_access_grant(table_name text, group_name text)
     returns text as $$
