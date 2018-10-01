@@ -17,6 +17,7 @@
     - this can be used to "publish data" - set the owner explicitly to the person for whom it is being published
     - `table_policy_grant(table, type<select,insert,update>, user_type<data_owner,data_user>)`
     - log all updates: person, time, table, colname, old, new
+    - see: https://wiki.postgresql.org/wiki/Audit_trigger
 - test that table creation is idempotent, and can add new columns
 - make a presentation, with visual representations of the model
 

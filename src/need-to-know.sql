@@ -47,7 +47,6 @@ create or replace function ntk.is_row_owner(_current_row_owner text)
     returns boolean as $$
     declare trusted_current_role text;
     declare trusted_current_row_owner text;
-    declare _type text;
     begin
         trusted_current_role := current_setting('request.jwt.claim.user');
         trusted_current_row_owner := _current_row_owner;
@@ -61,6 +60,27 @@ $$ language plpgsql;
 revoke all privileges on function ntk.is_row_owner(text) from public;
 alter function ntk.is_row_owner owner to admin_user;
 grant execute on function ntk.is_row_owner(text) to data_owners_group, data_users_group;
+
+
+drop function if exists ntk.is_row_originator(text);
+create or replace function ntk.is_row_originator(_current_row_originator text)
+    returns boolean as $$
+    declare trusted_current_role text;
+    declare trusted_current_row_originator text;
+    begin
+        trusted_current_role := current_setting('request.jwt.claim.user');
+        trusted_current_row_originator := _current_row_originator;
+        raise info 'user: % and row originator %', trusted_current_role, trusted_current_row_originator;
+        if trusted_current_role = trusted_current_row_owner then
+            return true;
+        else
+            return false;
+        end if;
+    end;
+$$ language plpgsql;
+revoke all privileges on function ntk.is_row_originator(text) from public;
+alter function ntk.is_row_originator owner to admin_user;
+grant execute on function ntk.is_row_originator(text) to data_owners_group, data_users_group;
 
 
 drop table if exists event_log_data_access;
@@ -244,6 +264,9 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute 'alter table ' || trusted_table_name ||
                 ' add column row_owner text default current_setting(' || quote_literal(_curr_setting) ||
                 ') references ntk.registered_users (_user_name)';
+        execute 'alter table ' || trusted_table_name ||
+                ' add column row_originator text default current_setting(' || quote_literal(_curr_setting) ||
+                ') references ntk.registered_users (_user_name)';
         for untrusted_i in select * from json_array_elements(untrusted_columns) loop
             select ntk.sql_type_from_generic_type(untrusted_i->>'type') into trusted_dtype;
             select quote_ident(untrusted_i->>'name') into trusted_colname;
@@ -275,13 +298,14 @@ create or replace function ntk.parse_mac_table_def(definition json)
         end loop;
         execute format('alter table %I enable row level security', trusted_table_name);
         execute format('alter table %I force row level security', trusted_table_name);
-        execute format('grant select on %I to data_owners_group', trusted_table_name);
-        execute format('grant insert, update, delete on %I to public', trusted_table_name);
+        execute format('grant select, insert, update, delete on %I to data_owners_group', trusted_table_name);
+        --execute format('grant insert, update, delete on %I to public', trusted_table_name);
         execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
         execute format('create policy row_ownership_select_policy on %I for select using (ntk.is_row_owner(row_owner))', trusted_table_name);
         execute format('create policy row_ownership_delete_policy on %I for delete using (ntk.is_row_owner(row_owner))', trusted_table_name);
         execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(row_owner))', trusted_table_name);
-        execute format('create policy row_ownership_update_policy on %I for update using (ntk.is_row_owner(row_owner)) with check (row_owner = current_user)', trusted_table_name);
+        execute format('create policy row_ownership_update_policy on %I for update using (ntk.is_row_owner(row_owner))', trusted_table_name);
+        execute format('create policy row_originator_update_policy on %I for update using (ntk.is_row_originator(row_originator))', trusted_table_name);
         execute format('comment on table %I is %s', trusted_table_name, trusted_comment);
         return 'Success';
     end;
@@ -401,12 +425,11 @@ create or replace function table_group_access_grant(table_name text,
         if grant_type = 'select' then
             execute format('grant select on %I to %I', trusted_table_name, trusted_group_name);
             grant_event := 'table_grant_add_select';
+        elsif grant_type = 'insert' then
+            execute format('grant insert on %I to %I', trusted_table_name, trusted_group_name);
+            grant_event := 'table_grant_add_insert';
+        -- TODO: update
         end if;
-        -- current insert policy is true, so adding insert on the table
-        -- at the group level will allow data_users to insert
-        -- if they are registered (given the FK constraint)
-        -- BUT need an update policy for data_users
-        -- will need new keys for the log: table_grant_add_<select,insert,update>
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                 using grant_event, trusted_group_name, trusted_table_name;
         return 'granted access to table';
@@ -435,6 +458,9 @@ create or replace function table_group_access_revoke(table_name text,
         if grant_type = 'select' then
             execute format('revoke select on %I from %I', trusted_table_name, trusted_group_name);
             revoke_event := 'table_grant_revoke_select';
+        elsif grant_type = 'insert' then
+            execute format('revoke insert on %I from %I', trusted_table_name, trusted_group_name);
+            revoke_event := 'table_grant_revoke_insert';
         end if;
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                 using revoke_event, trusted_group_name, trusted_table_name;
