@@ -22,10 +22,10 @@ User (credentials) -> app -> IdP + Auth Server (rights management)
 
 # 2. Getting an access token with an authenticated and authorized ID
                       app -> GET /rpc/token?id=id&token_type=<admin,owner,user>
-                          <- JWT {exp:exp, role:role}
+                          <- JWT {exp:exp, role:role, user:user_id}
 
 # 3. An authenticated request
-HTTP + JWT -> postgrest (authenticator) -> DB (role): SQL (security context)
+HTTP + JWT -> postgrest (authenticator) -> DB (role + session variable): SQL (security context)
            <- HTTP response             <- authorized dataset
 ```
 
@@ -33,7 +33,7 @@ Firstly, apps must authenticate end-users, and determine their rights: whether t
 
 Secondly, the app can get a token by doing `GET /rpc/token?id=id&token_type=<admin,owner,user>` - an endpoint provided by `pg-need-to-know`. If a token for a data user or data owner is being requested `pg-need-to-know` will check if the person has registered. If an admin token is requested, no check will be done. This emphasises the importance of managing rights in another system. The app will then receive a JWT with an expiry, and a role which is compatible with `pg-need-to-know`'s requirements. _Please note this is NOT authentication or authorization, the app is reponsible for establishing the authenticity of persons, and whether they are allowed to get specific token types._
 
-Lastly, the app can then include the JWT in the Authorization header in the following HTTP request. `postgrest` will then switch into the provided role, executing the implied SQL in the role's security context, thereby enforcing authorization. An authorized dataset will be returned in the HTTP response.
+Lastly, the app can then include the JWT in the Authorization header in the following HTTP request. `postgrest` will then switch into the provided role, set a session variable called `request.jwt.claim.user` to the value of the `user` claim, and execute the implied SQL in the role's security context, thereby enforcing authorization. An authorized dataset will be returned in the HTTP response.
 
 ## Tokens, roles and postgrest
 
@@ -42,13 +42,14 @@ Lastly, the app can then include the JWT in the Authorization header in the foll
 ```json
 {
     "role": "some_role",
+    "user": "some_id",
     "exp": 210849818
 }
 ```
 
 The `exp` field is the time when the token should expire. In practice, tokens should be short-lived. `pg-need-to-know` issues tokens which are valid for 30 minutes.
 
-The `role` claim plays a very specific role in `postgrest`: before the SQL query implied by the HTTP request is executed, `postgrest` switches into the role provided in the claim. In `pg-need-to-know`, `postgrest` is intended to connect to the DB with a role called the `authenticator`. This is a special role which has not other rights in the DB, other than the ability to connect to it, and to switch to other roles. By switching to the role provided in the JWT claim before executing the SQL query implied by the HTTP request, postgrest ensures that the DB system enforces security policies associated with that role.
+The `role` claim plays a very specific role in `postgrest`: before the SQL query implied by the HTTP request is executed, `postgrest` switches into the role provided in the claim. In `pg-need-to-know`, `postgrest` is intended to connect to the DB with a role called the `authenticator`. This is a special role which has not other rights in the DB, other than the ability to connect to it, and to switch to other roles. By switching to the role provided in the JWT claim before executing the SQL query implied by the HTTP request, postgrest ensures that the DB system enforces security policies associated with that role. The functions in `pg-need-to-know` use the identity information carried in the `user` claim to enforce authorization policies, in addition to roles.
 
 ## Establishing trust with apps
 
