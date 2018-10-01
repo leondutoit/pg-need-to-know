@@ -241,7 +241,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute format('create table if not exists %I()', trusted_table_name);
         execute 'alter table ' || trusted_table_name ||
                 ' add column row_owner text default current_setting(' || quote_literal(_curr_setting) ||
-                ') references ntk.data_owners (user_name)';
+                ') references ntk.registered_users (_user_name)';
         for untrusted_i in select * from json_array_elements(untrusted_columns) loop
             select ntk.sql_type_from_generic_type(untrusted_i->>'type') into trusted_dtype;
             select quote_ident(untrusted_i->>'name') into trusted_colname;
@@ -392,6 +392,10 @@ create or replace function table_group_access_grant(table_name text, group_name 
         trusted_table_name := quote_ident(table_name);
         trusted_group_name := quote_ident(group_name);
         execute format('grant select on %I to %I', trusted_table_name, trusted_group_name);
+        -- current insert policy is true, so adding insert on the table
+        -- at the group level will allow data_users to insert
+        -- if they are registered (given the FK constraint)
+        -- BUT need an update policy for data_users
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                 using 'table_grant_add', trusted_group_name, trusted_table_name;
         return 'granted access to table';
