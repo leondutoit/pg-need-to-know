@@ -10,8 +10,8 @@ table_create(definition json, type text)
 table_describe(table_name text, table_description text)
 table_describe_columns(table_name text, column_descriptions json)
 table_metadata(table_name text)
-table_group_access_grant(table_name text, group_name text)
-table_group_access_revoke(table_name text, group_name text)
+table_group_access_grant(table_name text, group_name text, grant_type text)
+table_group_access_revoke(table_name text, group_name text, grant_type text)
 
 -- user operations
 user_register(user_id text, user_type text, user_metadata json)

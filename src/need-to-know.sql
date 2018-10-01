@@ -102,7 +102,9 @@ create table if not exists event_log_access_control(
     event_type text not null check
         (event_type in ('group_create', 'group_delete',
                         'group_member_add', 'group_member_remove',
-                        'table_grant_add', 'table_grant_revoke')),
+                        'table_grant_add_select', 'table_grant_add_insert',
+                        'table_grant_add_update', 'table_grant_revoke_select',
+                        'table_grant_revoke_insert', 'table_grant_revoke_upate')),
     group_name text not null,
     target text
 );
@@ -379,25 +381,34 @@ $$ language plpgsql;
 revoke all privileges on function ntk.parse_generic_table_def(json) from public;
 
 
--- table_name, group_name, grant_type<select,insert,update>, user_type<data_owner,data_user>
-drop function if exists table_group_access_grant(text, text);
-create or replace function table_group_access_grant(table_name text, group_name text)
+-- table_name, group_name, grant_type<select,insert,update>
+drop function if exists table_group_access_grant(text, text, text);
+create or replace function table_group_access_grant(table_name text,
+                                                    group_name text,
+                                                    grant_type text)
     returns text as $$
     declare trusted_table_name text;
     declare trusted_group_name text;
+    declare grant_event text;
     begin
         assert group_name in (select udg.group_name from ntk.user_defined_groups udg),
             'access to group not allowed';
         assert (select ntk.is_user_defined_table(table_name) = true);
+        assert grant_type in ('select', 'insert', 'update'),
+            'unrecognised grant type - choose one: select, insert, update';
         trusted_table_name := quote_ident(table_name);
         trusted_group_name := quote_ident(group_name);
-        execute format('grant select on %I to %I', trusted_table_name, trusted_group_name);
+        if grant_type = 'select' then
+            execute format('grant select on %I to %I', trusted_table_name, trusted_group_name);
+            grant_event := 'table_grant_add_select';
+        end if;
         -- current insert policy is true, so adding insert on the table
         -- at the group level will allow data_users to insert
         -- if they are registered (given the FK constraint)
         -- BUT need an update policy for data_users
+        -- will need new keys for the log: table_grant_add_<select,insert,update>
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
-                using 'table_grant_add', trusted_group_name, trusted_table_name;
+                using grant_event, trusted_group_name, trusted_table_name;
         return 'granted access to table';
     end;
 $$ language plpgsql;
@@ -405,20 +416,28 @@ revoke all privileges on function table_group_access_grant(text, text) from publ
 grant execute on function table_group_access_grant(text, text) to admin_user;
 
 
-drop function if exists table_group_access_revoke(text, text);
-create or replace function table_group_access_revoke(table_name text, group_name text)
+drop function if exists table_group_access_revoke(text, text, text);
+create or replace function table_group_access_revoke(table_name text,
+                                                     group_name text,
+                                                     grant_type text)
     returns text as $$
     declare trusted_table_name text;
     declare trusted_group_name text;
+    declare revoke_event text;
     begin
         assert group_name in (select udg.group_name from ntk.user_defined_groups udg),
             'access to group not allowed';
         assert (select ntk.is_user_defined_table(table_name) = true);
+        assert grant_type in ('select', 'insert', 'update'),
+            'unrecognised grant type - choose one: select, insert, update';
         trusted_table_name := quote_ident(table_name);
         trusted_group_name := quote_ident(group_name);
-        execute format('revoke select on %I from %I', trusted_table_name, trusted_group_name);
+        if grant_type = 'select' then
+            execute format('revoke select on %I from %I', trusted_table_name, trusted_group_name);
+            revoke_event := 'table_grant_revoke_select';
+        end if;
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
-                using 'table_grant_revoke', trusted_group_name, trusted_table_name;
+                using revoke_event, trusted_group_name, trusted_table_name;
         return 'revoked access to table';
     end;
 $$ language plpgsql;

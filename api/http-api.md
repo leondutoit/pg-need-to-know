@@ -17,6 +17,8 @@ POST            | /rpc/table_create
 POST            | /rpc/table_describe
 POST            | /rpc/table_describe_columns
 GET             | /rpc/table_metadata?table_name=<name>
+POST            | /rpc/table_group_access_grant
+POST            | /rpc/table_group_access_revoke
 POST            | /rpc/group_create
 POST            | /rpc/group_add_members
 GET             | /rpc/group_list_members?group_name=<name>
@@ -151,6 +153,26 @@ Authorization: Bearer your-jwt
 # 5. add all existing data users to a group
 {"group_name": "analysis1_group",
  "add_all_users": true}
+```
+
+- Grant group access to a table
+```bash
+POST /rpc/table_group_access_grant
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+# grant_types: select, insert, update
+{"table_name": "people", "group_name": "analysis1_group", "grant_type": "select"}
+```
+
+- Revoke group access from a table
+```bash
+POST /rpc/table_group_access_revoke
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+# grant_types: select, insert, update
+{"table_name": "people", "group_name": "analysis1_group", "grant_type": "select"}
 ```
 
 - List all members in a specific group

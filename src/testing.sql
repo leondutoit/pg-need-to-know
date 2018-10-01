@@ -145,7 +145,7 @@ create or replace function test_table_group_access_management()
         set role admin_user;
         set session "request.jwt.claim.user" = '';
         -- ensure access grant works
-        select table_group_access_grant('people3', 'test_group') into _ans;
+        select table_group_access_grant('people3', 'test_group', 'select') into _ans;
         set role data_user;
         set session "request.jwt.claim.user" = 'user_1';
         assert (select count(1) from people3) = 1,
@@ -153,7 +153,7 @@ create or replace function test_table_group_access_management()
         set role authenticator;
         set role admin_user;
         set session "request.jwt.claim.user" = '';
-        select table_group_access_revoke('people3', 'test_group') into _ans;
+        select table_group_access_revoke('people3', 'test_group', 'select') into _ans;
         -- ensure revoking table access works
         set role data_user;
         set session "request.jwt.claim.user" = 'user_1';
@@ -278,7 +278,7 @@ create or replace function test_group_membership_data_access_policies()
         set role admin_user;
         set session "request.jwt.claim.user" = 'owner_hannah';
         -- the two data owners above are in the same group as the data user below
-        select table_group_access_grant('people', 'project_group') into _ans;
+        select table_group_access_grant('people', 'project_group', 'select') into _ans;
         set role data_user;
         set session "request.jwt.claim.user" = 'user_project_user';
         assert (select count(1) from people) = 2,
@@ -287,7 +287,7 @@ create or replace function test_group_membership_data_access_policies()
         set role admin_user;
         select group_remove_members('project_group', '{"memberships":
                 ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
-        select table_group_access_revoke('people', 'project_group') into _ans;
+        select table_group_access_revoke('people', 'project_group', 'select') into _ans;
         return true;
     end;
 $$ language plpgsql;
@@ -562,7 +562,7 @@ create or replace function test_event_log_access_control()
         set role admin_user;
         for i in select unnest(array['group_create', 'group_delete',
                         'group_member_add', 'group_member_remove',
-                        'table_grant_add', 'table_grant_revoke']) loop
+                        'table_grant_add_select', 'table_grant_revoke_select']) loop
             assert i in (select event_type from event_log_access_control
                          where group_name = 'test_group'),
                 'event not found in test_event_log_access_control';

@@ -166,7 +166,8 @@ Authorization: JWT-for-admin-user
 
 {
     "table_name": "t1",
-    "group_name": "group1"
+    "group_name": "group1",
+    "grant_type": "select"
 }
 ```
 
@@ -284,6 +285,10 @@ Authorization: JWT-for-admin-user
     "group_name": "group1",
 }
 ```
+
+## Publishing data
+
+Use case: analyse data, make it available to owners.
 
 ## Further reading
 
