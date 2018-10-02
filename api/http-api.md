@@ -155,7 +155,7 @@ Authorization: Bearer your-jwt
  "add_all_users": true}
 ```
 
-- Grant group access to a table
+- Grant group of data users access to a table (data owners have insert, update and delete rights by default)
 ```bash
 POST /rpc/table_group_access_grant
 Content-Type: application/json
