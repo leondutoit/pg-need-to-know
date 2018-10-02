@@ -70,7 +70,6 @@ create or replace function ntk.is_row_originator(_current_row_originator text)
     begin
         trusted_current_role := current_setting('request.jwt.claim.user');
         trusted_current_row_originator := _current_row_originator;
-        raise info 'user: % and row originator %', trusted_current_role, trusted_current_row_originator;
         if trusted_current_role = trusted_current_row_owner then
             return true;
         else
@@ -124,7 +123,7 @@ create table if not exists event_log_access_control(
                         'group_member_add', 'group_member_remove',
                         'table_grant_add_select', 'table_grant_add_insert',
                         'table_grant_add_update', 'table_grant_revoke_select',
-                        'table_grant_revoke_insert', 'table_grant_revoke_upate')),
+                        'table_grant_revoke_insert', 'table_grant_revoke_update')),
     group_name text not null,
     target text
 );
@@ -299,7 +298,6 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute format('alter table %I enable row level security', trusted_table_name);
         execute format('alter table %I force row level security', trusted_table_name);
         execute format('grant select, insert, update, delete on %I to data_owners_group', trusted_table_name);
-        --execute format('grant insert, update, delete on %I to public', trusted_table_name);
         execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
         execute format('create policy row_ownership_select_policy on %I for select using (ntk.is_row_owner(row_owner))', trusted_table_name);
         execute format('create policy row_ownership_delete_policy on %I for delete using (ntk.is_row_owner(row_owner))', trusted_table_name);
@@ -428,7 +426,10 @@ create or replace function table_group_access_grant(table_name text,
         elsif grant_type = 'insert' then
             execute format('grant insert on %I to %I', trusted_table_name, trusted_group_name);
             grant_event := 'table_grant_add_insert';
-        -- TODO: update
+        elsif grant_type = 'update' then
+            raise notice 'granting update';
+            execute format('grant select, update on %I to %I', trusted_table_name, trusted_group_name);
+            grant_event := 'table_grant_add_update';
         end if;
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                 using grant_event, trusted_group_name, trusted_table_name;
@@ -461,6 +462,9 @@ create or replace function table_group_access_revoke(table_name text,
         elsif grant_type = 'insert' then
             execute format('revoke insert on %I from %I', trusted_table_name, trusted_group_name);
             revoke_event := 'table_grant_revoke_insert';
+        elsif grant_type = 'update' then
+            execute format('revoke update on %I from %I', trusted_table_name, trusted_group_name);
+            revoke_event := 'table_grant_revoke_update';
         end if;
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                 using revoke_event, trusted_group_name, trusted_table_name;
