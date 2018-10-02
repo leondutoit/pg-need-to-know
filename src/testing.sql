@@ -307,13 +307,36 @@ create or replace function test_group_membership_data_access_policies()
             raise notice 'This should not be printed!';
         exception
             when insufficient_privilege
-            then raise notice 'revoking insert from data users works - as expected';
+            then raise notice
+            'revoking insert from data users works - as expected';
         end;
+        set role admin_user;
+        set session "request.jwt.claim.user" = '';
+        -- UPDATE policy grant
+        set role data_user;
+        set session "request.jwt.claim.user" = 'user_project_user';
+        begin
+            update people set age = 8
+                where row_originator = 'user_project_user';
+            raise notice 'This should not be printed!';
+        exception
+            when insufficient_privilege
+            then raise notice
+            'data user cannot update before grant is issued - as expected';
+        end;
+        set role admin_user;
+        set session "request.jwt.claim.user" = '';
+        select table_group_access_grant('people', 'project_group', 'update') into _ans;
+        set role data_user;
+        set session "request.jwt.claim.user" = 'user_project_user';
+        -- still not working???
+        update people set name = 'Otho'
+                where row_originator = 'user_project_user';
         set role admin_user;
         set session "request.jwt.claim.user" = '';
         select group_remove_members('project_group', '{"memberships":
                 ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
-        -- UPDATE policy grant
+        select table_group_access_revoke('people', 'project_group', 'update') into _ans;
         return true;
     end;
 $$ language plpgsql;
@@ -527,6 +550,7 @@ create or replace function test_group_delete()
         set role admin_user;
         select group_add_members('project_group', '{"memberships":
                 ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
+        select table_group_access_grant('people', 'project_group', 'select') into _ans;
         begin
             select group_delete('project_group') into _ans;
         exception
@@ -548,6 +572,8 @@ create or replace function test_group_delete()
             when assert_failure then raise notice
                 'cannot delete internal role via group_delete - as expected.';
         end;
+        select table_group_access_revoke('people', 'project_group', 'select') into _ans;
+        select group_delete('project_group') into _ans;
         set role authenticator;
         return true;
     end;
@@ -586,11 +612,13 @@ create or replace function test_event_log_access_control()
         -- use the group used in test_table_group_access_management
         -- this goes through the whole life-cycle in a simple way
         set role admin_user;
-        for i in select unnest(array['group_create', 'group_delete',
+        for i in select unnest(array['group_create', --'group_delete',
                         'group_member_add', 'group_member_remove',
                         'table_grant_add_select', 'table_grant_add_insert',
-                        'table_grant_revoke_select', 'table_grant_revoke_insert'])
+                        'table_grant_revoke_select', 'table_grant_revoke_insert',
+                        'table_grant_add_update', 'table_grant_revoke_update'])
             loop
+            raise info '%', i;
             assert i in (select event_type from event_log_access_control
                          where group_name = 'project_group'),
                 'event not found in test_event_log_access_control';
@@ -711,12 +739,10 @@ create or replace function teardown()
         execute 'drop table people2';
         select user_delete('owner_faye') into _ans;
         select user_delete('user_project_user') into _ans;
-        --set role authenticator;
         -- clear out accounting table
         set role admin_user;
         execute 'delete from event_log_user_data_deletions';
         execute 'delete from ntk.user_initiated_group_removals';
-        --set role authenticator;
         return true;
     end;
 $$ language plpgsql;
