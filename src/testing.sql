@@ -659,7 +659,21 @@ create or replace function test_event_log_access_control()
 $$ language plpgsql;
 
 
--- test_event_log_data_updates
+create or replace function test_event_log_data_updates()
+    returns boolean as $$
+    begin
+        assert (select column_name from event_log_data_updates
+                where updated_by = 'user_project_user' limit 1)
+            = 'name';
+        assert (select old_data from event_log_data_updates
+                where updated_by = 'user_project_user' limit 1)
+            = 'Gordon';
+        assert (select new_data from event_log_data_updates
+                where updated_by = 'user_project_user' limit 1)
+            = 'Otho';
+        return true;
+    end;
+$$ language plpgsql;
 
 
 create or replace function test_function_privileges()
@@ -806,6 +820,7 @@ create or replace function run_tests()
         assert (select test_function_privileges()), 'ERROR: test_function_privileges';
         assert (select test_event_log_data_access()), 'ERROR: test_event_log_data_access';
         assert (select test_event_log_access_control()), 'ERROR: test_event_log_access_control';
+        assert (select test_event_log_data_updates()), 'ERROR: test_event_log_data_updates';
         assert (select teardown()), 'ERROR: teardown';
         raise notice 'GOOD NEWS: All tests pass :)';
         return true;
@@ -839,6 +854,7 @@ drop function test_group_delete();
 drop function test_function_privileges();
 drop function test_event_log_data_access();
 drop function test_event_log_access_control();
+drop function test_event_log_data_updates();
 drop function teardown();
 
 \echo

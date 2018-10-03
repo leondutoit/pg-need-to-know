@@ -12,7 +12,6 @@
     - and update the RLS function to check the end date
 
 ## TODO
-- add test for update log
 - see if `user_` and `owner_` prepending can be dropped
 - make a presentation, with visual representations of the model
 
@@ -84,3 +83,4 @@
 - add assert false to tests for more robust checks
 - log all updates: person, time, table, colname, old, new
     - see: https://wiki.postgresql.org/wiki/Audit_trigger
+- add test for update log
