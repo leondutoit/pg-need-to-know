@@ -248,6 +248,13 @@ GET /event_log_user_group_removals
 Authorization: JWT-for-admin-user
 ```
 
+All data changes which have been made using updates:
+
+```bash
+GET /event_log_data_updates
+Authorization: JWT-for-admin-user
+```
+
 The group removal and data deletion event logs are useful to help administrators follow up by deleting downstream data artefacts which may still contain the identity of the person who deleted their data.
 
 ## Change access control
@@ -288,7 +295,36 @@ Authorization: JWT-for-admin-user
 
 ## Publishing data
 
-Use case: analyse data, make it available to owners.
+A common use case is to make data available to owners after analysis. This can be accomplished in the following way: 1) grant data users insert and update rights on a table, 2) register the user who should see the published data, and 3) set the `row_owner` column to the identity of the intended recipient.
+
+Firstly, grant insert and update rights:
+```bash
+POST /rpc/table_group_access_grant
+Authorization: JWT-for-admin-user
+
+{
+    "table_name": "t1",
+    "group_name": "group1",
+    "grant_type": "update"
+}
+```
+Secondly, register the intended recipient, if not already registered, using the same method described above. Lastly, insert the data and set the `row_owner` column to the identity of the recipient:
+```bash
+POST /t1
+Content-Type: application/json
+Authorization: JWT-for-data-user
+
+{"country": "Sudan", "education": 12}
+
+
+PATCH /t1?country=Sudan
+Content-Type: application/json
+Authorization: JWT-for-data-owner
+
+{"row_owner": "the-new-owner"}
+```
+
+A real case woulc probably have a better way of identifying rows which need to be updated. Be that as it may, now only the owner can see this data.
 
 ## Further reading
 

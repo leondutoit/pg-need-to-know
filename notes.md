@@ -12,10 +12,8 @@
     - and update the RLS function to check the end date
 
 ## TODO
-- add assert false to tests for more robust checks
-- log all updates: person, time, table, colname, old, new
-    - see: https://wiki.postgresql.org/wiki/Audit_trigger
-- test that table creation is idempotent, and can add new columns
+- add test for update log
+- see if `user_` and `owner_` prepending can be dropped
 - make a presentation, with visual representations of the model
 
 ## IP
@@ -81,3 +79,8 @@
     - table grant types: read, write so that users can be granted the right to insert and/or update
     - this can be used to "publish data" - set the owner explicitly to the person for whom it is being published
     - `table_policy_grant(table, type<select,insert,update>, user_type<data_owner,data_user>)`
+- fix revoke update
+- test that table creation is idempotent, and can add new columns
+- add assert false to tests for more robust checks
+- log all updates: person, time, table, colname, old, new
+    - see: https://wiki.postgresql.org/wiki/Audit_trigger

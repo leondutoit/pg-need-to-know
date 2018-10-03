@@ -38,6 +38,7 @@ event_log_user_group_removals
 event_log_user_data_deletions
 event_log_data_access
 event_log_access_control
+event_log_data_updates
 ```
 
 For details of usage see `testing.sql`.

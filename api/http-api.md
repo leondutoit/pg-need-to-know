@@ -33,6 +33,7 @@ GET             | /event_log_user_group_removals
 GET             | /event_log_user_data_deletions
 GET             | /event_log_data_access
 GET             | /event_log_access_control
+GET             | /event_log_data_updates
 ```
 
 For data_owners:
@@ -294,6 +295,15 @@ Authorization: Bearer your-jwt
 # returns {event_date,event_type,group_name,event_metadata}
 ```
 
+- As the admin user, see all data updates
+```bash
+GET /event_log_user_group_removals
+Content-Type: application/json
+Authorization: Bearer your-jwt
+
+# returns {updated_time, updated_by, table_name, row_id, column_name, old_data, new_data, query}
+```
+
 ### For data owners
 
 - Remove yourself from a group, as a data owner
@@ -342,3 +352,5 @@ Authorization: Bearer your-jwt
 # as defined by group membership
 # for more query capabilities see postgrest docs
 ```
+
+- If granted insert or update rights on tables, for publishing, then the same methods apply as described above

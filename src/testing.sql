@@ -659,6 +659,9 @@ create or replace function test_event_log_access_control()
 $$ language plpgsql;
 
 
+-- test_event_log_data_updates
+
+
 create or replace function test_function_privileges()
     returns boolean as $$
     declare _ans text;
@@ -739,7 +742,8 @@ create or replace function test_function_privileges()
         set role authenticator;
         for i in select unnest(array['table_overview', 'user_registrations', 'groups',
                   'event_log_user_group_removals', 'event_log_user_data_deletions',
-                  'event_log_data_access', 'event_log_access_control']) loop
+                  'event_log_data_access', 'event_log_access_control',
+                  'event_log_data_updates']) loop
             begin
                 execute format('select * from %I', i);
             exception
