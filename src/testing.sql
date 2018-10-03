@@ -64,13 +64,13 @@ create or replace function test_user_create()
     declare _ans text;
     begin
         set role admin_user;
-        select ntk.user_create('owner_gustav', 'data_owner', '{"institution":"A"}'::json) into _ans;
+        select ntk.user_create('gustav', 'owner_gustav', 'data_owner', '{"institution":"A"}'::json) into _ans;
         assert (select _user_type from ntk.registered_users where _user_name = 'owner_gustav') = 'data_owner',
             'problem with user creation';
-        select ntk.user_create('owner_hannah', 'data_owner', '{"institution":"A"}'::json) into _ans;
+        select ntk.user_create('hannah', 'owner_hannah', 'data_owner', '{"institution":"A"}'::json) into _ans;
         assert (select _user_type from ntk.registered_users where _user_name = 'owner_hannah') = 'data_owner',
             'problem with user creation';
-        select ntk.user_create('owner_faye', 'data_owner', '{"institution":"B"}'::json) into _ans;
+        select ntk.user_create('faye', 'owner_faye', 'data_owner', '{"institution":"B"}'::json) into _ans;
         assert (select _user_type from ntk.registered_users where _user_name = 'owner_faye') = 'data_owner',
             'problem with user creation';
         set role authenticator;

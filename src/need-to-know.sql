@@ -581,12 +581,14 @@ grant execute on function table_group_access_revoke(text, text) to admin_user;
 drop table if exists ntk.registered_users cascade;
 create table if not exists ntk.registered_users(
     registration_date timestamptz default current_timestamp,
+    user_id text not null,
     _user_name text not null unique,
     _user_type text not null check (_user_type in ('data_owner', 'data_user')),
     user_metadata json
 );
 alter table ntk.registered_users owner to admin_user;
 grant select on ntk.registered_users to public;
+-- TODO: need to make sure this is consistent with the new id API
 create or replace view user_registrations as
     select registration_date, _user_name as user_name,
            _user_type as user_type, user_metadata
@@ -612,7 +614,7 @@ create or replace function user_register(user_id text, user_type text, user_meta
             trusted_user_name := 'user_' || user_id;
         end if;
         set role admin_user;
-        select ntk.user_create(trusted_user_name, user_type, user_metadata) into _ans;
+        select ntk.user_create(user_id, trusted_user_name, user_type, user_metadata) into _ans;
         set role authenticator;
         set role anon;
         return 'user created';
@@ -622,27 +624,27 @@ revoke all privileges on function user_register(text, text, json) from public;
 grant execute on function user_register(text, text, json) to anon;
 
 
-drop function if exists ntk.user_create(text, text, json);
-create or replace function ntk.user_create(user_name text, user_type text, user_metadata json)
+drop function if exists ntk.user_create(text, text, text, json);
+create or replace function ntk.user_create(user_id text, user_name text, user_type text, user_metadata json)
     returns text as $$
     declare trusted_user_name text;
     declare trusted_user_type text;
     begin
-        assert (select bool_or(user_name like arr_element||'%')
-                from unnest(ARRAY['owner_','user_']) x(arr_element)),
-            'user name must start with either "owner_" or "user_"';
+        assert (select bool_or(user_type like arr_element||'%')
+                from unnest(ARRAY['data_owner','data_user']) x(arr_element)),
+            'user_type must be one of "data_owner" or "data_user"';
         trusted_user_name := quote_ident(user_name);
         trusted_user_type := quote_literal(user_type);
-        execute format('insert into ntk.registered_users (_user_name, _user_type, user_metadata) values ($1, $2, $3)')
-            using user_name, user_type, user_metadata;
+        execute format('insert into ntk.registered_users (user_id, _user_name, _user_type, user_metadata) values ($1, $2, $3, $4)')
+            using user_id, user_name, user_type, user_metadata;
         if user_type = 'data_owner' then
             execute format('insert into ntk.data_owners values ($1)') using user_name;
         end if;
         return 'user created';
     end;
 $$ language plpgsql;
-revoke all privileges on function ntk.user_create(text, text, json) from public;
-grant execute on function ntk.user_create(text, text, json) to admin_user;
+revoke all privileges on function ntk.user_create(text, text, text, json) from public;
+grant execute on function ntk.user_create(text, text, text, json) to admin_user;
 
 
 drop table if exists ntk.user_defined_groups cascade;
