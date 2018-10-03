@@ -188,8 +188,8 @@ create or replace function test_table_group_access_management()
         set role admin_user;
         select group_remove_members('test_group', '{"memberships":
             ["owner_1", "user_1"]}'::json) into _ans;
-        select user_delete('owner_1') into _ans;
-        select user_delete('user_1') into _ans;
+        select user_delete('1', 'data_owner') into _ans;
+        select user_delete('1', 'data_user') into _ans;
         select group_delete('test_group') into _ans;
         drop table people3;
         return true;
@@ -539,7 +539,7 @@ create or replace function test_user_delete()
     begin
         set role admin_user;
         begin
-            select user_delete('owner_hannah') into _ans; -- should fail, because data still present
+            select user_delete('hannah', 'data_owner') into _ans; -- should fail, because data still present
             assert false;
         exception
             when others then raise notice 'existing data check in order, when deleting a user';
@@ -552,13 +552,13 @@ create or replace function test_user_delete()
         select user_delete_data() into _ans;
         set role authenticator;
         set role admin_user;
-        select user_delete('owner_hannah') into _ans;
+        select user_delete('hannah', 'data_owner') into _ans;
         assert (select count(1) from ntk.registered_users where _user_name = 'owner_hannah') = 0,
             'user deletion did not update ntk.registered_users accounting table correctly';
         assert (select count(1) from ntk.data_owners where user_name = 'owner_hannah') = 0,
             'user deletion did not update ntk.data_owners accounting table correctly';
         begin
-            select user_delete('authenticator') into _ans;
+            select user_delete('authenticator', 'data_owner') into _ans;
             assert false;
         exception
             when assert_failure then raise notice
@@ -740,7 +740,7 @@ create or replace function test_function_privileges()
             'group_remove_members only callable by admin_user - as expected';
         end;
         begin
-            select user_delete('') into _ans;
+            select user_delete('', '') into _ans;
             return false;
         exception
             when others then raise notice
@@ -776,7 +776,7 @@ create or replace function teardown()
     begin
         set session "request.jwt.claim.user" = 'owner_gustav';
         set role admin_user;
-        select user_delete('owner_gustav') into _ans;
+        select user_delete('gustav', 'data_owner') into _ans;
         set role authenticator;
         set role data_owner;
         set session "request.jwt.claim.user" = 'owner_faye';
@@ -786,8 +786,8 @@ create or replace function teardown()
         -- drop tables
         execute 'drop table people cascade';
         execute 'drop table people2 cascade';
-        select user_delete('owner_faye') into _ans;
-        select user_delete('user_project_user') into _ans;
+        select user_delete('faye', 'data_owner') into _ans;
+        select user_delete('project_user', 'data_user') into _ans;
         -- clear out accounting table
         set role admin_user;
         execute 'delete from event_log_user_data_deletions';

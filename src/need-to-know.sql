@@ -945,16 +945,23 @@ $$ language plpgsql;
 grant execute on function user_delete_data() to public;
 
 
-drop function if exists user_delete(text);
-create or replace function user_delete(user_name text)
+drop function if exists user_delete(text, text);
+create or replace function user_delete(user_id text, user_type text)
     returns text as $$
+    declare user_name text;
     declare trusted_table text;
     declare trusted_user_name text;
     declare trusted_user_type text;
     declare trusted_numrows int;
     declare trusted_group text;
     begin
-        assert user_name in (select _user_name from ntk.registered_users), 'deleting role not allowed';
+        if user_type = 'data_owner' then
+            user_name := 'owner_' || user_id;
+        elsif user_type = 'data_user' then
+            user_name := 'user_' || user_id;
+        end if;
+        assert user_name in (select _user_name from ntk.registered_users),
+            'deleting role not allowed';
         trusted_user_name := quote_ident(user_name);
         execute format('select _user_type from ntk.registered_users where _user_name = $1')
                     using user_name into trusted_user_type;
@@ -997,8 +1004,8 @@ create or replace function user_delete(user_name text)
         return 'user deleted';
     end;
 $$ language plpgsql;
-revoke all privileges on function user_delete(text) from public;
-grant execute on function user_delete(text) to admin_user;
+revoke all privileges on function user_delete(text, text) from public;
+grant execute on function user_delete(text, text) to admin_user;
 
 
 drop function if exists group_delete(text);
