@@ -427,7 +427,6 @@ create or replace function table_group_access_grant(table_name text,
             execute format('grant insert on %I to %I', trusted_table_name, trusted_group_name);
             grant_event := 'table_grant_add_insert';
         elsif grant_type = 'update' then
-            raise notice 'granting update';
             execute format('grant select, update on %I to %I', trusted_table_name, trusted_group_name);
             grant_event := 'table_grant_add_update';
         end if;
@@ -440,6 +439,31 @@ revoke all privileges on function table_group_access_grant(text, text) from publ
 grant execute on function table_group_access_grant(text, text) to admin_user;
 
 
+drop function if exists ntk.table_grant_status(text, text, text, text);
+create or replace function ntk.table_grant_status(table_name text,
+                                                  group_name text,
+                                                  grant_event_name text,
+                                                  revoke_event_name text)
+    returns text as $$
+    declare latest_event text;
+    begin
+        execute format('select event_type from
+            (select max(event_time), event_type
+                from event_log_access_control
+                where group_name = $1
+                and event_type in ($2,$3)
+                and target = $4
+                group by event_type
+                offset 1)a')
+            using group_name, grant_event_name, revoke_event_name, table_name
+            into latest_event;
+        return latest_event;
+    end;
+$$ language plpgsql;
+revoke all privileges on function ntk.table_grant_status(text, text, text, text) from public;
+grant execute on function ntk.table_grant_status(text, text, text, text) to admin_user;
+
+
 drop function if exists table_group_access_revoke(text, text, text);
 create or replace function table_group_access_revoke(table_name text,
                                                      group_name text,
@@ -448,6 +472,7 @@ create or replace function table_group_access_revoke(table_name text,
     declare trusted_table_name text;
     declare trusted_group_name text;
     declare revoke_event text;
+    declare latest_event text;
     begin
         assert group_name in (select udg.group_name from ntk.user_defined_groups udg),
             'access to group not allowed';
@@ -463,7 +488,14 @@ create or replace function table_group_access_revoke(table_name text,
             execute format('revoke insert on %I from %I', trusted_table_name, trusted_group_name);
             revoke_event := 'table_grant_revoke_insert';
         elsif grant_type = 'update' then
-            execute format('revoke update on %I from %I', trusted_table_name, trusted_group_name);
+            select ntk.table_grant_status(table_name, group_name, 'table_grant_add_select', 'table_grant_revoke_select')
+                into latest_event;
+            if latest_event = 'table_grant_revoke_select' then
+                -- then there is not an existing select grant from a separate grant
+                execute format('revoke select, update on %I from %I', trusted_table_name, trusted_group_name);
+            else
+                execute format('revoke update on %I from %I', trusted_table_name, trusted_group_name);
+            end if;
             revoke_event := 'table_grant_revoke_update';
         end if;
         execute format('select ntk.update_event_log_access_control($1, $2, $3)')
@@ -591,7 +623,7 @@ create or replace view table_overview as
     select a.table_name, b.table_description, a.groups_with_access from
     (select table_name, array_agg(grantee::text) groups_with_access
     from information_schema.table_privileges
-        where privilege_type = 'SELECT'
+        where privilege_type in ('SELECT', 'INSERT', 'UPDATE')
         and table_schema = 'public'
         and grantee not in ('PUBLIC')
         and grantee in (select group_name from ntk.user_defined_groups)
