@@ -203,11 +203,11 @@ create or replace function test_default_data_owner_and_user_policies()
     begin
         set role data_owner;
         set session "request.jwt.claim.user" = 'owner_gustav';
-        insert into people (name, age) values ('owner_Gustav de la Croix', 1);
+        insert into people (name, age) values ('Gustav de la Croix', 1);
         set session "request.jwt.claim.user" = 'owner_hannah';
-        insert into people (name, age) values ('owner_Hannah le Roux', 29);
+        insert into people (name, age) values ('Hannah le Roux', 29);
         set session "request.jwt.claim.user" = 'owner_faye';
-        insert into people (name, age) values ('owner_Faye Thompson', 58);
+        insert into people (name, age) values ('Faye Thompson', 58);
         set session "request.jwt.claim.user" = 'owner_gustav';
         assert (select count(1) from people) = 1, 'owner_gustav has unauthorized data access';
         set session "request.jwt.claim.user" = 'owner_hannah';
