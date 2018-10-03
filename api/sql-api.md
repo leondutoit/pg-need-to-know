@@ -16,7 +16,7 @@ table_group_access_revoke(table_name text, group_name text, grant_type text)
 -- user operations
 user_register(user_id text, user_type text, user_metadata json)
 user_group_remove(group_name text)
-user_groups(user_name text)
+user_groups(user_id text, user_type text)
 user_delete_data()
 user_delete(user_id text)
 

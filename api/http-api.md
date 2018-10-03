@@ -24,7 +24,7 @@ POST            | /rpc/group_add_members
 GET             | /rpc/group_list_members?group_name=<name>
 POST            | /rpc/group_remove_members
 POST            | /rpc/group_delete
-GET             | /rpc/user_groups?user_name=<name>
+GET             | /rpc/user_groups?user_id=<id>&user_type=<type>
 POST            | /rpc/user_delete
 GET             | /table_overview
 GET             | /user_registrations
@@ -217,7 +217,7 @@ Authorization: Bearer your-jwt
 
 - List all groups belonging to a user
 ```bash
-GET /rpc/user_groups?user_name=myuser
+GET /rpc/user_groups?user_id=myuser&user_type=data_owner
 Content-Type: application/json
 Authorization: Bearer your-jwt
 

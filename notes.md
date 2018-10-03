@@ -12,7 +12,7 @@
     - and update the RLS function to check the end date
 
 ## TODO
-- see if `user_` and `owner_` prepending can be dropped
+- use `user_` and `owner_` internally only, user_id in API
     - group_add_remove: members: {data_users:[], data_owners: []}
     - user_groups(user_name) -> user_groups(user_id, user_type)
     - update docs

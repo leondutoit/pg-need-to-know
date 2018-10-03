@@ -406,10 +406,10 @@ create or replace function test_user_groups()
     begin
         set role admin_user;
         select group_add_members('project_group', '{"memberships": ["owner_gustav"]}'::json) into _ans;
-        assert '(project_group,"{""consent_reference"": 1234}")' in (select user_groups('owner_gustav')::text),
+        assert '(project_group,"{""consent_reference"": 1234}")' in (select user_groups('gustav', 'data_owner')::text),
             'user_groups function does not list all groups';
         begin
-            select user_groups('authenticator') into _ans;
+            select user_groups('authenticator', 'data_owner') into _ans;
             assert false;
         exception
             when assert_failure then raise notice
@@ -719,7 +719,7 @@ create or replace function test_function_privileges()
             'group_list_members only callable by admin_user - as expected';
         end;
         begin
-            select user_groups('') into _ans;
+            select user_groups('', '') into _ans;
             return false;
         exception
             when others then raise notice

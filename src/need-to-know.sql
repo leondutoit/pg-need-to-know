@@ -805,14 +805,18 @@ revoke all privileges on function group_list_members(text) from public;
 grant execute on function group_list_members(text) to admin_user;
 
 
-drop function if exists user_groups(text);
-create or replace function user_groups(user_name text default null)
+drop function if exists user_groups(text, text);
+create or replace function user_groups(user_id text default null, user_type text default null)
     returns table (group_name text, group_metadata json) as $$
+    declare user_name text;
     begin
-        if user_name is null then
+        if user_id is null then
             user_name := current_setting('request.jwt.claim.user');
+        elsif user_type = 'data_owner' then
+            user_name := 'owner_' || user_id;
+        elsif user_type = 'data_user' then
+            user_name := 'user_' || user_id;
         end if;
-        raise notice 'going to list groups for %', user_name;
         assert user_name in (select _user_name from ntk.registered_users),
             'access to role not allowed';
         return query execute format('select a.group_name as group_name, a.group_metadata as group_metadata
@@ -823,9 +827,9 @@ create or replace function user_groups(user_name text default null)
                                      on a.group_name = b.group_name') using user_name;
     end;
 $$ language plpgsql;
-revoke all privileges on function user_groups(text) from public;
+revoke all privileges on function user_groups(text, text) from public;
 alter function user_groups owner to admin_user;
-grant execute on function user_groups(text) to data_owners_group;
+grant execute on function user_groups(text, text) to data_owners_group;
 
 
 drop function if exists user_group_remove(text);
