@@ -117,6 +117,7 @@ grant execute on function ntk.update_request_log(text, text) to data_owners_grou
 
 drop table if exists event_log_access_control cascade;
 create table if not exists event_log_access_control(
+    id serial,
     event_time timestamptz default current_timestamp,
     event_type text not null check
         (event_type in ('group_create', 'group_delete',
@@ -260,12 +261,16 @@ create or replace function ntk.parse_mac_table_def(definition json)
         _curr_setting := 'request.jwt.claim.user';
         raise notice '%', _curr_setting;
         execute format('create table if not exists %I()', trusted_table_name);
-        execute 'alter table ' || trusted_table_name ||
-                ' add column row_owner text default current_setting(' || quote_literal(_curr_setting) ||
-                ') references ntk.registered_users (_user_name)';
-        execute 'alter table ' || trusted_table_name ||
-                ' add column row_originator text default current_setting(' || quote_literal(_curr_setting) ||
-                ') references ntk.registered_users (_user_name)';
+        begin
+            execute 'alter table ' || trusted_table_name ||
+                    ' add column row_owner text default current_setting(' || quote_literal(_curr_setting) ||
+                    ') references ntk.registered_users (_user_name)';
+            execute 'alter table ' || trusted_table_name ||
+                    ' add column row_originator text default current_setting(' || quote_literal(_curr_setting) ||
+                    ') references ntk.registered_users (_user_name)';
+        exception
+            when duplicate_column then null;
+        end;
         for untrusted_i in select * from json_array_elements(untrusted_columns) loop
             select ntk.sql_type_from_generic_type(untrusted_i->>'type') into trusted_dtype;
             select quote_ident(untrusted_i->>'name') into trusted_colname;
@@ -276,7 +281,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
                 execute format('comment on column %I.%I is %s',
                     trusted_table_name, trusted_colname, trusted_column_description);
             exception
-                when duplicate_column then raise notice 'column % already exists', trusted_colname;
+                when duplicate_column then null;
             end;
             begin
                 select untrusted_i->'constraints'->'primary_key' into untrusted_pk;
@@ -298,6 +303,8 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute format('alter table %I enable row level security', trusted_table_name);
         execute format('alter table %I force row level security', trusted_table_name);
         execute format('grant select, insert, update, delete on %I to data_owners_group', trusted_table_name);
+        -- policy creation in transaction block
+        -- cannot create twice
         execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
         execute format('create policy row_ownership_select_policy on %I for select using (ntk.is_row_owner(row_owner))', trusted_table_name);
         execute format('create policy row_ownership_delete_policy on %I for delete using (ntk.is_row_owner(row_owner))', trusted_table_name);
@@ -448,13 +455,13 @@ create or replace function ntk.table_grant_status(table_name text,
     declare latest_event text;
     begin
         execute format('select event_type from
-            (select max(event_time), event_type
+            (select id, event_type
                 from event_log_access_control
                 where group_name = $1
                 and event_type in ($2,$3)
                 and target = $4
-                group by event_type
-                offset 1)a')
+                order by id desc
+                limit 1)a')
             using group_name, grant_event_name, revoke_event_name, table_name
             into latest_event;
         return latest_event;

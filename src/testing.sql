@@ -19,6 +19,20 @@ create or replace function test_table_create()
                                      "description": "Age in years"} ],
                               "description": "a collection of data on people"}'::json,
                             'mac') into _ans;
+        -- this must be idempotent
+        -- so API users can add new columns
+        -- by simply updating their table definitions
+        /*
+        select table_create('{"table_name": "people",
+                              "columns": [
+                                    {"name": "name",
+                                     "type": "text",
+                                     "description": "First name"},
+                                    {"name": "age",
+                                     "type": "int",
+                                     "description": "Age in years"} ],
+                              "description": "a collection of data on people"}'::json,
+                            'mac') into _ans;*/
         assert (select count(1) from people) = 0, 'problem with table creation';
         set role authenticator;
         return true;
@@ -329,14 +343,21 @@ create or replace function test_group_membership_data_access_policies()
         select table_group_access_grant('people', 'project_group', 'update') into _ans;
         set role data_user;
         set session "request.jwt.claim.user" = 'user_project_user';
-        -- still not working???
         update people set name = 'Otho'
                 where row_originator = 'user_project_user';
         set role admin_user;
         set session "request.jwt.claim.user" = '';
+        -- test removal of only update right if select grant is present
+        select table_group_access_grant('people', 'project_group', 'select') into _ans;
+        select table_group_access_revoke('people', 'project_group', 'update') into _ans;
+        set role data_user;
+        set session "request.jwt.claim.user" = 'user_project_user';
+        select count(1)::text from people into _ans;
+        set role admin_user;
+        set session "request.jwt.claim.user" = '';
         select group_remove_members('project_group', '{"memberships":
                 ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
-        select table_group_access_revoke('people', 'project_group', 'update') into _ans;
+        select table_group_access_revoke('people', 'project_group', 'select') into _ans;
         return true;
     end;
 $$ language plpgsql;
@@ -618,7 +639,6 @@ create or replace function test_event_log_access_control()
                         'table_grant_revoke_select', 'table_grant_revoke_insert',
                         'table_grant_add_update', 'table_grant_revoke_update'])
             loop
-            raise info '%', i;
             assert i in (select event_type from event_log_access_control
                          where group_name = 'project_group'),
                 'event not found in test_event_log_access_control';
