@@ -42,7 +42,7 @@ grant usage on schema ntk to public;
 grant create on schema ntk to admin_user; -- so execute can be granted/revoked when users are created/deleted
 
 
-drop function if exists ntk.is_row_owner(text);
+drop function if exists ntk.is_row_owner(text) cascade;
 create or replace function ntk.is_row_owner(_current_row_owner text)
     returns boolean as $$
     declare trusted_current_role text;
@@ -176,6 +176,59 @@ alter function ntk.roles_have_common_group_and_is_data_user owner to admin_user;
 grant execute on function ntk.roles_have_common_group_and_is_data_user(text) to data_owners_group, data_users_group;
 
 
+drop table if exists event_log_data_updates;
+create table if not exists event_log_data_updates(
+    updated_time timestamptz default current_timestamp,
+    updated_by text,
+    table_name text,
+    row_id int,
+    column_name text,
+    old_data text,
+    new_data text,
+    query text
+);
+alter table event_log_data_updates owner to admin_user;
+grant insert on event_log_data_updates to data_owners_group, data_users_group;
+
+
+drop function if exists ntk.log_data_update();
+create or replace function ntk.log_data_update()
+    returns trigger as $$
+    declare _old_data text;
+    declare _new_data text;
+    declare _colname text;
+    declare _table_name text;
+    declare _updator text;
+    declare _row_id int;
+    begin
+        _table_name := TG_TABLE_NAME::text;
+        _updator := current_setting('request.jwt.claim.user');
+        for _colname in execute
+            format('select c.column_name::text
+                    from pg_catalog.pg_statio_all_tables as st
+                    inner join information_schema.columns c
+                    on c.table_schema = st.schemaname and c.table_name = st.relname
+                    left join pg_catalog.pg_description pgd
+                    on pgd.objoid=st.relid
+                    and pgd.objsubid=c.ordinal_position
+                    where st.relname = $1') using _table_name
+        loop
+            execute format('select ($1).%s::text', _colname) using OLD into _old_data;
+            execute format('select ($1).%s::text', _colname) using NEW into _new_data;
+            if _old_data != _new_data then
+                insert into event_log_data_updates
+                    (updated_by, table_name, row_id, column_name, old_data, new_data, query)
+                values
+                    (_updator, _table_name, OLD.id, _colname, _old_data, _new_data, current_query());
+            end if;
+        end loop;
+        return new;
+    end;
+$$ language plpgsql;
+revoke all privileges on function ntk.log_data_update() from public;
+grant execute on function ntk.log_data_update() to admin_user, data_owners_group, data_users_group;
+
+
 drop function if exists ntk.sql_type_from_generic_type(text);
 create or replace function ntk.sql_type_from_generic_type(_type text)
     returns text as $$
@@ -253,14 +306,23 @@ create or replace function ntk.parse_mac_table_def(definition json)
     declare trusted_comment text;
     declare trusted_column_description text;
     declare _curr_setting text;
+    declare _seqname text;
     begin
         untrusted_definition := definition;
         untrusted_columns := untrusted_definition->'columns';
         trusted_table_name := quote_ident(untrusted_definition->>'table_name');
         trusted_comment := quote_nullable(untrusted_definition->>'description');
         _curr_setting := 'request.jwt.claim.user';
-        raise notice '%', _curr_setting;
-        execute format('create table if not exists %I()', trusted_table_name);
+        _seqname := trusted_table_name || '_id_seq';
+        begin
+            execute format('create sequence %I', _seqname);
+            execute format('grant usage, select, update on %I to public', _seqname);
+        exception
+            when duplicate_table then null;
+        end;
+        execute 'create table if not exists ' || trusted_table_name ||
+                '(id int not null default nextval(' || quote_literal(_seqname) || '))';
+        execute format('alter sequence %I owned by %I.id', _seqname, trusted_table_name);
         begin
             execute 'alter table ' || trusted_table_name ||
                     ' add column row_owner text default current_setting(' || quote_literal(_curr_setting) ||
@@ -311,6 +373,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
             execute format('create policy row_ownership_update_policy on %I for update using (ntk.is_row_owner(row_owner))', trusted_table_name);
             execute format('create policy row_originator_update_policy on %I for update using (ntk.is_row_originator(row_originator))', trusted_table_name);
             execute format('comment on table %I is %s', trusted_table_name, trusted_comment);
+            execute format('create trigger update_trigger after update on %I for each row execute procedure ntk.log_data_update()', trusted_table_name);
         exception
             when duplicate_object then null;
         end;
@@ -412,7 +475,6 @@ $$ language plpgsql;
 revoke all privileges on function ntk.parse_generic_table_def(json) from public;
 
 
--- table_name, group_name, grant_type<select,insert,update>
 drop function if exists table_group_access_grant(text, text, text);
 create or replace function table_group_access_grant(table_name text,
                                                     group_name text,
