@@ -88,6 +88,7 @@ create or replace function test_user_create()
         set role anon;
         begin
             select user_register('1234', 'data_person', '{}'::json) into _ans;
+            assert false;
         exception when assert_failure then raise notice
             'user type check works - as expected';
         end;
@@ -150,6 +151,7 @@ create or replace function test_table_group_access_management()
         set session "request.jwt.claim.user" = 'user_1';
         begin
             select count(1) from people3 into _num;
+            assert false;
         exception
             when insufficient_privilege then raise notice
                 'data owners do not have access to tables before group table grant - as expected';
@@ -172,6 +174,7 @@ create or replace function test_table_group_access_management()
         set session "request.jwt.claim.user" = 'user_1';
         begin
             select count(1) from people3 into _num;
+            assert false;
         exception
             when insufficient_privilege then raise notice
                 'revoking table grant works - as expected';
@@ -216,12 +219,14 @@ create or replace function test_default_data_owner_and_user_policies()
         set role data_user;
         begin
             select count(1) from people into _num;
+            assert false;
         exception
             when insufficient_privilege then raise notice
                 'data user does not have access to the table before a group grant has been issued - as expected';
         end;
         begin
             insert into people (name, age) values ('Steve', 90);
+            assert false;
         exception
             when insufficient_privilege then raise notice
                 'data user cannot insert data - as expected';
@@ -317,7 +322,7 @@ create or replace function test_group_membership_data_access_policies()
             set role data_user;
             set session "request.jwt.claim.user" = 'user_project_user';
             insert into people(name, age) values ('Still Gordon', 41);
-            raise notice 'This should not be printed!';
+            assert false;
         exception
             when insufficient_privilege
             then raise notice
@@ -331,7 +336,7 @@ create or replace function test_group_membership_data_access_policies()
         begin
             update people set age = 8
                 where row_originator = 'user_project_user';
-            raise notice 'This should not be printed!';
+            assert false;
         exception
             when insufficient_privilege
             then raise notice
@@ -405,6 +410,7 @@ create or replace function test_user_groups()
             'user_groups function does not list all groups';
         begin
             select user_groups('authenticator') into _ans;
+            assert false;
         exception
             when assert_failure then raise notice
                 'cannot access internal role groups - as expected';
@@ -534,6 +540,7 @@ create or replace function test_user_delete()
         set role admin_user;
         begin
             select user_delete('owner_hannah') into _ans; -- should fail, because data still present
+            assert false;
         exception
             when others then raise notice 'existing data check in order, when deleting a user';
         end;
@@ -552,6 +559,7 @@ create or replace function test_user_delete()
             'user deletion did not update ntk.data_owners accounting table correctly';
         begin
             select user_delete('authenticator') into _ans;
+            assert false;
         exception
             when assert_failure then raise notice
                 'cannot delete internal role via user_delete - as expected.';
@@ -573,6 +581,7 @@ create or replace function test_group_delete()
         select table_group_access_grant('people', 'project_group', 'select') into _ans;
         begin
             select group_delete('project_group') into _ans;
+            assert false;
         exception
             when others then raise notice
                 'non-empty group deletion prevention works - as expected';
@@ -581,6 +590,7 @@ create or replace function test_group_delete()
                 ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
         begin
             select group_delete('project_group') into _ans;
+            assert false;
         exception
             when others then raise notice
                 'cannot delete a group if it still has select grant on a table - as expected';
@@ -588,6 +598,7 @@ create or replace function test_group_delete()
         begin
             -- possible attack vector, since groups are just roles
             select group_delete('authenticator') into _ans;
+            assert false;
         exception
             when assert_failure then raise notice
                 'cannot delete internal role via group_delete - as expected.';
@@ -616,6 +627,7 @@ create or replace function test_event_log_data_access()
         set role admin_user;
         begin
             delete from event_log_data_access;
+            assert false;
         exception
             when insufficient_privilege then raise notice
                 'admin_user cannot delete event_log_data_access - as expected';
