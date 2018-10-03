@@ -766,8 +766,8 @@ create or replace function teardown()
         set role authenticator;
         set role admin_user;
         -- drop tables
-        execute 'drop table people';
-        execute 'drop table people2';
+        execute 'drop table people cascade';
+        execute 'drop table people2 cascade';
         select user_delete('owner_faye') into _ans;
         select user_delete('user_project_user') into _ans;
         -- clear out accounting table
