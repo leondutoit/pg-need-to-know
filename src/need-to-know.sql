@@ -303,15 +303,17 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute format('alter table %I enable row level security', trusted_table_name);
         execute format('alter table %I force row level security', trusted_table_name);
         execute format('grant select, insert, update, delete on %I to data_owners_group', trusted_table_name);
-        -- policy creation in transaction block
-        -- cannot create twice
-        execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
-        execute format('create policy row_ownership_select_policy on %I for select using (ntk.is_row_owner(row_owner))', trusted_table_name);
-        execute format('create policy row_ownership_delete_policy on %I for delete using (ntk.is_row_owner(row_owner))', trusted_table_name);
-        execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(row_owner))', trusted_table_name);
-        execute format('create policy row_ownership_update_policy on %I for update using (ntk.is_row_owner(row_owner))', trusted_table_name);
-        execute format('create policy row_originator_update_policy on %I for update using (ntk.is_row_originator(row_originator))', trusted_table_name);
-        execute format('comment on table %I is %s', trusted_table_name, trusted_comment);
+        begin
+            execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
+            execute format('create policy row_ownership_select_policy on %I for select using (ntk.is_row_owner(row_owner))', trusted_table_name);
+            execute format('create policy row_ownership_delete_policy on %I for delete using (ntk.is_row_owner(row_owner))', trusted_table_name);
+            execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(row_owner))', trusted_table_name);
+            execute format('create policy row_ownership_update_policy on %I for update using (ntk.is_row_owner(row_owner))', trusted_table_name);
+            execute format('create policy row_originator_update_policy on %I for update using (ntk.is_row_originator(row_originator))', trusted_table_name);
+            execute format('comment on table %I is %s', trusted_table_name, trusted_comment);
+        exception
+            when duplicate_object then null;
+        end;
         return 'Success';
     end;
 $$ language plpgsql;

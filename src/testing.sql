@@ -22,7 +22,6 @@ create or replace function test_table_create()
         -- this must be idempotent
         -- so API users can add new columns
         -- by simply updating their table definitions
-        /*
         select table_create('{"table_name": "people",
                               "columns": [
                                     {"name": "name",
@@ -32,7 +31,7 @@ create or replace function test_table_create()
                                      "type": "int",
                                      "description": "Age in years"} ],
                               "description": "a collection of data on people"}'::json,
-                            'mac') into _ans;*/
+                            'mac') into _ans;
         assert (select count(1) from people) = 0, 'problem with table creation';
         set role authenticator;
         return true;
