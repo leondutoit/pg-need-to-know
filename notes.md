@@ -13,6 +13,14 @@
 
 ## TODO
 - see if `user_` and `owner_` prepending can be dropped
+    - group_add_remove: members: {data_users:[], data_owners: []}
+    - user_groups(user_name) -> user_groups(user_id, user_type)
+    - update docs
+        - sql api
+        - http api
+        - examples
+- id -> user_id in token, for consistency
+- review docs again
 - make a presentation, with visual representations of the model
 
 ## IP

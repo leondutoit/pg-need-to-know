@@ -266,7 +266,8 @@ POST /rpc/user_delete
 Authorization: JWT-for-admin-user
 
 {
-    "user_name": "owner_E"
+    "user_id": "owner_E",
+    "user_type": "data_owner"
 }
 ```
 

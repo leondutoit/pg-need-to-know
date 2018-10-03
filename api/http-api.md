@@ -231,7 +231,7 @@ POST /rpc/user_delete
 Content-Type: application/json
 Authorization: Bearer your-jwt
 
-{"user_name": "myuser"}
+{"user_id": "myuser"}
 ```
 
 - see table overview: name, description, group access
