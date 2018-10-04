@@ -188,7 +188,7 @@ create or replace function test_table_group_access_management()
         set role authenticator;
         set role admin_user;
         select group_remove_members('test_group',
-            '{"memberships": {"data_owners": ["owner_1"], "data_users": ["user_1"]}}'::json) into _ans;
+            '{"memberships": {"data_owners": ["1"], "data_users": ["1"]}}'::json) into _ans;
         select user_delete('1', 'data_owner') into _ans;
         select user_delete('1', 'data_user') into _ans;
         select group_delete('test_group') into _ans;
@@ -251,7 +251,7 @@ create or replace function test_group_add_and_remove_members()
                 where group_name = 'project_group') = 3,
             'adding members to groups individually is broken';
         select group_remove_members('project_group',
-            '{"memberships": {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["user_project_user"]}}'::json)
+            '{"memberships": {"data_owners": ["gustav", "hannah"], "data_users": ["project_user"]}}'::json)
             into _ans;
         select group_add_members('project_group', null, '{"key": "institution", "value": "A"}', null) into _ans;
         assert (select count(user_name) from groups.group_memberships
@@ -310,7 +310,7 @@ create or replace function test_group_membership_data_access_policies()
         set role admin_user;
         set session "request.jwt.claim.user" = '';
         select group_remove_members('project_group', '{"memberships":
-                {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["user_project_user"]}}'::json) into _ans;
+                {"data_owners": ["gustav", "hannah"], "data_users": ["project_user"]}}'::json) into _ans;
         select table_group_access_revoke('people', 'project_group', 'select') into _ans;
         -- INSERT policy grant
         select group_add_members('project_group', '{"memberships":
@@ -364,7 +364,7 @@ create or replace function test_group_membership_data_access_policies()
         set role admin_user;
         set session "request.jwt.claim.user" = '';
         select group_remove_members('project_group', '{"memberships":
-                {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["user_project_user"]}}'::json) into _ans;
+                {"data_owners": ["gustav", "hannah"], "data_users": ["project_user"]}}'::json) into _ans;
         select table_group_access_revoke('people', 'project_group', 'select') into _ans;
         return true;
     end;
@@ -398,7 +398,7 @@ create or replace function test_group_list_members()
         assert 'user_project_user' in (select group_list_members('project_group')),
             'listing group members does not work';
         select group_remove_members('project_group',
-            '{"memberships": {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["user_project_user"]}}'::json) into _ans;
+            '{"memberships": {"data_owners": ["gustav", "hannah"], "data_users": ["project_user"]}}'::json) into _ans;
         set role authenticator;
         return true;
     end;
@@ -428,7 +428,7 @@ create or replace function test_user_groups()
         set session "request.jwt.claim.user" = '';
         set role authenticator;
         set role admin_user;
-        select group_remove_members('project_group', '{"memberships": {"data_owners": ["owner_gustav"]}}'::json) into _ans;
+        select group_remove_members('project_group', '{"memberships": {"data_owners": ["gustav"]}}'::json) into _ans;
         return true;
     end;
 $$ language plpgsql;
@@ -592,7 +592,7 @@ create or replace function test_group_delete()
                 'non-empty group deletion prevention works - as expected';
         end;
         select group_remove_members('project_group', '{"memberships":
-                {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["user_project_user"]}}'::json) into _ans;
+                {"data_owners": ["gustav", "hannah"], "data_users": ["project_user"]}}'::json) into _ans;
         begin
             select group_delete('project_group') into _ans;
             assert false;

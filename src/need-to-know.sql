@@ -893,14 +893,14 @@ create or replace function group_remove_members(group_name text,
             untrusted_owners := members->'memberships'->'data_owners';
             untrusted_users := members->'memberships'->'data_users';
             for untrusted_i in select * from json_array_elements(untrusted_owners) loop
-                -- take user_id -> user_name, using type info
-                execute format('select groups.revoke($1, $2)') using trusted_group_name, replace(untrusted_i, '"', '');
+                trusted_user := 'owner_' || replace(untrusted_i, '"', '');
+                execute format('select groups.revoke($1, $2)') using trusted_group_name, trusted_user;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_remove', trusted_group_name, replace(untrusted_i, '"', '');
             end loop;
             for untrusted_i in select * from json_array_elements(untrusted_users) loop
-                -- take user_id -> user_name, using type info
-                execute format('select groups.revoke($1, $2)') using trusted_group_name, replace(untrusted_i, '"', '');
+                trusted_user := 'user_' || replace(untrusted_i, '"', '');
+                execute format('select groups.revoke($1, $2)') using trusted_group_name, trusted_user;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_remove', trusted_group_name, replace(untrusted_i, '"', '');
             end loop;
