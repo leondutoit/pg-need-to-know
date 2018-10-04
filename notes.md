@@ -12,17 +12,11 @@
     - and update the RLS function to check the end date
 
 ## TODO
-- use `user_` and `owner_` internally only, user_id in API
-    - group_add_remove: members: {data_users:[], data_owners: []}, and tests
-    - update docs
-        - sql api
-        - http api
-        - examples
-- review docs again
+- move HTTP client code to own repo
+- full review of docs
+- write about the implementation
+- add script to generate interactive html docs, and presentation
 - make a presentation, with visual representations of the model
-
-## IP
-- HTTP client tests (correctness, and configurable scalability tests)
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -90,5 +84,10 @@
 - log all updates: person, time, table, colname, old, new
     - see: https://wiki.postgresql.org/wiki/Audit_trigger
 - add test for update log
-- user_groups(user_name) -> user_groups(user_id, user_type)
-- id -> user_id in token, for consistency
+- use `user_` and `owner_` internally only, user_id in API
+    - group_list_members should display user_ids
+    - update docs
+    - user_groups(user_name) -> user_groups(user_id, user_type)
+    - id -> user_id in token, for consistency
+    - group_add_remove: members: {data_users:[], data_owners: []}, and tests
+    - show user ids and names in registerations

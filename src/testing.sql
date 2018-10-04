@@ -391,11 +391,11 @@ create or replace function test_group_list_members()
         -- use user_id instead of names
         select group_add_members('project_group',
             '{"memberships": {"data_owners": ["gustav", "hannah"], "data_users": ["project_user"]}}'::json) into _ans;
-        assert 'owner_gustav' in (select group_list_members('project_group')),
+        assert 'gustav' in (select group_list_members('project_group')),
             'listing group members does not work';
-        assert 'owner_hannah' in (select group_list_members('project_group')),
+        assert 'hannah' in (select group_list_members('project_group')),
             'listing group members does not work';
-        assert 'user_project_user' in (select group_list_members('project_group')),
+        assert 'project_user' in (select group_list_members('project_group')),
             'listing group members does not work';
         select group_remove_members('project_group',
             '{"memberships": {"data_owners": ["gustav", "hannah"], "data_users": ["project_user"]}}'::json) into _ans;

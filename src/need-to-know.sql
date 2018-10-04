@@ -588,9 +588,8 @@ create table if not exists ntk.registered_users(
 );
 alter table ntk.registered_users owner to admin_user;
 grant select on ntk.registered_users to public;
--- TODO: need to make sure this is consistent with the new id API
 create or replace view user_registrations as
-    select registration_date, _user_name as user_name,
+    select registration_date, user_id, _user_name as user_name,
            _user_type as user_type, user_metadata
     from ntk.registered_users;
 alter view user_registrations owner to admin_user;
@@ -801,14 +800,17 @@ revoke all privileges on function group_add_members(json, json, boolean) from pu
 grant execute on function group_add_members(json, json, boolean) to admin_user;
 
 
--- TODO: should return user_id, do not expose user_names via the API
 drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
-    returns table (member text) as $$
+    returns table (user_id text) as $$
     begin
         return query execute
-            -- join on ntk.registered_users, return user_id
-            format('select user_name from groups.group_memberships where group_name = $1')
+            format('select user_id from
+                (select user_id, user_name from user_registrations)a
+                join
+                (select group_name, user_name from groups.group_memberships
+                 where group_name = $1)b
+                on a.user_name = b.user_name')
             using group_name;
     end;
 $$ language plpgsql;

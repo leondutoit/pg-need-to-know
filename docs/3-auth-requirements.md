@@ -21,7 +21,7 @@ User (credentials) -> app -> IdP + Auth Server (rights management)
                           <- ID
 
 # 2. Getting an access token with an authenticated and authorized ID
-                      app -> GET /rpc/token?id=id&token_type=<admin,owner,user>
+                      app -> GET /rpc/token?user_id=<id>&token_type=<admin,owner,user>
                           <- JWT {exp:exp, role:role, user:user_id}
 
 # 3. An authenticated request
@@ -31,7 +31,7 @@ HTTP + JWT -> postgrest (authenticator) -> DB (role + session variable): SQL (se
 
 Firstly, apps must authenticate end-users, and determine their rights: whether they are data owners, data users, or admin users. Presumably, the IdP and Authentication Server will return some form of user ID, if the authentication is successful. This is the step where applications must determine whether the person has the right to request a data owner, data user, or admin user token. It may well be the case that different authentication systems are used for different roles.
 
-Secondly, the app can get a token by doing `GET /rpc/token?id=id&token_type=<admin,owner,user>` - an endpoint provided by `pg-need-to-know`. If a token for a data user or data owner is being requested `pg-need-to-know` will check if the person has registered. If an admin token is requested, no check will be done. This emphasises the importance of managing rights in another system. The app will then receive a JWT with an expiry, and a role which is compatible with `pg-need-to-know`'s requirements. _Please note this is NOT authentication or authorization, the app is reponsible for establishing the authenticity of persons, and whether they are allowed to get specific token types._
+Secondly, the app can get a token by doing `GET /rpc/token?user_id=<id>&token_type=<admin,owner,user>` - an endpoint provided by `pg-need-to-know`. If a token for a data user or data owner is being requested `pg-need-to-know` will check if the person has registered. If an admin token is requested, no check will be done. This emphasises the importance of managing rights in another system. The app will then receive a JWT with an expiry, and a role which is compatible with `pg-need-to-know`'s requirements. _Please note this is NOT authentication or authorization, the app is reponsible for establishing the authenticity of persons, and whether they are allowed to get specific token types._
 
 Lastly, the app can then include the JWT in the Authorization header in the following HTTP request. `postgrest` will then switch into the provided role, set a session variable called `request.jwt.claim.user` to the value of the `user` claim, and execute the implied SQL in the role's security context, thereby enforcing authorization. An authorized dataset will be returned in the HTTP response.
 

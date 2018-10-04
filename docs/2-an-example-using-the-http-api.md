@@ -59,8 +59,6 @@ Authorization: JWT-for-anon-user
 }
 ```
 
-Internally, the `user_id` is appened to either `owner_` or `user_` and then a PostgreSQL role is created using that name. This means that even though registering a user with an ID of `A`, listing users by doing `GET /user_registrations`, the user name that will be returned will be `owner_A`.
-
 Now recall that we need to set up the following groups:
 
 ```txt

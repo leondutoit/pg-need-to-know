@@ -183,7 +183,7 @@ Content-Type: application/json
 Authorization: Bearer your-jwt
 
 # returns
-[{"member": "myuser"}, {"member": "some_analyst"}]
+[{"user_id": "myuser"}, {"user_id": "some_analyst"}]
 ```
 
 - Remove members from a group (choose one of three methods)
