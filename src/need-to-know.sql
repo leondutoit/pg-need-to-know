@@ -743,14 +743,16 @@ create or replace function group_add_members(group_name text,
             untrusted_owners := members->'memberships'->'data_owners';
             untrusted_users := members->'memberships'->'data_users';
             for untrusted_i in select * from json_array_elements(untrusted_owners) loop
+                trusted_user_name := 'owner_' || replace(untrusted_i, '"', '');
                 execute format('select groups.grant($1, $2)')
-                    using trusted_group_name, replace(untrusted_i, '"', '');
+                    using trusted_group_name, trusted_user_name;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, replace(untrusted_i, '"', '');
             end loop;
             for untrusted_i in select * from json_array_elements(untrusted_users) loop
+                trusted_user_name := 'user_' || replace(untrusted_i, '"', '');
                 execute format('select groups.grant($1, $2)')
-                    using trusted_group_name, replace(untrusted_i, '"', '');
+                    using trusted_group_name, trusted_user_name;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, replace(untrusted_i, '"', '');
             end loop;
@@ -788,7 +790,6 @@ create or replace function group_add_members(group_name text,
                 execute format('select groups.grant($1, $2)') using trusted_group_name, trusted_user_name;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_add', trusted_group_name, trusted_user_name;
-                raise notice 'added %', trusted_user_name;
             end loop;
             return 'added members to groups';
         else
@@ -800,12 +801,13 @@ revoke all privileges on function group_add_members(json, json, boolean) from pu
 grant execute on function group_add_members(json, json, boolean) to admin_user;
 
 
--- should return user_id
+-- TODO: should return user_id, do not expose user_names via the API
 drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
     returns table (member text) as $$
     begin
         return query execute
+            -- join on ntk.registered_users, return user_id
             format('select user_name from groups.group_memberships where group_name = $1')
             using group_name;
     end;
@@ -891,12 +893,13 @@ create or replace function group_remove_members(group_name text,
             untrusted_owners := members->'memberships'->'data_owners';
             untrusted_users := members->'memberships'->'data_users';
             for untrusted_i in select * from json_array_elements(untrusted_owners) loop
-                raise info 'adding %', replace(untrusted_i, '"', '');
+                -- take user_id -> user_name, using type info
                 execute format('select groups.revoke($1, $2)') using trusted_group_name, replace(untrusted_i, '"', '');
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_remove', trusted_group_name, replace(untrusted_i, '"', '');
             end loop;
             for untrusted_i in select * from json_array_elements(untrusted_users) loop
+                -- take user_id -> user_name, using type info
                 execute format('select groups.revoke($1, $2)') using trusted_group_name, replace(untrusted_i, '"', '');
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_remove', trusted_group_name, replace(untrusted_i, '"', '');
