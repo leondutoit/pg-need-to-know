@@ -13,13 +13,11 @@
 
 ## TODO
 - use `user_` and `owner_` internally only, user_id in API
-    - group_add_remove: members: {data_users:[], data_owners: []}
-    - user_groups(user_name) -> user_groups(user_id, user_type)
+    - group_add_remove: members: {data_users:[], data_owners: []}, and tests
     - update docs
         - sql api
         - http api
         - examples
-- id -> user_id in token, for consistency
 - review docs again
 - make a presentation, with visual representations of the model
 
@@ -92,3 +90,5 @@
 - log all updates: person, time, table, colname, old, new
     - see: https://wiki.postgresql.org/wiki/Audit_trigger
 - add test for update log
+- user_groups(user_name) -> user_groups(user_id, user_type)
+- id -> user_id in token, for consistency

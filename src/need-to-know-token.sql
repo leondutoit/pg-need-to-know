@@ -82,7 +82,7 @@ grant select on jwt.secret_store to anon;
 
 
 drop function if exists token(text, text);
-create or replace function token(id text default null, token_type text default null)
+create or replace function token(user_id text default null, token_type text default null)
     returns json as $$
     declare _secret text;
     declare _token text;
@@ -100,9 +100,9 @@ create or replace function token(id text default null, token_type text default n
             _user_name := ''; -- external to pg-need-to-know
         elsif token_type in ('owner', 'user') then
             if token_type = 'owner' then
-                _user_name := 'owner_' || id;
+                _user_name := 'owner_' || user_id;
             elsif token_type = 'user' then
-                _user_name := 'user_' || id;
+                _user_name := 'user_' || user_id;
             end if;
             set role authenticator;
             set role admin_user;
@@ -120,7 +120,6 @@ create or replace function token(id text default null, token_type text default n
         end if;
         select extract(epoch from now())::integer + 1800 into _exp;
         select secret from jwt.secret_store into _secret;
-        -- add id to token as user claim
         select '{"exp": ' || _exp || ', "role": "' || _role || '", "user": "'|| _user_name ||'"}' into _claims;
         select jwt.sign(_claims::json, _secret) into _token;
         select '{"token": "'|| _token || '"}' into _out;

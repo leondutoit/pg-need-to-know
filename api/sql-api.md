@@ -3,7 +3,7 @@
 
 ```sql
 -- tokens
-token(id text, token_type text)
+token(user_id text, token_type text)
 
 -- table operations
 table_create(definition json, type text)
