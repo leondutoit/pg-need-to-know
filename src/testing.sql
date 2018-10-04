@@ -144,7 +144,8 @@ create or replace function test_table_group_access_management()
         set role anon;
         select user_register('1', 'data_user', '{}'::json) into _ans;
         set role admin_user;
-        select group_add_members('test_group', '{"memberships": ["owner_1", "user_1"]}'::json, null, null)
+        select group_add_members('test_group',
+            '{"memberships": {"data_owners": ["owner_1"], "data_users": ["user_1"]}}'::json)
                 into _ans;
         -- ensure group membership does not work before table access is granted
         set role data_user;
@@ -186,8 +187,8 @@ create or replace function test_table_group_access_management()
         select user_delete_data() into _ans;
         set role authenticator;
         set role admin_user;
-        select group_remove_members('test_group', '{"memberships":
-            ["owner_1", "user_1"]}'::json) into _ans;
+        select group_remove_members('test_group',
+            '{"memberships": {"data_owners": ["owner_1"], "data_users": ["user_1"]}}'::json) into _ans;
         select user_delete('1', 'data_owner') into _ans;
         select user_delete('1', 'data_user') into _ans;
         select group_delete('test_group') into _ans;
@@ -242,13 +243,16 @@ create or replace function test_group_add_and_remove_members()
     declare _ans text;
     begin
         set role admin_user;
-        select group_add_members('project_group', '{"memberships":
-                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
+        -- need to use user_id instead of user_names
+        select group_add_members('project_group',
+            '{"memberships": {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["project_user"]}}'::json)
+            into _ans;
         assert (select count(user_name) from groups.group_memberships
                 where group_name = 'project_group') = 3,
             'adding members to groups individually is broken';
-        select group_remove_members('project_group', '{"memberships":
-                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
+        select group_remove_members('project_group',
+            '{"memberships": {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["project_user"]}}'::json)
+            into _ans;
         select group_add_members('project_group', null, '{"key": "institution", "value": "A"}', null) into _ans;
         assert (select count(user_name) from groups.group_memberships
                 where group_name = 'project_group') = 3,
@@ -281,7 +285,7 @@ create or replace function test_group_membership_data_access_policies()
     begin
         set role admin_user;
         select group_add_members('project_group', '{"memberships":
-                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
+                {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["user_project_user"]}}'::json) into _ans;
         set role authenticator;
         set role data_owner;
         set session "request.jwt.claim.user" = 'owner_gustav';
@@ -301,16 +305,16 @@ create or replace function test_group_membership_data_access_policies()
         set role data_user;
         set session "request.jwt.claim.user" = 'user_project_user';
         assert (select count(1) from people) = 2,
-            'RLS policy for data user, user_project_user, is broken';
+            'RLS policy for data user, project_user, is broken';
         set role authenticator;
         set role admin_user;
         set session "request.jwt.claim.user" = '';
         select group_remove_members('project_group', '{"memberships":
-                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
+                {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["user_project_user"]}}'::json) into _ans;
         select table_group_access_revoke('people', 'project_group', 'select') into _ans;
         -- INSERT policy grant
         select group_add_members('project_group', '{"memberships":
-                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
+                {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["user_project_user"]}}'::json) into _ans;
         select table_group_access_grant('people', 'project_group', 'insert') into _ans;
         set role data_user;
         set session "request.jwt.claim.user" = 'user_project_user';
@@ -360,7 +364,7 @@ create or replace function test_group_membership_data_access_policies()
         set role admin_user;
         set session "request.jwt.claim.user" = '';
         select group_remove_members('project_group', '{"memberships":
-                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
+                {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["user_project_user"]}}'::json) into _ans;
         select table_group_access_revoke('people', 'project_group', 'select') into _ans;
         return true;
     end;
@@ -384,16 +388,17 @@ create or replace function test_group_list_members()
     declare _ans text;
     begin
         set role admin_user;
-        select group_add_members('project_group', '{"memberships":
-                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
+        -- use user_id instead of names
+        select group_add_members('project_group',
+            '{"memberships": {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["project_user"]}}'::json) into _ans;
         assert 'owner_gustav' in (select group_list_members('project_group')),
             'listing group members does not work';
         assert 'owner_hannah' in (select group_list_members('project_group')),
             'listing group members does not work';
-        assert 'user_project_user' in (select group_list_members('project_group')),
+        assert 'project_user' in (select group_list_members('project_group')),
             'listing group members does not work';
-        select group_remove_members('project_group', '{"memberships":
-                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json, null, null) into _ans;
+        select group_remove_members('project_group',
+            '{"memberships": {"data_owners": ["owner_gustav", "owner_hannah"], "data_users": ["project_user"]}}'::json) into _ans;
         set role authenticator;
         return true;
     end;
@@ -405,7 +410,7 @@ create or replace function test_user_groups()
     declare _ans text;
     begin
         set role admin_user;
-        select group_add_members('project_group', '{"memberships": ["owner_gustav"]}'::json) into _ans;
+        select group_add_members('project_group', '{"memberships": {"data_owners": ["owner_gustav"]}}'::json) into _ans;
         assert '(project_group,"{""consent_reference"": 1234}")' in (select user_groups('gustav', 'data_owner')::text),
             'user_groups function does not list all groups';
         begin
@@ -423,7 +428,7 @@ create or replace function test_user_groups()
         set session "request.jwt.claim.user" = '';
         set role authenticator;
         set role admin_user;
-        select group_remove_members('project_group', '{"memberships": ["owner_gustav"]}'::json) into _ans;
+        select group_remove_members('project_group', '{"memberships": {"data_owners": ["owner_gustav"]}}'::json) into _ans;
         return true;
     end;
 $$ language plpgsql;
@@ -473,31 +478,31 @@ create or replace function test_group_remove_members()
         select group_remove_members('project_group', '{"memberships":
             ["owner_gustav"]}'::json, null, null) into _ans;
         set role authenticator;
-        set role user_project_user;
+        set role project_user;
         -- now only data owner in the group is owner_hannah
         assert (select count(1) from people) = 1,
-            'user_project_user has unauthorized data access to people, something went wrong then removing owner_gustav from project_group';
+            'project_user has unauthorized data access to people, something went wrong then removing owner_gustav from project_group';
         assert (select count(1) from ntk.user_defined_groups_memberships
                 where member = 'owner_gustav' and group_name = 'project_group') = 0,
             'owner_gustav is still recorded as being a member of project_group in the accounting view';
         set role authenticator;
         set role admin_user;
         grant project_group to owner_gustav;
-        -- now members are: owner_gustav, owner_hannah, and user_project_user
+        -- now members are: owner_gustav, owner_hannah, and project_user
         -- all of them have metadata attr: institution: A
         select group_remove_members('project_group', null, '{"key": "institution", "value": "A"}', null) into _ans;
         assert (select count(member) from ntk.user_defined_groups_memberships
                 where group_name = 'project_group') = 0,
             'removing group members using metadata values does not work';
         grant project_group to owner_hannah;
-        grant project_group to user_project_user;
+        grant project_group to project_user;
         -- now remove all
         select group_remove_members('project_group', null, null, true) into _ans;
         assert (select count(member) from ntk.user_defined_groups_memberships
                 where group_name = 'project_group') = 0,
             'removing group members using metadata values does not work';
         grant project_group to owner_hannah;
-        grant project_group to user_project_user;
+        grant project_group to project_user;
         return true;
     end;
 $$ language plpgsql;
@@ -577,7 +582,7 @@ create or replace function test_group_delete()
 
         set role admin_user;
         select group_add_members('project_group', '{"memberships":
-                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
+                ["owner_gustav", "owner_hannah", "project_user"]}'::json) into _ans;
         select table_group_access_grant('people', 'project_group', 'select') into _ans;
         begin
             select group_delete('project_group') into _ans;
@@ -587,7 +592,7 @@ create or replace function test_group_delete()
                 'non-empty group deletion prevention works - as expected';
         end;
         select group_remove_members('project_group', '{"memberships":
-                ["owner_gustav", "owner_hannah", "user_project_user"]}'::json) into _ans;
+                ["owner_gustav", "owner_hannah", "project_user"]}'::json) into _ans;
         begin
             select group_delete('project_group') into _ans;
             assert false;

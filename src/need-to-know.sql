@@ -720,7 +720,8 @@ create or replace function group_add_members(group_name text,
                                              add_all_users boolean default null)
     returns text as $$
     declare trusted_num_params int;
-    declare untrusted_members json;
+    declare untrusted_owners json;
+    declare untrusted_users json;
     declare untrusted_i text;
     declare trusted_user text;
     declare trusted_group text;
@@ -739,8 +740,15 @@ create or replace function group_add_members(group_name text,
                                                   add_all_users::text]) x where x is not null) = 1,
             'only one parameter is allowed to be used in the function signature - you can only add group members by one method per call';
         if members is not null then
-            untrusted_members := members;
-            for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
+            untrusted_owners := members->'memberships'->'data_owners';
+            untrusted_users := members->'memberships'->'data_users';
+            for untrusted_i in select * from json_array_elements(untrusted_owners) loop
+                execute format('select groups.grant($1, $2)')
+                    using trusted_group_name, replace(untrusted_i, '"', '');
+                execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                    using 'group_member_add', trusted_group_name, replace(untrusted_i, '"', '');
+            end loop;
+            for untrusted_i in select * from json_array_elements(untrusted_users) loop
                 execute format('select groups.grant($1, $2)')
                     using trusted_group_name, replace(untrusted_i, '"', '');
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
@@ -792,6 +800,7 @@ revoke all privileges on function group_add_members(json, json, boolean) from pu
 grant execute on function group_add_members(json, json, boolean) to admin_user;
 
 
+-- should return user_id
 drop function if exists group_list_members(text);
 create or replace function group_list_members(group_name text)
     returns table (member text) as $$
@@ -864,7 +873,8 @@ create or replace function group_remove_members(group_name text,
                                                 metadata json default null,
                                                 remove_all boolean default null)
     returns text as $$
-    declare untrusted_members json;
+    declare untrusted_owners json;
+    declare untrusted_users json;
     declare untrusted_i text;
     declare trusted_user text;
     declare trusted_group_name text;
@@ -878,8 +888,15 @@ create or replace function group_remove_members(group_name text,
                 metadata::text, remove_all::text]) x where x is not null) = 1,
             'you can only remove group members by one method per call';
         if members is not null then
-            untrusted_members := members;
-            for untrusted_i in select * from json_array_elements(untrusted_members->'memberships') loop
+            untrusted_owners := members->'memberships'->'data_owners';
+            untrusted_users := members->'memberships'->'data_users';
+            for untrusted_i in select * from json_array_elements(untrusted_owners) loop
+                raise info 'adding %', replace(untrusted_i, '"', '');
+                execute format('select groups.revoke($1, $2)') using trusted_group_name, replace(untrusted_i, '"', '');
+                execute format('select ntk.update_event_log_access_control($1, $2, $3)')
+                    using 'group_member_remove', trusted_group_name, replace(untrusted_i, '"', '');
+            end loop;
+            for untrusted_i in select * from json_array_elements(untrusted_users) loop
                 execute format('select groups.revoke($1, $2)') using trusted_group_name, replace(untrusted_i, '"', '');
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
                     using 'group_member_remove', trusted_group_name, replace(untrusted_i, '"', '');
