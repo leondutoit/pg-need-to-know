@@ -25,7 +25,6 @@ _guide="\
     -------
     --setup     Create the DB schema.
     --sqltest   Run SQL tests to ensure the DB schema works.
-    --httptest  Run HTTP tests (postgrest must be running, python dependencies must be installed)
     --guide     Print this guide
 
 "
