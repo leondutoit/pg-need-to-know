@@ -24,12 +24,13 @@ For data owners:
 - transparent insight into how their data is being used
 
 For data users:
-- extensible metadata support for describing user, group, tables, and columns
+- extensible metadata support for describing users, groups, tables, and columns
 - possibility to publish data, and make it available to specific individuals only
 
 For application developers:
 - rich HTTP and SQL API for application development
 - authorization is a solved problem
+- a [reference client](https://github.com/leondutoit/py-need-to-know) to see how the API can be used
 
 ## Setup
 
