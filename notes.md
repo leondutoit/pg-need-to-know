@@ -12,7 +12,7 @@
     - and update the RLS function to check the end date
 
 ## TODO
-- move HTTP client code to own repo
+- consider returning json from funcs, instead of text
 - full review of docs
 - write about the implementation
 - add script to generate interactive html docs, and presentation
@@ -91,3 +91,4 @@
     - id -> user_id in token, for consistency
     - group_add_remove: members: {data_users:[], data_owners: []}, and tests
     - show user ids and names in registerations
+- move HTTP client code to own repo
