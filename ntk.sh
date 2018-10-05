@@ -24,7 +24,7 @@ _guide="\
     Options
     -------
     --setup     Create the DB schema.
-    --sqltest   Run SQL tests to ensure the DB schema works.
+    --test      Run SQL tests to ensure the DB schema works.
     --guide     Print this guide
 
 "
@@ -33,6 +33,7 @@ setup() {
     psql -U $SUPERUSER -d $DBNAME -f ./src/need-to-know.sql
     psql -U $SUPERUSER -d $DBNAME -f ./src/groups.sql
     psql -U $SUPERUSER -d $DBNAME -f ./src/need-to-know-token.sql
+    # TODO: insert JWT secret
 }
 
 sqltest() {
@@ -42,8 +43,7 @@ sqltest() {
 while (( "$#" )); do
     case $1 in
         --setup)           shift; setup; exit 0 ;;
-        --sqltest)         shift; sqltest; exit 0 ;;
-        --httptest)        shift; httptest; exit 0 ;;
+        --test)            shift; sqltest; exit 0 ;;
         --guide)           printf "%s\n" "$_guide"; exit 0 ;;
         *) break ;;
     esac
