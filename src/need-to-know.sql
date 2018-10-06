@@ -219,7 +219,7 @@ create or replace function ntk.log_data_update()
                 insert into event_log_data_updates
                     (updated_by, table_name, row_id, column_name, old_data, new_data, query)
                 values
-                    (_updator, _table_name, OLD.id, _colname, _old_data, _new_data, current_query());
+                    (_updator, _table_name, OLD.row_id, _colname, _old_data, _new_data, current_query());
             end if;
         end loop;
         return new;
@@ -321,8 +321,8 @@ create or replace function ntk.parse_mac_table_def(definition json)
             when duplicate_table then null;
         end;
         execute 'create table if not exists ' || trusted_table_name ||
-                '(id int not null default nextval(' || quote_literal(_seqname) || '))';
-        execute format('alter sequence %I owned by %I.id', _seqname, trusted_table_name);
+                '(row_id int not null default nextval(' || quote_literal(_seqname) || '))';
+        execute format('alter sequence %I owned by %I.row_id', _seqname, trusted_table_name);
         begin
             execute 'alter table ' || trusted_table_name ||
                     ' add column row_owner text default current_setting(' || quote_literal(_curr_setting) ||
