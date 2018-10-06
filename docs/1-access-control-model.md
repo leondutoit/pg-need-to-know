@@ -98,7 +98,7 @@ data users: X, Y, Z
 Suppose the following access control rules needed to be in place:
 
 ```txt
-data users X, and Y should only have access to data contained in tables t1, and t2
+data users X, and Y should only have access to data contained in tables t1, t2, and t3, and only data from owners A, B, C, D
 data user Z should have access to all data - i.e. tables t1, t2, t3, and t4
 ```
 
