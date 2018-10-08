@@ -325,10 +325,10 @@ create or replace function ntk.parse_mac_table_def(definition json)
         execute format('alter sequence %I owned by %I.row_id', _seqname, trusted_table_name);
         begin
             execute 'alter table ' || trusted_table_name ||
-                    ' add column row_owner text default current_setting(' || quote_literal(_curr_setting) ||
+                    ' add column row_owner text not null default current_setting(' || quote_literal(_curr_setting) ||
                     ') references ntk.registered_users (_user_name)';
             execute 'alter table ' || trusted_table_name ||
-                    ' add column row_originator text default current_setting(' || quote_literal(_curr_setting) ||
+                    ' add column row_originator text not null default current_setting(' || quote_literal(_curr_setting) ||
                     ') references ntk.registered_users (_user_name)';
         exception
             when duplicate_column then null;
