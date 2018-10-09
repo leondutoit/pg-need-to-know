@@ -22,9 +22,9 @@ user_delete(user_id text, user_type text)
 
 -- group operations
 group_create(group_name text, group_metadata json)
-group_add_members(group_name text, memberships json, metadata json, add_all boolean, add_all_owners boolean, add_all_users boolean)
+group_add_members(group_name text, members json, metadata json, add_all boolean, add_all_owners boolean, add_all_users boolean)
 group_list_members(group_name text)
-group_remove_members(group_name text, memberships json, metadata json, remove_all boolean)
+group_remove_members(group_name text, members json, metadata json, remove_all boolean)
 group_delete(group_name text)
 ```
 

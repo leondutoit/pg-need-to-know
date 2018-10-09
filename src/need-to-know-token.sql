@@ -107,7 +107,7 @@ create or replace function token(user_id text default null, token_type text defa
             set role authenticator;
             set role admin_user;
             execute format('select count(1) from user_registrations
-                            where user_name = $1') using _user_name
+                            where user_id = $1') using user_id
                     into _exists_count;
             set role authenticator;
             set role anon;
