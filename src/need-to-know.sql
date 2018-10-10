@@ -693,7 +693,7 @@ grant execute on function group_create(text, json) to admin_user;
 
 create or replace view table_overview as
     select a.table_name, b.table_description, a.groups_with_access from
-    (select table_name, array_agg(grantee::text) groups_with_access
+    (select table_name, array_agg(distinct grantee::text) groups_with_access
     from information_schema.table_privileges
         where privilege_type in ('SELECT', 'INSERT', 'UPDATE')
         and table_schema = 'public'
@@ -701,7 +701,8 @@ create or replace view table_overview as
         and grantee in (select group_name from ntk.user_defined_groups)
         or grantee = 'data_owners_group'
         and table_name not in ('user_registrations', 'groups', 'event_log_user_group_removals',
-                               'event_log_user_data_deletions', 'event_log_data_access')
+                               'event_log_user_data_deletions', 'event_log_data_access',
+                               'event_log_data_updates')
         group by table_name)a
     join
     (select relname, obj_description(oid) table_description
