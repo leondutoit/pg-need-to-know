@@ -62,7 +62,7 @@ alter function ntk.is_row_owner owner to admin_user;
 grant execute on function ntk.is_row_owner(text) to data_owners_group, data_users_group;
 
 
-drop function if exists ntk.is_row_originator(text);
+drop function if exists ntk.is_row_originator(text) cascade;
 create or replace function ntk.is_row_originator(_current_row_originator text)
     returns boolean as $$
     declare trusted_current_role text;
@@ -97,7 +97,7 @@ create policy select_for_data_owners on event_log_data_access for select using (
 create policy insert_policy_for_public on event_log_data_access for insert with check (true);
 
 
-drop function if exists ntk.update_request_log(text, text);
+drop function if exists ntk.update_request_log(text, text) cascade;
 create or replace function ntk.update_request_log(_current_role text, _current_row_owner text)
     returns boolean as $$
     declare trusted_current_role text;
@@ -146,7 +146,7 @@ revoke all privileges on function ntk.update_event_log_access_control(text, text
 grant execute on function ntk.update_event_log_access_control(text, text, json) to admin_user;
 
 
-drop function if exists ntk.roles_have_common_group_and_is_data_user(text);
+drop function if exists ntk.roles_have_common_group_and_is_data_user(text) cascade;
 create or replace function ntk.roles_have_common_group_and_is_data_user(_current_row_owner text)
     returns boolean as $$
     declare trusted_current_role text;
@@ -191,7 +191,7 @@ alter table event_log_data_updates owner to admin_user;
 grant insert on event_log_data_updates to data_owners_group, data_users_group;
 
 
-drop function if exists ntk.log_data_update();
+drop function if exists ntk.log_data_update() cascade;
 create or replace function ntk.log_data_update()
     returns trigger as $$
     declare _old_data text;
