@@ -747,14 +747,14 @@ create or replace function group_add_members(group_name text,
                 execute format('select groups.grant($1, $2)')
                     using trusted_group_name, trusted_user_name;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
-                    using 'group_member_add', trusted_group_name, replace(untrusted_i, '"', '');
+                    using 'group_member_add', trusted_group_name, trusted_user_name;
             end loop;
             for untrusted_i in select * from json_array_elements(untrusted_users) loop
                 trusted_user_name := 'user_' || replace(untrusted_i, '"', '');
                 execute format('select groups.grant($1, $2)')
                     using trusted_group_name, trusted_user_name;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
-                    using 'group_member_add', trusted_group_name, replace(untrusted_i, '"', '');
+                    using 'group_member_add', trusted_group_name, trusted_user_name;
             end loop;
             return 'added members to groups';
         elsif metadata is not null then
@@ -899,13 +899,13 @@ create or replace function group_remove_members(group_name text,
                 trusted_user := 'owner_' || replace(untrusted_i, '"', '');
                 execute format('select groups.revoke($1, $2)') using trusted_group_name, trusted_user;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
-                    using 'group_member_remove', trusted_group_name, replace(untrusted_i, '"', '');
+                    using 'group_member_remove', trusted_group_name, trusted_user;
             end loop;
             for untrusted_i in select * from json_array_elements(untrusted_users) loop
                 trusted_user := 'user_' || replace(untrusted_i, '"', '');
                 execute format('select groups.revoke($1, $2)') using trusted_group_name, trusted_user;
                 execute format('select ntk.update_event_log_access_control($1, $2, $3)')
-                    using 'group_member_remove', trusted_group_name, replace(untrusted_i, '"', '');
+                    using 'group_member_remove', trusted_group_name, trusted_user;
             end loop;
             return 'removed members to groups';
         elsif metadata is not null then
