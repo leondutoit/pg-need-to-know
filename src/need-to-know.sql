@@ -58,7 +58,7 @@ create or replace function ntk.is_row_owner(_current_row_owner text)
     end;
 $$ language plpgsql;
 revoke all privileges on function ntk.is_row_owner(text) from public;
-alter function ntk.is_row_owner owner to admin_user;
+alter function ntk.is_row_owner(text) owner to admin_user;
 grant execute on function ntk.is_row_owner(text) to data_owners_group, data_users_group;
 
 
@@ -78,7 +78,7 @@ create or replace function ntk.is_row_originator(_current_row_originator text)
     end;
 $$ language plpgsql;
 revoke all privileges on function ntk.is_row_originator(text) from public;
-alter function ntk.is_row_originator owner to admin_user;
+alter function ntk.is_row_originator(text) owner to admin_user;
 grant execute on function ntk.is_row_originator(text) to data_owners_group, data_users_group;
 
 
@@ -111,7 +111,7 @@ create or replace function ntk.update_request_log(_current_role text, _current_r
     end;
 $$ language plpgsql;
 revoke all privileges on function ntk.update_request_log(text, text) from public;
-alter function ntk.update_request_log owner to admin_user;
+alter function ntk.update_request_log(text, text) owner to admin_user;
 grant execute on function ntk.update_request_log(text, text) to data_owners_group, data_users_group;
 
 
@@ -172,7 +172,7 @@ create or replace function ntk.roles_have_common_group_and_is_data_user(_current
     end;
 $$ language plpgsql;
 revoke all privileges on function ntk.roles_have_common_group_and_is_data_user(text) from public;
-alter function ntk.roles_have_common_group_and_is_data_user owner to admin_user;
+alter function ntk.roles_have_common_group_and_is_data_user(text) owner to admin_user;
 grant execute on function ntk.roles_have_common_group_and_is_data_user(text) to data_owners_group, data_users_group;
 
 
@@ -842,7 +842,7 @@ create or replace function user_groups(user_id text default null, user_type text
     end;
 $$ language plpgsql;
 revoke all privileges on function user_groups(text, text) from public;
-alter function user_groups owner to admin_user;
+alter function user_groups(text, text) owner to admin_user;
 grant execute on function user_groups(text, text) to data_owners_group;
 
 
@@ -868,7 +868,7 @@ create or replace function user_group_remove(group_name text)
     end;
 $$ language plpgsql;
 revoke all privileges on function user_group_remove(text) from public;
-alter function user_group_remove owner to admin_user;
+alter function user_group_remove owner(text) to admin_user;
 grant execute on function user_group_remove(text) to data_owners_group;
 
 
