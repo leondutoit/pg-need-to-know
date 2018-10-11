@@ -320,9 +320,13 @@ create or replace function ntk.parse_mac_table_def(definition json)
         exception
             when duplicate_table then null;
         end;
-        execute 'create table if not exists ' || trusted_table_name ||
-                '(row_id int not null default nextval(' || quote_literal(_seqname) || '))';
-        execute format('alter sequence %I owned by %I.row_id', _seqname, trusted_table_name);
+        begin
+            execute 'create table if not exists ' || trusted_table_name ||
+                    '(row_id int not null default nextval(' || quote_literal(_seqname) || '))';
+            execute format('alter sequence %I owned by %I.row_id', _seqname, trusted_table_name);
+        exception
+            when duplicate_table then null;
+        end;
         begin
             execute 'alter table ' || trusted_table_name ||
                     ' add column row_owner text not null default current_setting(' || quote_literal(_curr_setting) ||
