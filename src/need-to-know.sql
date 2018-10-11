@@ -461,7 +461,7 @@ create or replace function table_metadata(table_name text)
                 where st.relname = $1') using $1;
     end;
 $$ language plpgsql;
-revoke all privileges on function table_metadat(text) a from public;
+revoke all privileges on function table_metadat(text) from public;
 grant execute on function table_metadata(text) to admin_user;
 
 
