@@ -40,7 +40,7 @@ setup() {
 }
 
 sqltest() {
-    psql -U $SUPERUSER -d $DBNAME -1 -f ./src/testing.sql
+    psql -h $DBHOST -U $SUPERUSER -d $DBNAME -1 -f ./src/testing.sql
 }
 
 while (( "$#" )); do
