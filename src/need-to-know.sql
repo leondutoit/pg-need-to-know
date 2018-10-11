@@ -461,8 +461,8 @@ create or replace function table_metadata(table_name text)
                 where st.relname = $1') using $1;
     end;
 $$ language plpgsql;
-revoke all privileges on function table_metadata from public;
-grant execute on function table_metadata to admin_user;
+revoke all privileges on function table_metadat(text) a from public;
+grant execute on function table_metadata(text) to admin_user;
 
 
 drop function if exists ntk.parse_generic_table_def(json);
@@ -868,7 +868,7 @@ create or replace function user_group_remove(group_name text)
     end;
 $$ language plpgsql;
 revoke all privileges on function user_group_remove(text) from public;
-alter function user_group_remove owner(text) to admin_user;
+alter function user_group_remove(text) owner to admin_user;
 grant execute on function user_group_remove(text) to data_owners_group;
 
 
