@@ -1,7 +1,10 @@
 
+# HTTP API reference
+
 ## Method overview
 
 For the anon role:
+
 ```txt
 HTTP Method     | URL
 ----------------|-------------------
@@ -10,6 +13,7 @@ GET             | /rpc/token?user_id=id&token_type=<admin,owner,user>
 ```
 
 For admin_user role:
+
 ```txt
 HTTP Method     | URL
 ----------------|-------------------------------------------
@@ -37,6 +41,7 @@ GET             | /event_log_data_updates
 ```
 
 For data_owners:
+
 ```txt
 HTTP Method     | URL
 ----------------|-----------------------
@@ -51,6 +56,7 @@ POST            | /rpc/user_delete_data
 ### For anayone
 
 - Register as a new user, either a data owner, or a data user
+
 ```bash
 POST /rpc/user_register
 Content-Type: application/json
@@ -62,6 +68,7 @@ Authorization: Bearer your-jwt
 ```
 
 - _After authenticating a user and authorizing their role_, get a token
+
 ```bash
 GET /rpc/token?user_id=id&token_type=<admin,owner,user>
 ```
@@ -69,6 +76,7 @@ GET /rpc/token?user_id=id&token_type=<admin,owner,user>
 ### For admins
 
 - Create a new table
+
 ```bash
 POST /rpc/table_create
 Content-Type: application/json
@@ -85,6 +93,7 @@ Authorization: Bearer your-jwt
 ```
 
 - describe your table, or change the existing description
+
 ```bash
 POST /rpc/table_describe
 Content-Type: application/json
@@ -94,6 +103,7 @@ Authorization: Bearer your-jwt
 ```
 
 - describe your table columns, or change existing ones
+
 ```bash
 POST /rpc/table_describe_columns
 Content-Type: application/json
@@ -103,6 +113,7 @@ Authorization: Bearer your-jwt
 ```
 
 - get column descriptions for a table
+
 ```bash
 GET /rpc/table_metadata?table_name=<name>
 Content-Type: application/json
@@ -112,6 +123,7 @@ Authorization: Bearer your-jwt
 ```
 
 - Collect data from `myuser`
+
 ```bash
 POST /people
 Content-Type: application/json
@@ -121,6 +133,7 @@ Authorization: Bearer your-jwt
 ```
 
 - Create a new group
+
 ```bash
 POST /rpc/group_create
 Content-Type: application/json
@@ -130,6 +143,7 @@ Authorization: Bearer your-jwt
 ```
 
 - Add members to the group to enable data access (choose one of three methods)
+
 ```bash
 POST /rpc/group_add_members
 Content-Type: application/json
@@ -157,6 +171,7 @@ Authorization: Bearer your-jwt
 ```
 
 - Grant group of data users access to a table (data owners have insert, update and delete rights by default)
+
 ```bash
 POST /rpc/table_group_access_grant
 Content-Type: application/json
@@ -167,6 +182,7 @@ Authorization: Bearer your-jwt
 ```
 
 - Revoke group access from a table
+
 ```bash
 POST /rpc/table_group_access_revoke
 Content-Type: application/json
@@ -177,6 +193,7 @@ Authorization: Bearer your-jwt
 ```
 
 - List all members in a specific group
+
 ```bash
 GET /rpc/group_list_members?group_name=analysis1_group
 Content-Type: application/json
@@ -187,6 +204,7 @@ Authorization: Bearer your-jwt
 ```
 
 - Remove members from a group (choose one of three methods)
+
 ```bash
 POST /rpc/group_remove_members
 Content-Type: application/json
@@ -206,6 +224,7 @@ Authorization: Bearer your-jwt
 ```
 
 - Delete a group
+
 ```bash
 POST /rpc/group_delete
 Content-Type: application/json
@@ -216,6 +235,7 @@ Authorization: Bearer your-jwt
 ```
 
 - List all groups belonging to a user
+
 ```bash
 GET /rpc/user_groups?user_id=myuser&user_type=data_owner
 Content-Type: application/json
@@ -226,6 +246,7 @@ Authorization: Bearer your-jwt
 ```
 
 - Delete a user identity
+
 ```bash
 POST /rpc/user_delete
 Content-Type: application/json
@@ -235,6 +256,7 @@ Authorization: Bearer your-jwt
 ```
 
 - see table overview: name, description, group access
+
 ```bash
 GET /table_overview
 Content-Type: application/json
@@ -242,6 +264,7 @@ Authorization: Bearer your-jwt
 ```
 
 - see an overview of registered users, along with metadata
+
 ```bash
 GET /user_registrations
 Content-Type: application/json
@@ -251,6 +274,7 @@ Authorization: Bearer your-jwt
 ```
 
 - see all user defined groups, with metadata
+
 ```bash
 GET /groups
 Content-Type: application/json
@@ -260,6 +284,7 @@ Authorization: Bearer your-jwt
 ```
 
 - As the admin user, see user initiated group removals
+
 ```bash
 GET /event_log_user_group_removals
 Content-Type: application/json
@@ -269,6 +294,7 @@ Authorization: Bearer your-jwt
 ```
 
 - As the admin user, see user data deletion requests
+
 ```bash
 GET /event_log_user_data_deletions
 Content-Type: application/json
@@ -278,6 +304,7 @@ Authorization: Bearer your-jwt
 ```
 
 - get audit information about which data users access data about which data owners, when
+
 ```bash
 GET /event_log_data_access
 Content-Type: application/json
@@ -287,6 +314,7 @@ Authorization: Bearer your-jwt
 ```
 
 - get audit information about all group-based access control events
+
 ```bash
 GET /event_log_access_control
 Content-Type: application/json
@@ -296,6 +324,7 @@ Authorization: Bearer your-jwt
 ```
 
 - As the admin user, see all data updates
+
 ```bash
 GET /event_log_user_group_removals
 Content-Type: application/json
@@ -307,6 +336,7 @@ Authorization: Bearer your-jwt
 ### For data owners
 
 - Remove yourself from a group, as a data owner
+
 ```bash
 POST /rpc/user_group_remove
 Content-Type: application/json
@@ -316,6 +346,7 @@ Authorization: Bearer your-jwt
 ```
 
 - A data owner deletes all their data
+
 ```bash
 POST /rpc/user_delete_data
 Content-Type: application/json
@@ -323,6 +354,7 @@ Authorization: Bearer your-jwt
 ```
 
 - List all groups that one belongs to (as a data owner)
+
 ```bash
 GET /rpc/user_groups
 Content-Type: application/json
@@ -332,6 +364,7 @@ Authorization: Bearer your-jwt
 ```
 
 - Get audit logs about who accessed your data, when
+
 ```bash
 GET /event_log_data_access
 Content-Type: application/json
@@ -341,6 +374,7 @@ Authorization: Bearer your-jwt
 ### For data users
 
 - As the data user `some_analyst`, get data to analyse
+
 ```bash
 GET /people
 Content-Type: application/json
