@@ -582,7 +582,7 @@ create or replace function test_group_delete()
 
         set role admin_user;
         select group_add_members('project_group', '{"memberships":
-                {"data_owners": ["gustav", "hannah"], "data_users": ["project_user"]}}'::json) into _ans;
+                {"data_owners": ["gustav"], "data_users": ["project_user"]}}'::json) into _ans;
         select table_group_access_grant('people', 'project_group', 'select') into _ans;
         begin
             select group_delete('project_group') into _ans;
@@ -592,7 +592,7 @@ create or replace function test_group_delete()
                 'non-empty group deletion prevention works - as expected';
         end;
         select group_remove_members('project_group', '{"memberships":
-                {"data_owners": ["gustav", "hannah"], "data_users": ["project_user"]}}'::json) into _ans;
+                {"data_owners": ["gustav"], "data_users": ["project_user"]}}'::json) into _ans;
         begin
             select group_delete('project_group') into _ans;
             assert false;
