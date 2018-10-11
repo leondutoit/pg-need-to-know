@@ -12,7 +12,7 @@ output:
 ---
 Generated on: $_date
 
-## Features
+# Features
 
 For administrators:
 
@@ -36,7 +36,7 @@ For application developers:
 - authorization is a solved problem
 - a [reference client](https://github.com/leondutoit/py-need-to-know) to see how the API can be used
 
-" >> ntk-docs.Rmd
+" > ntk-docs.Rmd
 
 cat ./docs/1-access-control-model.md \
     ./docs/2-an-example-using-the-http-api.md \
