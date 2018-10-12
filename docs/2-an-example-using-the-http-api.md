@@ -1,7 +1,7 @@
 
 # Example
 
-The last example in  `1-access-control-model.md` showed how an administrator can use `pg-need-to-know` to set up access control rules based on data owners and data subsets, in a conceptual way. The rest of this document shows how one would use the HTTP API (provided by running `postgrest`) to implement this.
+The previous section showed how an administrator can use `pg-need-to-know` to set up access control rules based on data owners and data subsets, in a conceptual way. The rest of this document shows how one would use the HTTP API (provided by running `postgrest`) to implement this.
 
 ## Create tables
 
@@ -150,7 +150,9 @@ Authorization: JWT-for-admin-user
 # 2.2 data users
 {
     "group_name": "group2",
-    "members": ["user_Z"]
+    "members": {
+        "memberships": {"data_users": ["Z"]}
+    }
 }
 ```
 
@@ -264,7 +266,7 @@ POST /rpc/user_delete
 Authorization: JWT-for-admin-user
 
 {
-    "user_id": "owner_E",
+    "user_id": "E",
     "user_type": "data_owner"
 }
 ```
@@ -324,7 +326,3 @@ Authorization: JWT-for-data-owner
 ```
 
 A real case woulc probably have a better way of identifying rows which need to be updated. Be that as it may, now only the owner can see this data.
-
-## Further reading
-
-Please refer to the references in `/api`, after reading through the rest of the docs.
