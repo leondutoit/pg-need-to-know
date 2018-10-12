@@ -1,6 +1,8 @@
 
 # Implementation
 
+## Tables
+
 The best place to start is to look at an example of a table created with `pg-need-to-know`:
 
 ```sql
@@ -53,10 +55,18 @@ Both the `row_owner` and `row_originator` columns have foreign key constraints, 
 
 The first important detail to note is: `(forced row security enabled)`. This means that the table owner, the `admin_user`, cannot bypass the security policies. This is an integral part of the access control system. `admin_user`s actually do not have access to the data at all. They have to register as data users just like anyone else if they want access.
 
-Now let's consider the policies that apply to data owners.
+Now let's consider the policies that apply to data owners. There are four relevant policies, each on a different SQL operation: `insert`, `select`, `update`, and `delete`. The policy on insert always evaluates to `true`. In combination with the foreign key constraints this means that any data owner can insert data, if registered. The remaining three policies simply check that the value in the `row_owner` column matches the value set in `request.jwt.claim.user` - in other words, that the authenticated request has been initiated by the owner of the data.
 
-Lastly, let's look at the data user policies.
+Recall that all these SQL operations were granted to the `data_owners_group`. This group has a role called `data_owner` as a member. All SQL operations done by authenticated data owners, must be executed as this DB role. The API, therefore switches into this role, `request.jwt.claim.user` sets the session variable, and then executes the query. The implication is that some external authentication system has to determine which people have the right to be assigned the `data_owner` role.
+
+Lastly, let's look at the data user policies. The only policy that is specified is for `select`, and is called `row_ownership_select_group_policy`. This invokes a function called `ntk.roles_have_common_group_and_is_data_user` which does what it says: it checks whether the session user and the row owner are in the same group. If so, then the select is granted.
+
+Notice though that there is no DB group or role granting data users access to the table - by default, data users do not have any access to data. This is where explicit table grants become relevant.
 
 ### Auditing
 
-- update trigger
+The trigger function on the table updates an audit log with information about changes made to data when updating rows. The `ntk.roles_have_common_group_and_is_data_user` function also logs which data user sees data about which data owner.
+
+## Groups and table grants
+
+
