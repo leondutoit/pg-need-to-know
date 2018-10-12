@@ -51,9 +51,11 @@ Both the `row_owner` and `row_originator` columns have foreign key constraints, 
 
 ### Row level security policies
 
-- admin user
-- data owners
-- data users
+The first important detail to note is: `(forced row security enabled)`. This means that the table owner, the `admin_user`, cannot bypass the security policies. This is an integral part of the access control system. `admin_user`s actually do not have access to the data at all. They have to register as data users just like anyone else if they want access.
+
+Now let's consider the policies that apply to data owners.
+
+Lastly, let's look at the data user policies.
 
 ### Auditing
 
