@@ -70,7 +70,7 @@ create or replace function ntk.is_row_originator(_current_row_originator text)
     begin
         trusted_current_role := current_setting('request.jwt.claim.user');
         trusted_current_row_originator := _current_row_originator;
-        if trusted_current_role = trusted_current_row_owner then
+        if trusted_current_role = trusted_current_row_originator then
             return true;
         else
             return false;

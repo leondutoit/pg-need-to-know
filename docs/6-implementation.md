@@ -73,4 +73,4 @@ Databases with `pg-need-to-know` installed have a `data_users_group` and `data_u
 
 Firstly, a new group must be created, using the `pg-need-to-know` API. Then, the administrator can add members, and grant either `select`, `insert`, and/or `update` access to the table for the group. What happens in the background is that the `data_users_group` is then given the necessary permissions on the table, and this is inherited by its members. Revoking access works in the same way.
 
-These policies then combine with the existing row-level security policies which ensure that data users can only `select` from rows where they share group membership with data owners. However, `insert` and `update` grants are much broader, since there are no row-level security policies for those. If an administrator gives update rights to data users, they can update all rows in a table.
+These policies then combine with the existing row-level security policies which ensure that data users can only `select` from rows where they share group membership with data owners. `update` grants are also quite narrow: data users can only update rows which they have inserted themselves.
