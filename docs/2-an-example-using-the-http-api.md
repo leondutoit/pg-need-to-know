@@ -315,14 +315,5 @@ POST /t1
 Content-Type: application/json
 Authorization: JWT-for-data-user
 
-{"country": "Sudan", "education": 12}
-
-
-PATCH /t1?country=Sudan
-Content-Type: application/json
-Authorization: JWT-for-data-owner
-
-{"row_owner": "the-new-owner"}
+{"country": "Sudan", "education": 12, "row_owner": "A"}
 ```
-
-A real case woulc probably have a better way of identifying rows which need to be updated. Be that as it may, now only the owner can see this data.

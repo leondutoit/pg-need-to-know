@@ -40,7 +40,6 @@ For application developers:
 
 cat ./docs/1-access-control-model.md \
     ./docs/2-an-example-using-the-http-api.md \
-    ./docs/3-auth-requirements.md \
     ./api/http-api.md  >> ntk-docs.Rmd
 
 R -q -e "library(rmarkdown); render('ntk-docs.Rmd', output_format='html_document')"
