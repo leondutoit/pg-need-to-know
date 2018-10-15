@@ -85,8 +85,9 @@ grant execute on function ntk.is_row_originator(text) to data_owners_group, data
 drop table if exists event_log_data_access;
 create table event_log_data_access(
     request_time timestamptz default current_timestamp,
-    data_user text,
-    data_owner text
+    row_id uuid not null,
+    data_user text not null,
+    data_owner text not null
 );
 grant insert, select on event_log_data_access to public;
 alter table event_log_data_access enable row level security;
@@ -97,16 +98,16 @@ create policy select_for_data_owners on event_log_data_access for select using (
 create policy insert_policy_for_public on event_log_data_access for insert with check (true);
 
 
-drop function if exists ntk.update_request_log(text, text) cascade;
-create or replace function ntk.update_request_log(_current_role text, _current_row_owner text)
+drop function if exists ntk.update_request_log(uuid, text, text) cascade;
+create or replace function ntk.update_request_log(row_id uuid, _current_role text, _current_row_owner text)
     returns boolean as $$
     declare trusted_current_role text;
     declare trusted_current_row_owner text;
     begin
         trusted_current_role := _current_role;
         trusted_current_row_owner := _current_row_owner;
-        execute format('insert into event_log_data_access (data_user, data_owner) values ($1, $2)')
-                using trusted_current_role, trusted_current_row_owner;
+        execute format('insert into event_log_data_access (row_id, data_user, data_owner) values ($1, $2, $3)')
+                using row_id, trusted_current_role, trusted_current_row_owner;
         return true;
     end;
 $$ language plpgsql;
@@ -146,8 +147,8 @@ revoke all privileges on function ntk.update_event_log_access_control(text, text
 grant execute on function ntk.update_event_log_access_control(text, text, json) to admin_user;
 
 
-drop function if exists ntk.roles_have_common_group_and_is_data_user(text) cascade;
-create or replace function ntk.roles_have_common_group_and_is_data_user(_current_row_owner text)
+drop function if exists ntk.roles_have_common_group_and_is_data_user(uuid, text) cascade;
+create or replace function ntk.roles_have_common_group_and_is_data_user(row_id uuid, _current_row_owner text)
     returns boolean as $$
     declare trusted_current_role text;
     declare trusted_current_row_owner text;
@@ -166,7 +167,7 @@ create or replace function ntk.roles_have_common_group_and_is_data_user(_current
             into _res
             using trusted_current_role, trusted_current_row_owner;
         if _res = true then
-            select ntk.update_request_log(trusted_current_role, trusted_current_row_owner) into _log;
+            select ntk.update_request_log(row_id, trusted_current_role, trusted_current_row_owner) into _log;
         end if;
         return _res;
     end;
@@ -365,7 +366,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
             execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
             execute format('create policy row_ownership_select_policy on %I for select using (ntk.is_row_owner(row_owner))', trusted_table_name);
             execute format('create policy row_ownership_delete_policy on %I for delete using (ntk.is_row_owner(row_owner))', trusted_table_name);
-            execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(row_owner))', trusted_table_name);
+            execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(row_id, row_owner))', trusted_table_name);
             execute format('create policy row_ownership_update_policy on %I for update using (ntk.is_row_owner(row_owner))', trusted_table_name);
             execute format('create policy row_originator_update_policy on %I for update using (ntk.is_row_originator(row_originator))', trusted_table_name);
             execute format('comment on table %I is %s', trusted_table_name, trusted_comment);
