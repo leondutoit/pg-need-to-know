@@ -48,11 +48,13 @@ And because the `table_create` function is executed as the `admin_user` role, us
 
 ### Internal columns
 
-The three columns, `row_id`, `row_owner`, and `row_originator` are default columns, created and maintend by `pg-need-to-know`. The `row_id` column is simple a sequence of integers, which allows audit records to refer to specific rows in tables. Both the `row_owner` and `row_originator` columns have default values set to the session variable `request.jwt.claim.user`.
+The three columns, `row_id`, `row_owner`, and `row_originator` are default columns, created and maintend by `pg-need-to-know`. The `row_id` column contains Universally Unique Identifier (UUID), which allows audit records to refer to specific rows in tables. Both the `row_owner` and `row_originator` columns have default values set to the session variable `request.jwt.claim.user`.
 
-As discussed in previous sections, the REST API extracts the `user` claim from the JWT, and sets the session variable to that value. The implication is that those rows will be filled with the authenticated `user` claim's value. This is how ownership is identified. By default, row owners are the same as row originators, but as we will see later, this does not have to be the case.
+As discussed in previous sections, the REST API extracts the `user` claim from the JWT, and sets the session variable to that value. The implication is that those rows will be filled with the authenticated `user` claim's value. This is how ownership is identified. By default, row owners are the same as row originators, but this does not have to be the case. The `row_originator` has an additional check constraint ensuring that it is _always_ set to the value of the current session user.
 
 Both the `row_owner` and `row_originator` columns have foreign key constraints, referencing the `_user_name` column in the `ntk.registered_users` table. This is how `pg-need-to-know` enforces that only registered users can upload data.
+
+Lastly, the `immutable_trigger` ensures that all three internal columns cannot be changed once their values are set.
 
 ### Row level security policies
 
