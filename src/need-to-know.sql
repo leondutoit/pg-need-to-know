@@ -181,7 +181,7 @@ create table if not exists event_log_data_updates(
     updated_time timestamptz default current_timestamp,
     updated_by text,
     table_name text,
-    row_id int,
+    row_id uuid,
     column_name text,
     old_data text,
     new_data text,
@@ -306,24 +306,14 @@ create or replace function ntk.parse_mac_table_def(definition json)
     declare trusted_comment text;
     declare trusted_column_description text;
     declare _curr_setting text;
-    declare _seqname text;
     begin
         untrusted_definition := definition;
         untrusted_columns := untrusted_definition->'columns';
         trusted_table_name := quote_ident(untrusted_definition->>'table_name');
         trusted_comment := quote_nullable(untrusted_definition->>'description');
         _curr_setting := 'request.jwt.claim.user';
-        _seqname := trusted_table_name || '_id_seq';
         begin
-            execute format('create sequence %I', _seqname);
-            execute format('grant usage, select, update on %I to public', _seqname);
-        exception
-            when duplicate_table then null;
-        end;
-        begin
-            execute 'create table if not exists ' || trusted_table_name ||
-                    '(row_id int not null default nextval(' || quote_literal(_seqname) || '))';
-            execute format('alter sequence %I owned by %I.row_id', _seqname, trusted_table_name);
+            execute format('create table if not exists %I(row_id uuid not null default gen_random_uuid())', trusted_table_name);
         exception
             when duplicate_table then null;
         end;
