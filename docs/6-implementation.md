@@ -6,15 +6,17 @@
 The best place to start is to look at an example of a table created with `pg-need-to-know`:
 
 ```sql
-                                         Table "public.t2"
-     Column     |  Type   | Collation | Nullable |                     Default
-----------------+---------+-----------+----------+-------------------------------------------------
- row_id         | integer |           | not null | nextval('t2_id_seq'::regclass)
- row_owner      | text    |           | not null | current_setting('request.jwt.claim.user'::text)
- row_originator | text    |           | not null | current_setting('request.jwt.claim.user'::text)
- votes          | text    |           |          |
- orientation    | text    |           |          |
- outlook        | text    |           |          |
+                                       Table "public.t2"
+     Column     | Type | Collation | Nullable |                     Default
+----------------+------+-----------+----------+-------------------------------------------------
+ row_id         | uuid |           | not null | gen_random_uuid()
+ row_owner      | text |           | not null | current_setting('request.jwt.claim.user'::text)
+ row_originator | text |           | not null | current_setting('request.jwt.claim.user'::text)
+ votes          | text |           |          |
+ orientation    | text |           |          |
+ outlook        | text |           |          |
+Check constraints:
+    "t2_row_originator_check" CHECK (row_originator = current_setting('request.jwt.claim.user'::text))
 Foreign-key constraints:
     "t2_row_originator_fkey" FOREIGN KEY (row_originator) REFERENCES ntk.registered_users(_user_name)
     "t2_row_owner_fkey" FOREIGN KEY (row_owner) REFERENCES ntk.registered_users(_user_name)
@@ -26,12 +28,13 @@ Policies (forced row security enabled):
     POLICY "row_ownership_insert_policy" FOR INSERT
       WITH CHECK (true)
     POLICY "row_ownership_select_group_policy" FOR SELECT
-      USING (ntk.roles_have_common_group_and_is_data_user(row_owner))
+      USING (ntk.roles_have_common_group_and_is_data_user(row_id, row_owner))
     POLICY "row_ownership_select_policy" FOR SELECT
       USING (ntk.is_row_owner(row_owner))
     POLICY "row_ownership_update_policy" FOR UPDATE
       USING (ntk.is_row_owner(row_owner))
 Triggers:
+    immutable_trigger BEFORE UPDATE ON t2 FOR EACH ROW EXECUTE PROCEDURE ntk.ensure_internal_columns_are_immutable()
     update_trigger AFTER UPDATE ON t2 FOR EACH ROW EXECUTE PROCEDURE ntk.log_data_update()
 ```
 
