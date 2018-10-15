@@ -229,7 +229,24 @@ revoke all privileges on function ntk.log_data_update() from public;
 grant execute on function ntk.log_data_update() to admin_user, data_owners_group, data_users_group;
 
 
--- immutable_col_trigger
+drop function if exists ntk.ensure_internal_columns_are_immutable();
+create or replace function ntk.ensure_internal_columns_are_immutable()
+    returns trigger as $$
+    begin
+        if OLD.row_id != NEW.row_id
+            then raise exception using message = 'not allowed to alter row_id';
+        end if;
+        if OLD.row_originator != NEW.row_originator
+            then raise exception using message = 'not allowed to alter row_originator';
+        end if;
+        if OLD.row_owner != NEW.row_owner
+            then raise exception using message = 'not allowed to alter row_owner';
+        end if;
+        return new;
+    end;
+$$ language plpgsql;
+revoke all privileges on function ntk.ensure_internal_columns_are_immutable() from public;
+grant execute on function ntk.ensure_internal_columns_are_immutable() to admin_user, data_owners_group, data_users_group;
 
 
 drop function if exists ntk.sql_type_from_generic_type(text);
@@ -371,6 +388,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
             execute format('create policy row_originator_update_policy on %I for update using (ntk.is_row_originator(row_originator))', trusted_table_name);
             execute format('comment on table %I is %s', trusted_table_name, trusted_comment);
             execute format('create trigger update_trigger after update on %I for each row execute procedure ntk.log_data_update()', trusted_table_name);
+            execute format('create trigger immutable_trigger before update on %I for each row execute procedure ntk.ensure_internal_columns_are_immutable()', trusted_table_name);
         exception
             when duplicate_object then null;
         end;

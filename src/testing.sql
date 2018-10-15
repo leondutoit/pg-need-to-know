@@ -364,8 +364,14 @@ create or replace function test_group_membership_data_access_policies()
         set session "request.jwt.claim.user" = 'user_project_user';
         update people set name = 'Otho'
                 where row_originator = 'user_project_user';
-        update people set row_owner = 'owner_gustav'
+        begin
+            update people set row_owner = 'owner_gustav'
                 where row_originator = 'user_project_user';
+            assert false;
+        exception
+            when others
+            then raise notice 'cannot alter row_owner - as expected';
+        end;
         set role admin_user;
         set session "request.jwt.claim.user" = '';
         -- test removal of only update right if select grant is present
