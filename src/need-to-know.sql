@@ -184,8 +184,7 @@ create table if not exists event_log_data_updates(
     row_id uuid not null,
     column_name text not null,
     old_data text not null,
-    new_data text not null,
-    query text
+    new_data text not null
 );
 alter table event_log_data_updates owner to admin_user;
 grant insert on event_log_data_updates to data_owners_group, data_users_group;
@@ -217,9 +216,9 @@ create or replace function ntk.log_data_update()
             execute format('select ($1).%s::text', _colname) using NEW into _new_data;
             if _old_data != _new_data then
                 insert into event_log_data_updates
-                    (updated_by, table_name, row_id, column_name, old_data, new_data, query)
+                    (updated_by, table_name, row_id, column_name, old_data, new_data)
                 values
-                    (_updator, _table_name, OLD.row_id, _colname, _old_data, _new_data, current_query());
+                    (_updator, _table_name, OLD.row_id, _colname, _old_data, _new_data);
             end if;
         end loop;
         return new;
