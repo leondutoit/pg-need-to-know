@@ -228,6 +228,9 @@ revoke all privileges on function ntk.log_data_update() from public;
 grant execute on function ntk.log_data_update() to admin_user, data_owners_group, data_users_group;
 
 
+-- immutable_col_trigger
+
+
 drop function if exists ntk.sql_type_from_generic_type(text);
 create or replace function ntk.sql_type_from_generic_type(_type text)
     returns text as $$
@@ -322,7 +325,7 @@ create or replace function ntk.parse_mac_table_def(definition json)
                     ') references ntk.registered_users (_user_name)';
             execute 'alter table ' || trusted_table_name ||
                     ' add column row_originator text not null default current_setting(' || quote_literal(_curr_setting) ||
-                    ') references ntk.registered_users (_user_name)';
+                    ') references ntk.registered_users (_user_name) check (row_originator = current_setting(' || quote_literal(_curr_setting) || '))';
         exception
             when duplicate_column then null;
         end;

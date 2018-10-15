@@ -204,6 +204,17 @@ create or replace function test_default_data_owner_and_user_policies()
     begin
         set role data_owner;
         set session "request.jwt.claim.user" = 'owner_gustav';
+        -- first try to insert row_originator explicitly
+        -- with a value different from the session variable
+        -- this should fail due to the column check constraint
+        begin
+            insert into people (row_originator, name, age)
+            values ('bla', 'Gustav de la Croix', 1);
+            assert false;
+        exception
+            when check_violation then
+            raise notice 'row_originator check constraint works - as expected';
+        end;
         insert into people (name, age) values ('Gustav de la Croix', 1);
         set session "request.jwt.claim.user" = 'owner_hannah';
         insert into people (name, age) values ('Hannah le Roux', 29);
