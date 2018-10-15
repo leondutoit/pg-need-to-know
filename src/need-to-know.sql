@@ -179,12 +179,12 @@ grant execute on function ntk.roles_have_common_group_and_is_data_user(text) to 
 drop table if exists event_log_data_updates;
 create table if not exists event_log_data_updates(
     updated_time timestamptz default current_timestamp,
-    updated_by text,
-    table_name text,
-    row_id uuid,
-    column_name text,
-    old_data text,
-    new_data text,
+    updated_by text not null,
+    table_name text not null,
+    row_id uuid not null,
+    column_name text not null,
+    old_data text not null,
+    new_data text not null,
     query text
 );
 alter table event_log_data_updates owner to admin_user;
