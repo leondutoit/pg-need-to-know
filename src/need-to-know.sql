@@ -289,26 +289,6 @@ revoke all privileges on function ntk.data_user_group_membership_with_correct_pr
 grant execute on function ntk.data_user_group_membership_with_correct_privileges(text, text) to admin_user, data_owners_group, data_users_group;
 
 
-create or replace function ntk.current_data_user_member_of_group_with_update_privilege()
-    returns boolean as $$
-    declare
-    begin
-        -- same logic as select
-        return true;
-    end;
-$$ language plpgsql;
-
-
-create or replace function ntk.current_data_user_member_of_group_with_delete_privilege()
-    returns boolean as $$
-    declare
-    begin
-        -- same logic as select
-        return true;
-    end;
-$$ language plpgsql;
-
-
 drop function if exists ntk.sql_type_from_generic_type(text);
 create or replace function ntk.sql_type_from_generic_type(_type text)
     returns text as $$
