@@ -155,22 +155,45 @@ create or replace function test_table_group_access_management()
             assert false;
         exception
             when insufficient_privilege then raise notice
-                'data owners do not have access to tables before group table grant - as expected';
+                'data users do not have access to tables before group table grant - as expected';
         end;
         set role authenticator;
         set role admin_user;
         set session "request.jwt.claim.user" = '';
-        -- ensure access grant works
+        -- ensure select access grant works for data users
         select table_group_access_grant('people3', 'test_group', 'select') into _ans;
         set role data_user;
         set session "request.jwt.claim.user" = 'user_1';
         assert (select count(1) from people3) = 1,
             'group table grant is not working';
+        -- ensure granting access on people3 does not propagate to any other tables
+        begin
+            set role authenticator;
+            set role admin_user;
+            set session "request.jwt.claim.user" = '';
+            select group_create('dummy_group', '{}'::json) into _ans;
+            select table_group_access_grant('people', 'dummy_group', 'select') into _ans;
+            select group_add_members('dummy_group',
+            '{"memberships": {"data_owners": ["1"], "data_users": ["1"]}}'::json)
+                into _ans;
+            set role data_user;
+            set session "request.jwt.claim.user" = 'user_1';
+            select count(1) from people into _num;
+            assert false, 'problem with table access grant: they are inherited across tables';
+        exception
+            when insufficient_privilege then
+            raise info 'table grants do no apply to other tables - as expected';
+        end;
         set role authenticator;
         set role admin_user;
         set session "request.jwt.claim.user" = '';
-        select table_group_access_revoke('people3', 'test_group', 'select') into _ans;
+        -- cleanup
+        select group_remove_members('dummy_group',
+                '{"memberships": {"data_owners": ["1"], "data_users": ["1"]}}'::json) into _ans;
+        select table_group_access_revoke('people', 'dummy_group', 'select') into _ans;
+        select group_delete('dummy_group') into _ans;
         -- ensure revoking table access works
+        select table_group_access_revoke('people3', 'test_group', 'select') into _ans;
         set role data_user;
         set session "request.jwt.claim.user" = 'user_1';
         begin
@@ -308,9 +331,21 @@ create or replace function test_group_membership_data_access_policies()
         assert (select count(1) from people) = 1,
             'data owner, owner_hannah, has unauthorized data access';
         set role authenticator;
-        set role admin_user;
-        set session "request.jwt.claim.user" = 'owner_hannah';
         -- SELECT policy grant
+        set role data_user;
+        -- make sure the data user cannot select from the table
+        -- before the grant has actually been issued
+        set session "request.jwt.claim.user" = 'user_project_user';
+        begin
+            select * from people;
+            assert false;
+        exception
+            when insufficient_privilege
+            then raise notice
+            'data_user cannot select from table before select grant is issued';
+        end;
+        set role authenticator;
+        set role admin_user;
         -- the two data owners above are in the same group as the data user below
         select table_group_access_grant('people', 'project_group', 'select') into _ans;
         set role data_user;
