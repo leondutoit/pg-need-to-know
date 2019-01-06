@@ -172,7 +172,7 @@ create or replace function test_table_group_access_management()
             set role admin_user;
             set session "request.jwt.claim.user" = '';
             select group_create('dummy_group', '{}'::json) into _ans;
-            select table_group_access_grant('people', 'dummy_group', 'select') into _ans;
+            select table_group_access_grant('people3', 'dummy_group', 'select') into _ans;
             select group_add_members('dummy_group',
             '{"memberships": {"data_owners": ["1"], "data_users": ["1"]}}'::json)
                 into _ans;
@@ -182,16 +182,11 @@ create or replace function test_table_group_access_management()
             assert false, 'problem with table access grant: they are inherited across tables';
         exception
             when insufficient_privilege then
-            raise info 'table grants do no apply to other tables - as expected';
+            raise notice 'table grants do no apply to other tables - as expected';
         end;
         set role authenticator;
         set role admin_user;
         set session "request.jwt.claim.user" = '';
-        -- cleanup
-        select group_remove_members('dummy_group',
-                '{"memberships": {"data_owners": ["1"], "data_users": ["1"]}}'::json) into _ans;
-        select table_group_access_revoke('people', 'dummy_group', 'select') into _ans;
-        select group_delete('dummy_group') into _ans;
         -- ensure revoking table access works
         select table_group_access_revoke('people3', 'test_group', 'select') into _ans;
         set role data_user;

@@ -172,9 +172,9 @@ create or replace function ntk.roles_have_common_group_and_is_data_user(row_id u
         return _res;
     end;
 $$ language plpgsql;
-revoke all privileges on function ntk.roles_have_common_group_and_is_data_user(text) from public;
-alter function ntk.roles_have_common_group_and_is_data_user(text) owner to admin_user;
-grant execute on function ntk.roles_have_common_group_and_is_data_user(text) to data_owners_group, data_users_group;
+revoke all privileges on function ntk.roles_have_common_group_and_is_data_user(uuid, text) from public;
+alter function ntk.roles_have_common_group_and_is_data_user(uuid, text) owner to admin_user;
+grant execute on function ntk.roles_have_common_group_and_is_data_user(uuid, text) to data_owners_group, data_users_group;
 
 
 drop table if exists event_log_data_updates;
@@ -229,7 +229,7 @@ revoke all privileges on function ntk.log_data_update() from public;
 grant execute on function ntk.log_data_update() to admin_user, data_owners_group, data_users_group;
 
 
-drop function if exists ntk.ensure_internal_columns_are_immutable();
+drop function if exists ntk.ensure_internal_columns_are_immutable() cascade;
 create or replace function ntk.ensure_internal_columns_are_immutable()
     returns trigger as $$
     begin
@@ -247,6 +247,66 @@ create or replace function ntk.ensure_internal_columns_are_immutable()
 $$ language plpgsql;
 revoke all privileges on function ntk.ensure_internal_columns_are_immutable() from public;
 grant execute on function ntk.ensure_internal_columns_are_immutable() to admin_user, data_owners_group, data_users_group;
+
+
+drop function if exists ntk.data_user_group_membership_with_correct_privileges(uuid, text, text) cascade;
+create or replace function ntk.data_user_group_membership_with_correct_privileges(row_id uuid, row_owner text, tname text)
+    returns boolean as $$
+    declare
+        group text;
+        num_groups int;
+        have_common_group boolean;
+        _log boolean;
+    begin
+        execute format('select count(group_name)
+            from (select distinct group_name from groups.group_memberships
+            where user_name = $1
+            intersect
+            select grantee from information_schema.table_privileges
+            where table_name = $2
+            and privilege_type = $3)a')
+            using current_setting('request.jwt.claim.user'), tname, 'SELECT'
+            into num_groups;
+        if num_groups = 0 then
+            raise insufficient_privilege using message = 'access denied to table';
+        end if;
+        if num_groups > 0  then
+            execute format('select groups.have_common_group($1, $2)')
+                into have_common_group
+                using current_setting('request.jwt.claim.user'), row_owner;
+            if have_common_group = true then
+                select ntk.update_request_log(row_id, current_setting('request.jwt.claim.user'), row_owner) into _log;
+                return true;
+            else
+                return false;
+            end if;
+        else
+            return false;
+        end if;
+    end;
+$$ language plpgsql;
+revoke all privileges on function ntk.data_user_group_membership_with_correct_privileges(text, text) from public;
+grant execute on function ntk.data_user_group_membership_with_correct_privileges(text, text) to admin_user, data_owners_group, data_users_group;
+
+
+create or replace function ntk.current_data_user_member_of_group_with_update_privilege()
+    returns boolean as $$
+    declare
+    begin
+        -- same logic as select
+        return true;
+    end;
+$$ language plpgsql;
+
+
+create or replace function ntk.current_data_user_member_of_group_with_delete_privilege()
+    returns boolean as $$
+    declare
+    begin
+        -- same logic as select
+        return true;
+    end;
+$$ language plpgsql;
 
 
 drop function if exists ntk.sql_type_from_generic_type(text);
@@ -383,9 +443,9 @@ create or replace function ntk.parse_mac_table_def(definition json)
             execute format('create policy row_ownership_insert_policy on %I for insert with check (true)', trusted_table_name);
             execute format('create policy row_ownership_select_policy on %I for select using (ntk.is_row_owner(row_owner))', trusted_table_name);
             execute format('create policy row_ownership_delete_policy on %I for delete using (ntk.is_row_owner(row_owner))', trusted_table_name);
-            execute format('create policy row_ownership_select_group_policy on %I for select using (ntk.roles_have_common_group_and_is_data_user(row_id, row_owner))', trusted_table_name);
             execute format('create policy row_ownership_update_policy on %I for update using (ntk.is_row_owner(row_owner))', trusted_table_name);
             execute format('create policy row_originator_update_policy on %I for update using (ntk.is_row_originator(row_originator))', trusted_table_name);
+            execute 'create policy data_user_select_policy on ' || trusted_table_name || ' for select to data_user using (ntk.data_user_group_membership_with_correct_privileges(row_id, row_owner, ' || E'E\'' || trusted_table_name || E'\'' || '))';
             execute format('comment on table %I is %s', trusted_table_name, trusted_comment);
             execute format('create trigger update_trigger after update on %I for each row execute procedure ntk.log_data_update()', trusted_table_name);
             execute format('create trigger immutable_trigger before update on %I for each row execute procedure ntk.ensure_internal_columns_are_immutable()', trusted_table_name);
