@@ -13,10 +13,6 @@
 
 ## TODO
 - consider returning json from funcs, instead of text
-- full review of docs
-- write about the implementation
-- add script to generate interactive html docs, and presentation
-- make a presentation, with visual representations of the model
 
 ## Done
 - review query build statements and input sanitsation - see: https://www.postgresql.org/docs/9.6/static/plpgsql-statements.html
@@ -92,3 +88,7 @@
     - group_add_remove: members: {data_users:[], data_owners: []}, and tests
     - show user ids and names in registerations
 - move HTTP client code to own repo
+- full review of docs
+- write about the implementation
+- add script to generate interactive html docs, and presentation
+- make a presentation, with visual representations of the model
