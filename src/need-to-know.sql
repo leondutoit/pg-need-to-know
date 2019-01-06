@@ -147,36 +147,6 @@ revoke all privileges on function ntk.update_event_log_access_control(text, text
 grant execute on function ntk.update_event_log_access_control(text, text, json) to admin_user;
 
 
-drop function if exists ntk.roles_have_common_group_and_is_data_user(uuid, text) cascade;
-create or replace function ntk.roles_have_common_group_and_is_data_user(row_id uuid, _current_row_owner text)
-    returns boolean as $$
-    declare trusted_current_role text;
-    declare trusted_current_row_owner text;
-    declare _type text;
-    declare _log boolean;
-    declare _res boolean;
-    begin
-        trusted_current_role := current_setting('request.jwt.claim.user');
-        trusted_current_row_owner := _current_row_owner;
-        execute format('select _user_type from ntk.registered_users where _user_name = $1')
-            into _type using trusted_current_role;
-        if _type != 'data_user'
-            then return false;
-        end if;
-        execute format('select groups.have_common_group($1, $2)')
-            into _res
-            using trusted_current_role, trusted_current_row_owner;
-        if _res = true then
-            select ntk.update_request_log(row_id, trusted_current_role, trusted_current_row_owner) into _log;
-        end if;
-        return _res;
-    end;
-$$ language plpgsql;
-revoke all privileges on function ntk.roles_have_common_group_and_is_data_user(uuid, text) from public;
-alter function ntk.roles_have_common_group_and_is_data_user(uuid, text) owner to admin_user;
-grant execute on function ntk.roles_have_common_group_and_is_data_user(uuid, text) to data_owners_group, data_users_group;
-
-
 drop table if exists event_log_data_updates;
 create table if not exists event_log_data_updates(
     updated_time timestamptz default current_timestamp,
