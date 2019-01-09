@@ -85,6 +85,7 @@ grant execute on function ntk.is_row_originator(text) to data_owners_group, data
 drop table if exists event_log_data_access;
 create table event_log_data_access(
     request_time timestamptz default current_timestamp,
+    table_name text not null,
     row_id uuid not null,
     data_user text not null,
     data_owner text not null
@@ -98,22 +99,22 @@ create policy select_for_data_owners on event_log_data_access for select using (
 create policy insert_policy_for_public on event_log_data_access for insert with check (true);
 
 
-drop function if exists ntk.update_request_log(uuid, text, text) cascade;
-create or replace function ntk.update_request_log(row_id uuid, _current_role text, _current_row_owner text)
+drop function if exists ntk.update_request_log(text, uuid, text, text) cascade;
+create or replace function ntk.update_request_log(table_name text, row_id uuid, _current_role text, _current_row_owner text)
     returns boolean as $$
     declare trusted_current_role text;
     declare trusted_current_row_owner text;
     begin
         trusted_current_role := _current_role;
         trusted_current_row_owner := _current_row_owner;
-        execute format('insert into event_log_data_access (row_id, data_user, data_owner) values ($1, $2, $3)')
-                using row_id, trusted_current_role, trusted_current_row_owner;
+        execute format('insert into event_log_data_access (table_name, row_id, data_user, data_owner) values ($1, $2, $3, $4)')
+                using table_name, row_id, trusted_current_role, trusted_current_row_owner;
         return true;
     end;
 $$ language plpgsql;
-revoke all privileges on function ntk.update_request_log(text, text) from public;
-alter function ntk.update_request_log(text, text) owner to admin_user;
-grant execute on function ntk.update_request_log(text, text) to data_owners_group, data_users_group;
+revoke all privileges on function ntk.update_request_log(text, uuid, text, text) from public;
+alter function ntk.update_request_log(text, uuid, text, text) owner to admin_user;
+grant execute on function ntk.update_request_log(text, uuid, text, text) to data_owners_group, data_users_group;
 
 
 drop table if exists event_log_access_control cascade;
@@ -245,7 +246,7 @@ create or replace function ntk.data_user_group_membership_with_correct_privilege
                 into have_common_group
                 using current_setting('request.jwt.claim.user'), row_owner;
             if have_common_group = true then
-                select ntk.update_request_log(row_id, current_setting('request.jwt.claim.user'), row_owner) into _log;
+                select ntk.update_request_log(tname, row_id, current_setting('request.jwt.claim.user'), row_owner) into _log;
                 return true;
             else
                 return false;
@@ -979,7 +980,9 @@ create or replace function user_delete_data()
 
         for trusted_table in select table_name from information_schema.tables
                       where table_schema = 'public' and table_type != 'VIEW' loop
-            if trusted_table in ('event_log_data_access', 'event_log_access_control')
+            if trusted_table in ('event_log_data_access',
+                                 'event_log_access_control',
+                                 'event_log_data_updates')
                 then continue;
             end if;
             begin
