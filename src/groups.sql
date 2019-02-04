@@ -17,72 +17,57 @@ grant select on groups.group_memberships to data_owners_group, data_users_group;
 
 
 create or replace function groups.create(group_name text)
-    returns boolean as $$
-    begin
-        execute format('create role %I', group_name);
-        return true;
-    end;
-$$ language plpgsql;
+    returns void
+    language sql
+    as $$
+    create role group_name;
+$$;
 revoke all privileges on function groups.create(text) from public;
 grant execute on function groups.create(text) to admin_user;
 
 
 create or replace function groups.grant(group_name text, user_name text)
-    returns boolean as $$
-    begin
-        execute format('insert into groups.group_memberships values
-                        ($1, $2)') using group_name, user_name;
-        return true;
-    end;
-$$ language plpgsql;
+    returns void
+    language sql
+    as $$
+    insert into groups.group_memberships
+    values (group_name, user_name);
+$$;
 revoke all privileges on function groups.grant(text, text) from public;
 grant execute on function groups.grant(text, text) to admin_user;
 
 
 create or replace function groups.have_common_group(user1 text, user2 text)
-    returns boolean as $$
-    declare _num_common_groups int;
-    begin
-        execute format('select count(group_name) from (
-                        select group_name from groups.group_memberships
-                        where user_name = $1
-                        intersect
-                        select group_name from groups.group_memberships
-                        where user_name = $2)a')
-                into _num_common_groups
-                using user1, user2;
-        if _num_common_groups = 0 then
-            return false;
-        elsif _num_common_groups > 0 then
-            return true;
-        else
-            return false;
-        end if;
-    end;
-$$ language plpgsql;
+    returns boolean
+    language sql as $$
+    select exists (
+        select 1
+        from groups.group_memberships
+        where user_name in (user1, user2)
+        group by group_name
+        having count(*) > 1
+    )
+$$;
 revoke all privileges on function groups.have_common_group(text, text) from public;
 grant execute on function groups.have_common_group(text, text) to admin_user, data_owners_group, data_users_group;
 
 
 create or replace function groups.revoke(group_name text, user_name text)
-    returns boolean as $$
-    begin
-        execute format('delete from groups.group_memberships
-                        where group_name = $1 and user_name = $2')
-                using group_name, user_name;
-        return true;
-    end;
-$$ language plpgsql;
+    returns void
+    language sql
+    as $$
+    delete from groups.group_memberships
+    where (group_name, user_name) = (group_name, user_name);
+$$;
 revoke all privileges on function groups.revoke(text, text) from public;
 grant execute on function groups.revoke(text, text) to admin_user, data_owners_group;
 
 
 create or replace function groups.drop(group_name text)
-    returns boolean as $$
-    begin
-        execute format('drop role %I', group_name);
-        return true;
-    end;
-$$ language plpgsql;
+    returns void
+    language sql
+    as $$
+        drop role group_name;
+$$;
 revoke all privileges on function groups.drop(text) from public;
 grant execute on function groups.drop(text) to admin_user;
