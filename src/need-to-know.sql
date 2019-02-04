@@ -44,19 +44,13 @@ grant create on schema ntk to admin_user; -- so execute can be granted/revoked w
 
 drop function if exists ntk.is_row_owner(text) cascade;
 create or replace function ntk.is_row_owner(_current_row_owner text)
-    returns boolean as $$
-    declare trusted_current_role text;
-    declare trusted_current_row_owner text;
-    begin
-        trusted_current_role := current_setting('request.jwt.claim.user');
-        trusted_current_row_owner := _current_row_owner;
-        if trusted_current_role = trusted_current_row_owner then
-            return true;
-        else
-            return false;
-        end if;
-    end;
-$$ language plpgsql;
+    returns boolean
+    language sql
+    as $$
+    SELECT
+        current_setting('request.jwt.claim.user') IS NOT DISTINCT FROM
+        _current_row_owner;
+$$;
 revoke all privileges on function ntk.is_row_owner(text) from public;
 alter function ntk.is_row_owner(text) owner to admin_user;
 grant execute on function ntk.is_row_owner(text) to data_owners_group, data_users_group;
@@ -64,19 +58,13 @@ grant execute on function ntk.is_row_owner(text) to data_owners_group, data_user
 
 drop function if exists ntk.is_row_originator(text) cascade;
 create or replace function ntk.is_row_originator(_current_row_originator text)
-    returns boolean as $$
-    declare trusted_current_role text;
-    declare trusted_current_row_originator text;
-    begin
-        trusted_current_role := current_setting('request.jwt.claim.user');
-        trusted_current_row_originator := _current_row_originator;
-        if trusted_current_role = trusted_current_row_originator then
-            return true;
-        else
-            return false;
-        end if;
-    end;
-$$ language plpgsql;
+    returns boolean
+    language sql
+    as $$
+    SELECT
+        current_setting('request.jwt.claim.user') IS NOT DISTINCT FROM
+        _current_row_originator;
+$$;
 revoke all privileges on function ntk.is_row_originator(text) from public;
 alter function ntk.is_row_originator(text) owner to admin_user;
 grant execute on function ntk.is_row_originator(text) to data_owners_group, data_users_group;
@@ -101,17 +89,12 @@ create policy insert_policy_for_public on event_log_data_access for insert with 
 
 drop function if exists ntk.update_request_log(text, uuid, text, text) cascade;
 create or replace function ntk.update_request_log(table_name text, row_id uuid, _current_role text, _current_row_owner text)
-    returns boolean as $$
-    declare trusted_current_role text;
-    declare trusted_current_row_owner text;
-    begin
-        trusted_current_role := _current_role;
-        trusted_current_row_owner := _current_row_owner;
-        execute format('insert into event_log_data_access (table_name, row_id, data_user, data_owner) values ($1, $2, $3, $4)')
-                using table_name, row_id, trusted_current_role, trusted_current_row_owner;
-        return true;
-    end;
-$$ language plpgsql;
+    returns void
+    language sql
+    as $$
+    insert into event_log_data_access (table_name, row_id, data_user, data_owner)
+    values (table_name, row_id, _current_role, _current_row_owner);
+$$;
 revoke all privileges on function ntk.update_request_log(text, uuid, text, text) from public;
 alter function ntk.update_request_log(text, uuid, text, text) owner to admin_user;
 grant execute on function ntk.update_request_log(text, uuid, text, text) to data_owners_group, data_users_group;
@@ -136,14 +119,12 @@ revoke delete, update on event_log_access_control from admin_user;
 
 drop function if exists ntk.update_event_log_access_control(text, text, text);
 create or replace function ntk.update_event_log_access_control(event_type text, group_name text, target text)
-    returns void as $$
-    begin
-        execute format('insert into event_log_access_control
-                       (event_type, group_name, target)
-                       values ($1, $2, $3)')
-            using event_type, group_name, target;
-    end;
-$$ language plpgsql;
+    returns void
+    language sql
+    as $$
+    insert into event_log_access_control (event_type, group_name, target)
+    values (event_type, group_name, target);
+$$;
 revoke all privileges on function ntk.update_event_log_access_control(text, text, json) from public;
 grant execute on function ntk.update_event_log_access_control(text, text, json) to admin_user;
 
@@ -164,38 +145,30 @@ grant insert on event_log_data_updates to data_owners_group, data_users_group;
 
 drop function if exists ntk.log_data_update() cascade;
 create or replace function ntk.log_data_update()
-    returns trigger as $$
-    declare _old_data text;
-    declare _new_data text;
-    declare _colname text;
-    declare _table_name text;
-    declare _updator text;
-    declare _row_id int;
+    returns trigger
+    language plpgsql
+    as $$
     begin
-        _table_name := TG_TABLE_NAME::text;
-        _updator := current_setting('request.jwt.claim.user');
-        for _colname in execute
-            format('select c.column_name::text
-                    from pg_catalog.pg_statio_all_tables as st
-                    inner join information_schema.columns c
-                    on c.table_schema = st.schemaname and c.table_name = st.relname
-                    left join pg_catalog.pg_description pgd
-                    on pgd.objoid=st.relid
-                    and pgd.objsubid=c.ordinal_position
-                    where st.relname = $1') using _table_name
-        loop
-            execute format('select ($1).%s::text', _colname) using OLD into _old_data;
-            execute format('select ($1).%s::text', _colname) using NEW into _new_data;
-            if _old_data != _new_data then
-                insert into event_log_data_updates
-                    (updated_by, table_name, row_id, column_name, old_data, new_data)
-                values
-                    (_updator, _table_name, OLD.row_id, _colname, _old_data, _new_data);
-            end if;
-        end loop;
+        insert into event_log_data_updates
+            (updated_by, table_name, row_id, column_name, old_data, new_data)
+        select
+            current_setting('request.jwt.claim.user'),
+            TG_TABLE_NAME,
+            OLD.row_id,
+            o.column_name,
+            old_data,
+            new_data
+        from
+            json_each_text(row_to_json(OLD)) AS o(column_name, old_data)
+        join
+            json_each_text(row_to_json(NEW)) AS n(column_name, new_data)
+            on (
+                o.column_name = n.column_name and
+                o.val is distinct from n.val
+            );
         return new;
     end;
-$$ language plpgsql;
+$$;
 revoke all privileges on function ntk.log_data_update() from public;
 grant execute on function ntk.log_data_update() to admin_user, data_owners_group, data_users_group;
 
@@ -204,13 +177,13 @@ drop function if exists ntk.ensure_internal_columns_are_immutable() cascade;
 create or replace function ntk.ensure_internal_columns_are_immutable()
     returns trigger as $$
     begin
-        if OLD.row_id != NEW.row_id
+        if OLD.row_id is distinct from NEW.row_id
             then raise exception using message = 'not allowed to alter row_id';
         end if;
-        if OLD.row_originator != NEW.row_originator
+        if OLD.row_originator is distinct from NEW.row_originator
             then raise exception using message = 'not allowed to alter row_originator';
         end if;
-        if OLD.row_owner != NEW.row_owner
+        if OLD.row_owner is distinct from NEW.row_owner
             then raise exception using message = 'not allowed to alter row_owner';
         end if;
         return new;
@@ -296,26 +269,19 @@ $$ language plpgsql;
 revoke all privileges on function ntk.sql_type_from_generic_type(text) from public;
 grant execute on function ntk.sql_type_from_generic_type(text) to admin_user;
 
+drop type if exists access_control_type;
+create type access_control_type as enum('mac', 'generic');
 
 drop function if exists table_create(json, text, int);
-create or replace function table_create(definition json, type text, form_id int default 0)
+create or replace function table_create(untrusted_definition json, untrusted_type access_control_type, form_id int default 0)
     returns text as $$
-    declare untrusted_definition json;
-    declare untrusted_type text;
-    declare untrusted_form_id int;
-    declare _res text;
     begin
-        untrusted_definition := definition;
-        untrusted_type := type;
-        untrusted_form_id := form_id;
         if untrusted_type = 'mac' then
-            select ntk.parse_mac_table_def(untrusted_definition) into _res;
-            return _res;
+            select ntk.parse_mac_table_def(untrusted_definition);
         elsif untrusted_type = 'generic' then
-            select ntk.parse_generic_table_def(untrusted_definition) into _res;
-            return _res;
+            select ntk.parse_generic_table_def(untrusted_definition);
         else
-            raise exception using message = 'Unrecognised table definition type.';
+            raise exception using message = 'Must supply a table definition type, i.e. not NULL.';
         end if;
     end;
 $$ language plpgsql;
@@ -473,20 +439,29 @@ create table if not exists ntk.tm(column_name text, column_description text);
 
 drop function if exists table_metadata(text);
 create or replace function table_metadata(table_name text)
-    returns setof ntk.tm as $$
-    begin
-        assert (select ntk.is_user_defined_table(table_name) = true);
-        return query execute format('
-            select c.column_name::text, pgd.description::text
-                from pg_catalog.pg_statio_all_tables as st
-            inner join information_schema.columns c
-                on c.table_schema = st.schemaname and c.table_name = st.relname
-            left join pg_catalog.pg_description pgd
-                on pgd.objoid=st.relid
-                and pgd.objsubid=c.ordinal_position
-                where st.relname = $1') using $1;
-    end;
-$$ language plpgsql;
+    returns setof ntk.tm
+    language sql
+    as $$
+select
+    c.column_name::text, pgd.description::text
+from
+    pg_catalog.pg_statio_all_tables as st
+inner join
+    information_schema.columns c
+    on (
+        c.table_schema = st.schemaname and
+        c.table_name = st.relname
+    )
+left join
+    pg_catalog.pg_description pgd
+    on (
+        pgd.objoid=st.relid and
+        pgd.objsubid=c.ordinal_position
+    )
+where
+    st.relname = table_name and
+    ntk.is_user_defined_table(table_name);
+$$;
 revoke all privileges on function table_metadat(text) from public;
 grant execute on function table_metadata(text) to admin_user;
 
@@ -541,22 +516,19 @@ create or replace function ntk.table_grant_status(table_name text,
                                                   group_name text,
                                                   grant_event_name text,
                                                   revoke_event_name text)
-    returns text as $$
-    declare latest_event text;
-    begin
-        execute format('select event_type from
-            (select id, event_type
-                from event_log_access_control
-                where group_name = $1
-                and event_type in ($2,$3)
-                and target = $4
-                order by id desc
-                limit 1)a')
-            using group_name, grant_event_name, revoke_event_name, table_name
-            into latest_event;
-        return latest_event;
-    end;
-$$ language plpgsql;
+    returns text
+    language sql
+    as $$
+select event_type
+from event_log_access_control
+where
+    group_name = group_name and
+    event_type in (grant_event_name, revoke_event_name) and
+    target = table_name
+order by
+    id desc
+limit 1;
+$$;
 revoke all privileges on function ntk.table_grant_status(text, text, text, text) from public;
 grant execute on function ntk.table_grant_status(text, text, text, text) to admin_user;
 
